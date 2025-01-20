@@ -10,25 +10,31 @@ import (
 func sender() {
 	//Address, _ := netip.ParseAddrPort("10.100.23.204:20005")
 	//UDPAddress := net.UDPAddrFromAddrPort(Address)
+	Address, _ := netip.ParseAddrPort("10.100.23.255:20005")
+	UDPAddress := net.UDPAddrFromAddrPort(Address)
 
-	connection, error := net.Dial("udp4", "10.100.23.204:20005")
+	connection, error := net.DialUDP("udp4", nil, UDPAddress) //Broadcast address
 
 	if error != nil {
 		panic(error)
 	}
 
 	for {
-		connection.Write([]byte("Hei!"))
+		connection.Write([]byte("Hello, world!"))
 
 		time.Sleep(time.Second)
 	}
 }
 
 func receiver() {
-	Address, _ := netip.ParseAddrPort("10.100.23.255:20005")
-	UDPAddress := net.UDPAddrFromAddrPort(Address)
 
-	connection, _ := net.ListenUDP("udp4", UDPAddress)
+	UDPAddress, _ := net.ResolveUDPAddr("udp4", ":20005")
+
+	connection, error := net.ListenUDP("udp4", UDPAddress)
+
+	if error != nil {
+		panic(error)
+	}
 
 	buffer := make([]byte, 1024) // Max 1024 bytes, last byte used for null termination
 

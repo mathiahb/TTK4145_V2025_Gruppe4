@@ -3,41 +3,60 @@ package main
 import (
 	"fmt"
 	"net"
+	"time"
 )
 
-func sender() {
+func client() {
+	time.Sleep(time.Second)
+	connection, _ := net.Dial("tcp", "10.100.23.204:33546")
+	defer connection.Close() // Close the connection when the function returns
+	tcpConn := connection.(*net.TCPConn)
+	tcpConn.SetNoDelay(true)
+
+	buffer := make([]byte, 1024)
+
+	connection.Write(([]byte("Connect to:10.100.23.15:20005\000")))
+	for {
+		connection.Write([]byte("Hello, world 1!\000"))
+		connection.Read(buffer)
+		fmt.Println(string(buffer))
+
+		time.Sleep(time.Second)
+
+	}
 
 }
 
-func receiver() {
+func server() {
 
-	listener, error := net.Listen("tcp", "localhost:30000")
+	listener, err := net.Listen("tcp", "10.100.23.15:20005")
 
-	fmt.Print(error)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
 
-	connection, _ := listener.Accept()
+	defer listener.Close()             // Close the listener when the function returns
+	connection, _ := listener.Accept() // Accept a connection
+	defer connection.Close()           // Close the connection when the function returns
 
-	buffer := make([]byte, 1025) // Max 1024 bytes, last byte used for null termination
-
-	var ourAddress net.Addr = connection.LocalAddr()
-	var fromWho net.Addr
+	buffer := make([]byte, 1024)
 
 	for {
-		numBytesReceived, _ := connection.Read(buffer)
-		fromWho = connection.RemoteAddr()
+		connection.Write([]byte("Hello, world 2!\000"))
+		connection.Read(buffer)
+		fmt.Println(string(buffer))
 
-		if ourAddress != fromWho {
-			if numBytesReceived >= 1025 {
-				fmt.Print("Buffer overflow!")
-			} else {
-				buffer[numBytesReceived] = 0 // Null byte for string termination
-				fmt.Print(buffer)
-				fmt.Print(fromWho)
-			}
-		}
+		time.Sleep(time.Second)
+
 	}
 }
 
 func main() {
+
+	go server()
+	go client()
+
+	select {} // Block forever
 
 }
