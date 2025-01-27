@@ -3,6 +3,7 @@ package elevator_logic
 import (
 	"Driver-go/elevio"
 	"fmt"
+	"time"
 )
 
 type Order struct {
@@ -12,10 +13,11 @@ type Order struct {
 }
 
 const (
-	STATE_MOVING_UP   = iota
-	STATE_MOVING_DOWN = iota
-	STATE_IDLE        = iota
-	STATE_UNDEFINED   = iota
+	STATE_MOVING_UP            = iota
+	STATE_MOVING_DOWN          = iota
+	STATE_MOVING_UP_TO_GO_DOWN = iota
+	STATE_MOVING_DOWN_TO_GO_UP = iota
+	STATE_UNDEFINED            = iota
 
 	//STATE_STANDING_STILL_MOVING_UP   = iota
 	//STATE_STANDING_STILL_MOVING_DOWN = iota
@@ -57,7 +59,7 @@ func getMotorDirectionToFloor(currentFloor int, destinationFloor int) elevio.Mot
 }
 
 func chooseDirection(state *int, order *Order, currentFloor int) elevio.MotorDirection {
-	if *state == STATE_MOVING_UP {
+	if *state == STATE_MOVING_UP || *state == STATE_MOVING_UP_TO_GO_DOWN {
 		for f := currentFloor + 1; f < 4; f++ {
 			if order.UP[f] == 1 || order.INSIDE[f] == 1 {
 				*state = STATE_MOVING_UP
@@ -70,7 +72,13 @@ func chooseDirection(state *int, order *Order, currentFloor int) elevio.MotorDir
 				return getMotorDirectionToFloor(currentFloor, f)
 			}
 		}
-	} else if *state == STATE_MOVING_DOWN {
+		for f := 0; f < currentFloor; f++ {
+			if order.UP[f] == 1 {
+				*state = STATE_MOVING_DOWN_TO_GO_UP
+				return elevio.MD_Down
+			}
+		}
+	} else if *state == STATE_MOVING_DOWN || *state == STATE_MOVING_DOWN_TO_GO_UP {
 		for f := currentFloor - 1; f >= 0; f-- {
 			if order.DOWN[f] == 1 || order.INSIDE[f] == 1 {
 				*state = STATE_MOVING_DOWN
@@ -83,24 +91,116 @@ func chooseDirection(state *int, order *Order, currentFloor int) elevio.MotorDir
 				return getMotorDirectionToFloor(currentFloor, f)
 			}
 		}
-	}
-
-	if *state != STATE_UNDEFINED{
-		for f := 0; f < 4; f++ {
-			if order.UP[f] == 1 || order.DOWN[f] == 1 || order.INSIDE[f] == 1 {
-				direction := getMotorDirectionToFloor(currentFloor, f)
-				if direction == elevio.MD_Up {
-					*state = STATE_MOVING_UP
-				} else if direction == elevio.MD_Down {
-					*state = STATE_MOVING_DOWN
-				}
-				return direction
+		for f := 3; f > currentFloor; f-- {
+			if order.DOWN[f] == 1 {
+				*state = STATE_MOVING_UP_TO_GO_DOWN
+				return elevio.MD_Up
 			}
 		}
 	}
 
-	*state = STATE_IDLE
 	return elevio.MD_Stop
+
+}
+func check_if_floor_has_order(current_floor int, order *Order, state int) bool {
+
+	if order.INSIDE[current_floor] == 1 {
+		return true
+	}
+
+	if (state == STATE_MOVING_UP || state == STATE_MOVING_DOWN_TO_GO_UP) && order.UP[current_floor] == 1 {
+		return true
+	}
+
+	if (state == STATE_MOVING_DOWN || state == STATE_MOVING_UP_TO_GO_DOWN) && order.DOWN[current_floor] == 1 {
+		return true
+	}
+
+	return false
+}
+
+func serve_order(current_floor int, order *Order, state int, obstruction chan bool, ready_to_move chan bool) {
+	removeOrder(elevio.ButtonEvent{Floor: current_floor, Button: elevio.BT_Cab}, order)
+
+	if state == STATE_MOVING_DOWN {
+		removeOrder(elevio.ButtonEvent{Floor: current_floor, Button: elevio.BT_HallDown}, order)
+	}
+	if state == STATE_MOVING_UP {
+		removeOrder(elevio.ButtonEvent{Floor: current_floor, Button: elevio.BT_HallUp}, order)
+	}
+
+	elevio.SetDoorOpenLamp(true)
+	three_sec_delay := time.NewTimer(time.Second * 3)
+	is_obstructed := false
+
+	for {
+		select {
+		case is_obstructed = <-obstruction:
+			if !is_obstructed {
+				three_sec_delay.Reset(time.Second * 3)
+			}
+
+		case <-three_sec_delay.C:
+			if !is_obstructed {
+				elevio.SetDoorOpenLamp(false)
+				ready_to_move <- true
+				return
+			}
+		}
+	}
+}
+
+func elevator_logic_loop(state int, order Order, current_floor int,
+	drv_buttons chan elevio.ButtonEvent, drv_floors chan int, drv_obstr chan bool, drv_stop chan bool, ready_to_move chan bool) {
+
+	standing_still := true
+	can_move := true
+
+	for {
+		select {
+		case buttonEvent := <-drv_buttons:
+			addOrder(buttonEvent, &order)
+
+			if standing_still && buttonEvent.Floor == current_floor {
+				elevio.SetMotorDirection(elevio.MD_Stop)
+				can_move = false
+				go serve_order(current_floor, &order, state, drv_obstr, ready_to_move)
+			}
+
+			fmt.Printf("%+v\n", order)
+			if can_move {
+				direction := chooseDirection(&state, &order, current_floor)
+				elevio.SetMotorDirection(direction)
+				standing_still = direction == elevio.MD_Stop
+			}
+
+		case floorSensorReading := <-drv_floors:
+			fmt.Printf("%+v\n", floorSensorReading)
+			current_floor = floorSensorReading
+			elevio.SetFloorIndicator(current_floor)
+			if check_if_floor_has_order(current_floor, &order, state) {
+				elevio.SetMotorDirection(elevio.MD_Stop)
+				can_move = false
+				go serve_order(current_floor, &order, state, drv_obstr, ready_to_move)
+
+			}
+		case <-ready_to_move:
+			can_move = true
+			direction := chooseDirection(&state, &order, current_floor)
+			elevio.SetMotorDirection(direction)
+			standing_still = direction == elevio.MD_Stop
+
+			if check_if_floor_has_order(current_floor, &order, state) {
+				elevio.SetMotorDirection(elevio.MD_Stop)
+				can_move = false
+				go serve_order(current_floor, &order, state, drv_obstr, ready_to_move)
+			}
+
+		case stopButtonEvent := <-drv_stop:
+			fmt.Printf("%+v\n", stopButtonEvent)
+
+		}
+	}
 
 }
 
@@ -114,51 +214,29 @@ func Init_elevator_logic(numFloors int, d elevio.MotorDirection) {
 	drv_floors := make(chan int)
 	drv_obstr := make(chan bool)
 	drv_stop := make(chan bool)
+	ready_to_move := make(chan bool)
 
 	go elevio.PollButtons(drv_buttons)
 	go elevio.PollFloorSensor(drv_floors)
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
 
+	for button := 0; button < 3; button++ {
+		for floor := 0; floor < 4; floor++ {
+			elevio.SetButtonLamp(elevio.ButtonType(button), floor, false)
+		}
+	}
+
+	elevio.SetDoorOpenLamp(false)
 	elevio.SetMotorDirection(elevio.MD_Down)
 
 	currentFloor = <-drv_floors // Wait for the elevator to reach a floor before starting the elevator logic
 
-	state = STATE_IDLE
+	state = STATE_MOVING_UP
+	elevio.SetMotorDirection(elevio.MD_Stop)
+	elevio.SetFloorIndicator(currentFloor)
 
-	for {
-		select {
-		case bEvent := <-drv_buttons:
-			addOrder(bEvent, &order)
-			fmt.Printf("%+v\n", order)
-
-		case a := <-drv_floors:
-			fmt.Printf("%+v\n", a)
-			if a == numFloors-1 {
-				d = elevio.MD_Down
-			} else if a == 0 {
-				d = elevio.MD_Up
-			}
-			elevio.SetMotorDirection(d)
-
-		case a := <-drv_obstr:
-			fmt.Printf("%+v\n", a)
-			if a {
-				elevio.SetMotorDirection(elevio.MD_Stop)
-			} else {
-				elevio.SetMotorDirection(d)
-			}
-
-		case a := <-drv_stop:
-			fmt.Printf("%+v\n", a)
-			for f := 0; f < numFloors; f++ {
-				for b := elevio.ButtonType(0); b < 3; b++ {
-					elevio.SetButtonLamp(b, f, false)
-				}
-			}
-		}
-	}
-
-	select {}
-
+	go elevator_logic_loop(state, order, currentFloor, drv_buttons, drv_floors, drv_obstr, drv_stop, ready_to_move)
 }
+
+//mangler stoppknapp og ideell håndtering av ordre
