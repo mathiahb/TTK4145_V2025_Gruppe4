@@ -1,10 +1,11 @@
 package main
 
 import (
-	"Go-driver/elevator"
-	"Go-driver/elevator/elevio"
 	"fmt"
 	"time"
+
+	"github.com/mathiahb/TTK4145_V2025_Gruppe4/elevator"
+	"github.com/mathiahb/TTK4145_V2025_Gruppe4/elevator/elevio"
 )
 
 // I Go blir init()-funksjoner i en pakke automatisk kjørt før main() starter.

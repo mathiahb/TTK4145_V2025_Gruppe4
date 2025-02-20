@@ -1,8 +1,9 @@
 package elevator
 
 import (
-	"Go-driver/elevator/elevio"
 	"fmt"
+
+	"github.com/mathiahb/TTK4145_V2025_Gruppe4/elevator/elevio"
 )
 
 // FSM (Finite State Machine) styrer heisens tilstand og oppførsel basert på knappetrykk, etasjeanløp og dørlukkingshendelser.

@@ -12,4 +12,5 @@ package shared_state
 //
 
 // Internal functions
+//		Initialize
 //

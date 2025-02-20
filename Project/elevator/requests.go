@@ -1,7 +1,7 @@
 package elevator
 
 import (
-	"Go-driver/elevator/elevio"
+	"github.com/mathiahb/TTK4145_V2025_Gruppe4/elevator/elevio"
 )
 
 // DirnBehaviourPair strukturen holder retningen og oppførselen for heisen
