@@ -48,10 +48,11 @@ func create_UDP_client(channel_write chan string) {
 
 	// Handle incoming write requests
 	for {
-		var data string = <-channel_write
+		var message string = <-channel_write
 
-		connection.SetWriteDeadline(time.Now().Add(500 * time.Millisecond))
-		connection.Write([]byte(data))
+		//connection.SetWriteDeadline(time.Now().Add(500 * time.Millisecond))
+		data := []byte(message)
+		connection.Write(data)
 	}
 }
 
@@ -76,10 +77,11 @@ func create_UDP_server(channel_read chan string) {
 		bytes_received, sender_address, err := connection.ReadFromUDP(data)
 
 		if err == nil && sender_address != connection.LocalAddr() {
-			channel_read <- string(data[0:bytes_received])
+			message := string(data[0:bytes_received])
+			channel_read <- message
 		}
 
-		time.After(Constants.UDP_WAIT_BEFORE_READING_AGAIN) // Wait 500 milliseconds
+		<-time.NewTimer(Constants.UDP_WAIT_BEFORE_READING_AGAIN).C
 	}
 }
 

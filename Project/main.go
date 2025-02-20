@@ -4,69 +4,54 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mathiahb/TTK4145_V2025_Gruppe4/elevator"
-	"github.com/mathiahb/TTK4145_V2025_Gruppe4/elevator/elevio"
+	"github.com/mathiahb/TTK4145_V2025_Gruppe4/shared_state/Network_Protocol"
 )
 
-// I Go blir init()-funksjoner i en pakke automatisk kjørt før main() starter.
-// &
-// Go only allows functions and variables to be accessed from outside their package if they are exported,
-// meaning their names must start with an uppercase letter.
-func main() {
-	fmt.Println("Started!")
-
-	// Load configuration
-	config := elevator.LoadConfig("elevator/elevator.con")
-	inputPollRateMs := config.InputPollRateMs
-
-	elevio.Init("localhost:15657", elevator.N_FLOORS)
-
-	// Initialize elevator IO
-	inputDevice := elevio.GetInputDevice()
-
-	// If the elevator starts between floors, handle initialization
-	if inputDevice.FloorSensor() == -1 {
-		elevator.FSMOnInitBetweenFloors()
-	}
-
-	// Declared outside the loop since static doesn't exist in Go for local variables
-	var prev [elevator.N_FLOORS][elevator.N_BUTTONS]int // Tracks previous button states
-	prevFloor := -1
-
-	// Main loop
+func listener(connection Network_Protocol.TCP_Connection, kill chan bool) {
 	for {
-		// Sjekker fortløpende om knapper er trykket og oppdaterer systemet deretter.
-		for f := 0; f < elevator.N_FLOORS; f++ {
-			for b := 0; b < elevator.N_BUTTONS; b++ {
-				v := inputDevice.RequestButton(elevio.ButtonType(b), f)
-				if v && prev[f][b] == 0 {
-					elevator.FSMOnRequestButtonPress(f, elevio.ButtonType(b))
-				}
-				prev[f][b] = boolToInt(v)
-			}
+		select {
+		case message := <-connection.Read_Channel:
+			fmt.Printf("%s received message: %s\n", connection.Get_Name(), message)
+		case <-kill:
+			return
 		}
-
-		// Floor sensor handling
-		f := inputDevice.FloorSensor()
-		if f != -1 && f != prevFloor {
-			elevator.FSMOnFloorArrival(f)
-		}
-		prevFloor = f
-
-		// Timer handling
-		if elevator.TimerTimedOut() {
-			elevator.TimerStop()
-			elevator.FSMOnDoorTimeout()
-		}
-		// Sleep for input poll rate
-		time.Sleep(time.Duration(inputPollRateMs) * time.Millisecond)
 	}
 }
 
-// Helper function to convert bool to int
-func boolToInt(b bool) int {
-	if b {
-		return 1
+func sender(connection Network_Protocol.TCP_Connection, kill chan bool) {
+	ticker_send := time.NewTicker(time.Second)
+
+	for {
+		select {
+		case <-ticker_send.C:
+			connection.Write_Channel <- connection.Get_Name()
+		case <-kill:
+			return
+		}
 	}
-	return 0
+}
+
+func main() {
+
+	var connection_manager Network_Protocol.TCP_Connection_Manager = *Network_Protocol.New_TCP_Connection_Manager()
+
+	connection_manager.Open_Server()
+
+	<-time.After(time.Second)
+	connection_manager.Connect_Client("10.24.51.1")
+
+	<-time.After(time.Second * 5)
+
+	timer_kill := time.NewTimer(time.Minute)
+	kill_channel := make(chan bool)
+
+	for _, connection := range connection_manager.Connections {
+		go listener(connection, kill_channel)
+		go sender(connection, kill_channel)
+
+		fmt.Printf("Added %s\n", connection.Get_Name())
+	}
+
+	<-timer_kill.C
+	close(kill_channel)
 }
