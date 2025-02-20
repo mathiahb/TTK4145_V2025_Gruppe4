@@ -15,8 +15,10 @@ func main() {
 	fmt.Println("Started!")
 
 	// Load configuration
-	config := elevator.LoadConfig("elevator.con")
+	config := elevator.LoadConfig("elevator/elevator.con")
 	inputPollRateMs := config.InputPollRateMs
+
+	elevio.Init("localhost:15657", elevator.N_FLOORS)
 
 	// Initialize elevator IO
 	inputDevice := elevio.GetInputDevice()
@@ -55,7 +57,6 @@ func main() {
 			elevator.TimerStop()
 			elevator.FSMOnDoorTimeout()
 		}
-
 		// Sleep for input poll rate
 		time.Sleep(time.Duration(inputPollRateMs) * time.Millisecond)
 	}

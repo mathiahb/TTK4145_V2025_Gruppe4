@@ -48,6 +48,16 @@ func requestsHere(e Elevator) bool {
 func requestsChooseDirection(e Elevator) DirnBehaviourPair {
 	switch e.Dirn {
 	case D_Up:
+		// NYTT TESTING
+		if e.Floor == N_FLOORS-1 { // Hvis heisen er på toppen, skal den ikke gå opp
+			if requestsHere(e) {
+				return DirnBehaviourPair{D_Stop, EB_DoorOpen}
+			} else if requestsBelow(e) {
+				return DirnBehaviourPair{D_Down, EB_Moving}
+			}
+			return DirnBehaviourPair{D_Stop, EB_Idle}
+		}
+		// NYTT TESTING
 		if requestsAbove(e) {
 			return DirnBehaviourPair{D_Up, EB_Moving}
 		} else if requestsHere(e) {

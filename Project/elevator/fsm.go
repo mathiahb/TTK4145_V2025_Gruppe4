@@ -25,6 +25,17 @@ func init() {
 	outputDevice = elevio.GetOutputDevice()
 }
 
+func convertDirnToMotor(d Dirn) elevio.MotorDirection {
+	switch d {
+	case D_Up:
+		return elevio.MD_Up
+	case D_Down:
+		return elevio.MD_Down
+	default:
+		return elevio.MD_Stop
+	}
+}
+
 // **setAllLights**: Oppdaterer alle heisknapper med riktig lysstatus
 func setAllLights(e Elevator) {
 	for floor := 0; floor < N_FLOORS; floor++ {
@@ -60,6 +71,9 @@ func FSMOnRequestButtonPress(btnFloor int, btnType elevio.ButtonType) {
 	case EB_Idle:
 		elevator.Requests[btnFloor][btnType] = 1
 		pair := requestsChooseDirection(elevator)
+
+		fmt.Printf("requestsChooseDirection returned Dirn=%v, Behaviour=%v\n", pair.Dirn, pair.Behaviour)
+
 		elevator.Dirn = pair.Dirn
 		elevator.Behaviour = pair.Behaviour
 
@@ -70,7 +84,9 @@ func FSMOnRequestButtonPress(btnFloor int, btnType elevio.ButtonType) {
 			elevator = requestsClearAtCurrentFloor(elevator)
 
 		case EB_Moving:
-			outputDevice.MotorDirection(elevio.MotorDirection(elevator.Dirn))
+			fmt.Printf("FSMOnRequestButtonPress: Setting motor direction to %v\n", elevio.MotorDirection(convertDirnToMotor(elevator.Dirn)))
+			//outputDevice.MotorDirection(elevio.MotorDirection(elevator.Dirn))
+			outputDevice.MotorDirection(elevio.MotorDirection(convertDirnToMotor(elevator.Dirn)))
 
 		case EB_Idle:
 			// Ikke gjør noe
@@ -124,7 +140,9 @@ func FSMOnDoorTimeout() {
 
 		case EB_Moving, EB_Idle:
 			outputDevice.DoorLight(false)
-			outputDevice.MotorDirection(elevio.MotorDirection(elevator.Dirn))
+			//outputDevice.MotorDirection(elevio.MotorDirection(elevator.Dirn))
+			outputDevice.MotorDirection(elevio.MotorDirection(convertDirnToMotor(elevator.Dirn)))
+
 		}
 	}
 
