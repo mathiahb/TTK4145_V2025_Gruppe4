@@ -2,6 +2,14 @@ package Constants
 
 import "time"
 
+// ----------------- ARGV ----------------------
+const ARGV_TEST string = "--test"
+const ARGV_BACKUP string = "--backup"
+const ARGV_LISTENER_ONLY string = "--listener"
+const ARGV_ELEVATOR_ID string = "--id"
+
+const NO_ID int = -1
+
 // --------------- ELEVATOR --------------------
 
 // ---------------- NETWORK --------------------
@@ -17,6 +25,9 @@ const SERVER_CREATED_NAME string = "server_" // + address
 const ACKNOWLEDGE string = "SYN/ACK"
 const ALL_ACKNOWLEDGE string = "ACK"
 const ABORT_COMMIT string = "ERR"
+
+// Heartbeat
+const HEARTBEAT_MESSAGE string = "HB"
 
 // Constants for UDP connection
 const UDP_PORT string = ":10005"

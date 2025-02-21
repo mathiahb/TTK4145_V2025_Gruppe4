@@ -2,56 +2,39 @@ package main
 
 import (
 	"fmt"
-	"time"
+	"os"
+	"tests"
 
-	"github.com/mathiahb/TTK4145_V2025_Gruppe4/shared_state/Network_Protocol"
+	"Constants"
 )
 
-func listener(connection Network_Protocol.TCP_Connection, kill chan bool) {
-	for {
-		select {
-		case message := <-connection.Read_Channel:
-			fmt.Printf("%s received message: %s\n", connection.Get_Name(), message)
-		case <-kill:
-			return
-		}
-	}
-}
-
-func sender(connection Network_Protocol.TCP_Connection, kill chan bool) {
-	ticker_send := time.NewTicker(time.Second)
-
-	for {
-		select {
-		case <-ticker_send.C:
-			connection.Write_Channel <- connection.Get_Name()
-		case <-kill:
-			return
-		}
-	}
-}
-
 func main() {
+	var is_testing bool = false
+	var id string = ""
+	for i, arg := range os.Args {
+		if i == 0 {
+			continue
+		}
 
-	var connection_manager Network_Protocol.TCP_Connection_Manager = *Network_Protocol.New_TCP_Connection_Manager()
-
-	connection_manager.Open_Server()
-
-	<-time.After(time.Second)
-	connection_manager.Connect_Client("10.24.51.1")
-
-	<-time.After(time.Second * 5)
-
-	timer_kill := time.NewTimer(time.Minute)
-	kill_channel := make(chan bool)
-
-	for _, connection := range connection_manager.Connections {
-		go listener(connection, kill_channel)
-		go sender(connection, kill_channel)
-
-		fmt.Printf("Added %s\n", connection.Get_Name())
+		switch arg {
+		case Constants.ARGV_TEST:
+			is_testing = true
+		case Constants.ARGV_LISTENER_ONLY:
+		case Constants.ARGV_BACKUP:
+		case Constants.ARGV_ELEVATOR_ID:
+			id = os.Args[i+1]
+		default:
+			fmt.Printf("Unknown Arg: %s", arg)
+		}
 	}
 
-	<-timer_kill.C
-	close(kill_channel)
+	if id == "" {
+		fmt.Println("Error. No id!")
+		return
+	}
+
+	if is_testing {
+		tests.Test_Creating_Connection(id)
+		return
+	}
 }
