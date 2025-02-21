@@ -1,10 +1,5 @@
 package UDP
 
-// Implements a UDP access point to the broadcast channel
-// Interface:
-// initialize() - Returns [send, receive] channels. Warning: Receive blocks?
-//			Sets up the access point, should be called by protocol intending to use UDP on the LAN
-
 import (
 	"net"
 	"time"
@@ -12,6 +7,22 @@ import (
 	"Constants"
 )
 
+// Package UDP
+//-----------------------------------------------------------------
+//
+// Implements a struct UDP_Channel, connected to Broadcast (255.255.255.255), made by New_UDP_Channel().
+//
+// WRITING:
+// By default on
+// Use Channel.Write_Channel <- message, to write onto the channel
+//
+// READING:
+// Use Channel.Start_Reading() to open the server and claim the port.
+// Use Channel.Stop_Reading() to close the server and free the port.
+// Use message <- Channel.Read_Channel, to read from the channel after Start_Reading() has been called
+//
+// Note: There may be messages read in Read_Channel after Stop_Reading has been called.
+//
 // ----------------------------------------------------------------
 
 type UDP_Channel struct {
