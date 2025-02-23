@@ -3,8 +3,6 @@ package TCP
 import (
 	"fmt"
 	"net"
-
-	"Constants"
 )
 
 func (connection_manager *TCP_Connection_Manager) setup_TCP_Connection(connection net.Conn) {
@@ -13,7 +11,7 @@ func (connection_manager *TCP_Connection_Manager) setup_TCP_Connection(connectio
 	tcp_conn.SetNoDelay(true)
 
 	// Add the incoming connection to the connection manager
-	connection_name := Constants.SERVER_CREATED_NAME + connection.RemoteAddr().String()
+	connection_name := connection.RemoteAddr().String()
 	connection_object := New_TCP_Connection(connection_name, connection_manager.Global_Read_Channel, connection)
 	connection_manager.Add_Connection(connection_object)
 

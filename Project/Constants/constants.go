@@ -14,7 +14,7 @@ const NO_ID int = -1
 
 // ---------------- NETWORK --------------------
 const NO_DATA string = ""
-const EOF string = "\000"
+const NULL string = "\000"
 const TCP_BUFFER_SIZE int = 4096
 
 // Connection names

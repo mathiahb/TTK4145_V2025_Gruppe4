@@ -4,30 +4,13 @@ import (
 	"Constants"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 )
 
 // Protected functions
 
-// Return: Null-terminated splits of tcp_message which has handled partial TCP transmission.
-func (TCP_Connection *TCP_Connection) split_null_terminated_tcp_message(tcp_message string) []string {
-	split_messages := strings.Split(tcp_message, "\000") // Null terminated
-
-	// Handle message that has been split due to buffer size or partial TCP transmission.
-	//---
-	// Add previous split message to the first message:
-	split_messages[0] = TCP_Connection.split_message_to_be_handled + split_messages[0]
-
-	// Store next split message to be handled on next read:
-	last_split_id := len(split_messages) - 1
-	TCP_Connection.split_message_to_be_handled = split_messages[last_split_id]
-
-	//---
-	return split_messages[0:last_split_id]
-}
-
-// Reads a string from a net.Conn onto a read channel
+// Reads a TCP message from the TCP Connection and puts all detected messages in the TCP message onto the Read Channel.
+// Handles splitting messages using the TCP Split Handler.
 func (TCP_Connection *TCP_Connection) read() {
 	deadline := time.Now().Add(Constants.TCP_READ_DEADLNE)
 	TCP_Connection.connection.SetReadDeadline(deadline)
@@ -44,7 +27,7 @@ func (TCP_Connection *TCP_Connection) read() {
 	if err == nil {
 		message := string(data[0:bytes_received])
 
-		split_messages := TCP_Connection.split_null_terminated_tcp_message(message)
+		split_messages := TCP_Connection.split_handler.Split_Null_Terminated_Tcp_Message(message)
 
 		for _, split_message := range split_messages {
 			TCP_Connection.Read_Channel <- split_message
@@ -52,13 +35,13 @@ func (TCP_Connection *TCP_Connection) read() {
 	}
 }
 
-// Writes a string to a net.Conn
+// Writes a string onto the TCP Connection, function handles necessary
 func (TCP_Connection *TCP_Connection) write(message string) {
 	deadline := time.Now().Add(Constants.TCP_READ_DEADLNE)
 	TCP_Connection.connection.SetWriteDeadline(deadline)
 
-	data := []byte(message)
-	data = append(data, '\000') // Null terminated
+	tcp_message := TCP_Connection.split_handler.Make_Null_Terminated_TCP_Message(message)
+	data := []byte(tcp_message)
 
 	_, err := TCP_Connection.connection.Write(data)
 

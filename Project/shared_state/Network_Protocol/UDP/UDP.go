@@ -49,7 +49,7 @@ func (channel UDP_Channel) Broadcast(message string) {
 // --------------------------------------------------------------------
 
 func Get_local_IP() net.IP {
-	connection, err := net.Dial("udp", "8.8.8.8:10")
+	connection, err := net.Dial("udp", "255.255.255.255:1")
 	if err != nil {
 		panic(err)
 	}
