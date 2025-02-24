@@ -2,6 +2,7 @@ package peer_to_peer
 
 import (
 	"Constants"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -39,6 +40,56 @@ func Test_Dependency_Horizon(t *testing.T) {
 		t.Fatalf("Second dependency was removed! Map length %d, Heap length %d\n", len(handler.lookup_map), handler.min_heap.Len())
 	}
 
+}
+
+func Test_Lamport_Clock_Wraparound(t *testing.T) {
+	clock_high := Lamport_Clock{Constants.LAMPORT_CLOCK_WRAPAROUND_UPPER_EDGE + 1}
+	clock_low := Lamport_Clock{Constants.LAMPORT_CLOCK_WRAPAROUND_LOWER_EDGE - 1}
+
+	if !clock_high.Is_Less_Than(clock_low) {
+		t.Fatal("Wraparound clock is not returning true on wraparound!")
+	}
+}
+
+func Test_Dependency_Wraparound(t *testing.T) {
+	handler := New_Dependency_Handler()
+	clock := New_Lamport_Clock()
+
+	clock.time = Constants.LAMPORT_CLOCK_WRAPAROUND_UPPER_EDGE + 1
+
+	low_time := Constants.LAMPORT_CLOCK_WRAPAROUND_LOWER_EDGE - Constants.P2P_DEP_TIME_HORIZON // Avoid cyclical dependency
+
+	for i := 0; i < Constants.P2P_DEP_TIME_HORIZON+1; i++ {
+		dependency := Dependency{strconv.Itoa(clock.time), clock}
+
+		handler.Add_Dependency(dependency)
+
+		if !handler.Has_Dependency(dependency) {
+			t.Fatal("Handler did not add dependency to list!\n")
+		}
+
+		clock.Event()
+	}
+
+	clock.time = low_time
+
+	for i := 0; i < Constants.P2P_DEP_TIME_HORIZON+1; i++ {
+		dependency := Dependency{strconv.Itoa(clock.time), clock}
+
+		handler.Add_Dependency(dependency)
+		old_dependency := Dependency{strconv.Itoa(clock.time - 1), Lamport_Clock{clock.time - 1}}
+
+		if !handler.Has_Dependency(dependency) {
+			t.Fatal("Handler did not add dependency to list!\n")
+		}
+
+		// Old dependency doesn't exist for i = 0.
+		if i != 0 && !handler.Has_Dependency(old_dependency) {
+			t.Fatalf("Handler did not keep the new dependency: %s!\n", old_dependency.To_String())
+		}
+
+		clock.Event()
+	}
 }
 
 func Test_P2P_Message_String(t *testing.T) {

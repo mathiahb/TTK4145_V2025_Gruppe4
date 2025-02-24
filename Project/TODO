@@ -16,20 +16,20 @@ HEARTBEAT
 NETWORKING
 ---------------------
 
-> [ ] Rigorously test UDP
+> [x] Rigorously test UDP
 > [ ] Clean up UDP Protocol for readability and code quality
 
-> [ ] Rigorously test TCP
+> [x] Rigorously test TCP
 > [ ] Clean up TCP Protocol for readability and code quality
 
 > [ ] Create TCP Heartbeat that closes unresponsive connections
 
-> [ ] Create Peer Detection
-> [ ] Test Peer Detection
+> [x] Create Peer Detection
+> [x] Test Peer Detection
 > [ ] Clean up Peer Detection for readability and code quality
 
-> [ ] Create Causality Broadcasting
-> [ ] Test Causality Broadcasting
+> [x] Create Causality Broadcasting
+> [x] Test Causality Broadcasting
 > [ ] Clean up Causality Broadcasting for readability and code quality
 
 > [ ] Create 3-Phase Commit

@@ -33,7 +33,7 @@ type Dependency_Handler struct {
 }
 
 func New_Dependency_Handler() Dependency_Handler {
-	min_heap := make(Dependency_Heap, Constants.P2P_DEP_TIME_HORIZON)
+	min_heap := make(Dependency_Heap, 0)
 
 	heap.Init(&min_heap)
 
