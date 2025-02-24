@@ -11,12 +11,12 @@ const (
 )
 
 // Definerer mulige retninger for heisen - type safety
-type Dirn int
+type Dirn string
 
 const (
-	D_Stop Dirn = iota // Teller fra 0
-	D_Up
-	D_Down
+	D_Stop Dirn = "up"
+	D_Up        = "down"
+	D_Down      = "stop"
 )
 
 // Definerer knappetyper (for eksempel hall up, hall down, cab).
@@ -27,41 +27,41 @@ const (
 )
 
 // Konverterer en Dirn-verdi til tekst for utskrift.
-func elevioDirnToString(d Dirn) string {
-	switch d {
-	case D_Stop:
-		return "Stop"
-	case D_Up:
-		return "Up"
-	case D_Down:
-		return "Down"
-	default:
-		return "Undefined"
-	}
-}
+// func elevioDirnToString(d Dirn) string {
+// 	switch d {
+// 	case D_Stop:
+// 		return "Stop"
+// 	case D_Up:
+// 		return "Up"
+// 	case D_Down:
+// 		return "Down"
+// 	default:
+// 		return "Undefined"
+// 	}
+// }
 
 // ElevatorBehaviour beskriver heisens hovedtilstander.
-type ElevatorBehaviour int
+type ElevatorBehaviour string
 
 const (
-	EB_Idle ElevatorBehaviour = iota
-	EB_DoorOpen
-	EB_Moving
+	EB_Idle     ElevatorBehaviour = "EB_Idle"
+	EB_DoorOpen                   = "EB_DoorOpen"
+	EB_Moving                     = "EB_Moving"
 )
 
 // Konverterer ElevatorBehaviour til en tekstlig representasjon.
-func elevatorBehaviourToString(eb ElevatorBehaviour) string {
-	switch eb {
-	case EB_Idle:
-		return "EB_Idle"
-	case EB_DoorOpen:
-		return "EB_DoorOpen"
-	case EB_Moving:
-		return "EB_Moving"
-	default:
-		return "EB_UNDEFINED"
-	}
-}
+// func elevatorBehaviourToString(eb ElevatorBehaviour) string {
+// 	switch eb {
+// 	case EB_Idle:
+// 		return "EB_Idle"
+// 	case EB_DoorOpen:
+// 		return "EB_DoorOpen"
+// 	case EB_Moving:
+// 		return "EB_Moving"
+// 	default:
+// 		return "EB_UNDEFINED"
+// 	}
+// }
 
 // ClearRequestVariant definerer hvordan bestillinger (requests) "ryddes opp" når døren åpner.
 type ClearRequestVariant int
@@ -73,10 +73,10 @@ const (
 
 // Elevator beskriver hele heisens tilstand.
 type Elevator struct {
-	Floor     int
-	Dirn      Dirn
-	Requests  [N_FLOORS][N_BUTTONS]int
-	Behaviour ElevatorBehaviour
+	Behaviour   ElevatorBehaviour `json:"behaviour"`
+	Floor       int               `json:"floor"`
+	Dirn        Dirn              `json:"direction"`
+	CabRequests []bool            `json:"cabRequests"`
 
 	Config struct {
 		ClearRequestVariant ClearRequestVariant
@@ -84,12 +84,18 @@ type Elevator struct {
 	}
 }
 
+// Hall Request Assigner Input
+type HRAInput struct {
+	HallRequests [][2]bool           `json:"hallRequests"`
+	States       map[string]Elevator `json:"states"`
+}
+
 // ElevatorPrint skriver ut heisens tilstand til konsollen.
 func ElevatorPrint(es Elevator) {
 	fmt.Println("  +--------------------+")
-	fmt.Printf("  |floor = %-2d          |\n", es.Floor)              // %-2d = to siffer, venstrejustert.
-	fmt.Printf("  |dirn  = %-12.12s|\n", elevioDirnToString(es.Dirn)) // %-12.12s = minst 12 tegn i bredde, maks 12 tegn, venstrejustert.
-	fmt.Printf("  |behav = %-12.12s|\n", elevatorBehaviourToString(es.Behaviour))
+	fmt.Printf("  |floor = %-2d          |\n", es.Floor) // %-2d = to siffer, venstrejustert.
+	fmt.Printf("  |dirn  = %-12.12s|\n", es.Dirn)        // %-12.12s = minst 12 tegn i bredde, maks 12 tegn, venstrejustert.
+	fmt.Printf("  |behav = %-12.12s|\n", es.Behaviour)
 	fmt.Println("  +--------------------+")
 	fmt.Println("  |  | up  | dn  | cab |")
 
@@ -102,7 +108,7 @@ func ElevatorPrint(es Elevator) {
 				(f == 0 && btn == B_HallDown) {
 				fmt.Print("|     ")
 			} else {
-				if es.Requests[f][btn] != 0 {
+				if es.CabRequests[f] == true {
 					fmt.Print("|  #  ")
 				} else {
 					fmt.Print("|  -  ")
@@ -118,8 +124,8 @@ func ElevatorPrint(es Elevator) {
 func ElevatorUninitialized() Elevator {
 	var e Elevator
 	e.Floor = -1
-	e.Dirn = D_Stop
-	e.Behaviour = EB_Idle
+	e.Dirn = "stop"
+	e.Behaviour = "EB_Idle"
 	e.Config.ClearRequestVariant = CV_All
 	e.Config.DoorOpenDurationS = 3.0
 	return e

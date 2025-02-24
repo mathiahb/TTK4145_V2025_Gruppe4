@@ -3,11 +3,14 @@ package elevator
 import (
 	"fmt"
 
-	"Driver-Elevio"
+	elevio "Driver-Elevio"
 )
 
 // FSM (Finite State Machine) styrer heisens tilstand og oppførsel basert på knappetrykk, etasjeanløp og dørlukkingshendelser.
 // Den håndterer tilstander som Idle, DoorOpen og Moving, og bestemmer heisens retning og handlinger.
+
+// Må opprette en assigner, fjerne funksjoner som bestemmer logikk for valg av etasje - erstattes av kostfunksjonen, beholde logikk som gir retning.
+// En kanal for assigning og en for meldinger. Enveis kommunikasjon.
 
 // Global heistilstand og output-enhet fra elevio
 var elevator Elevator
@@ -28,9 +31,9 @@ func init() {
 
 func convertDirnToMotor(d Dirn) elevio.MotorDirection {
 	switch d {
-	case D_Up:
+	case "up":
 		return elevio.MD_Up
-	case D_Down:
+	case "down":
 		return elevio.MD_Down
 	default:
 		return elevio.MD_Stop
@@ -49,7 +52,7 @@ func setAllLights(e Elevator) {
 // **FSMOnInitBetweenFloors**: Kalles hvis heisen starter mellom etasjer
 func FSMOnInitBetweenFloors() {
 	outputDevice.MotorDirection(elevio.MD_Down)
-	elevator.Dirn = D_Down
+	elevator.Dirn = "down"
 	elevator.Behaviour = EB_Moving
 }
 

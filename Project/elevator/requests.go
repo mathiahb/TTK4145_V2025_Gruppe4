@@ -1,8 +1,6 @@
 package elevator
 
-import (
-	"Driver-Elevio"
-)
+import elevio "Driver-Elevio"
 
 // DirnBehaviourPair strukturen holder retningen og oppførselen for heisen
 type DirnBehaviourPair struct {
@@ -47,7 +45,7 @@ func requestsHere(e Elevator) bool {
 // requestsChooseDirection velger hvilken retning heisen skal gå i
 func requestsChooseDirection(e Elevator) DirnBehaviourPair {
 	switch e.Dirn {
-	case D_Up:
+	case "up":
 		// NYTT TESTING
 		if e.Floor == N_FLOORS-1 { // Hvis heisen er på toppen, skal den ikke gå opp
 			if requestsHere(e) {
@@ -67,7 +65,7 @@ func requestsChooseDirection(e Elevator) DirnBehaviourPair {
 		}
 		return DirnBehaviourPair{D_Stop, EB_Idle}
 
-	case D_Down:
+	case "down":
 		if requestsBelow(e) {
 			return DirnBehaviourPair{D_Down, EB_Moving}
 		} else if requestsHere(e) {
@@ -77,7 +75,7 @@ func requestsChooseDirection(e Elevator) DirnBehaviourPair {
 		}
 		return DirnBehaviourPair{D_Stop, EB_Idle}
 
-	case D_Stop:
+	case "stop":
 		if requestsHere(e) {
 			return DirnBehaviourPair{D_Stop, EB_DoorOpen}
 		} else if requestsAbove(e) {
@@ -95,17 +93,17 @@ func requestsChooseDirection(e Elevator) DirnBehaviourPair {
 // requestsShouldStop sjekker om heisen skal stoppe på nåværende etasje
 func requestsShouldStop(e Elevator) bool {
 	switch e.Dirn {
-	case D_Down:
+	case "down":
 		return e.Requests[e.Floor][B_HallDown] != 0 ||
 			e.Requests[e.Floor][B_Cab] != 0 ||
 			!requestsBelow(e)
 
-	case D_Up:
+	case "up":
 		return e.Requests[e.Floor][B_HallUp] != 0 ||
 			e.Requests[e.Floor][B_Cab] != 0 ||
 			!requestsAbove(e)
 
-	case D_Stop:
+	case "stop":
 		return true
 	default:
 		return false
@@ -119,9 +117,9 @@ func requestsShouldClearImmediately(e Elevator, btnFloor int, btnType elevio.But
 		return e.Floor == btnFloor
 
 	case CV_InDirn:
-		return e.Floor == btnFloor && ((e.Dirn == D_Up && btnType == B_HallUp) ||
-			(e.Dirn == D_Down && btnType == B_HallDown) ||
-			e.Dirn == D_Stop || btnType == B_Cab)
+		return e.Floor == btnFloor && ((e.Dirn == "up" && btnType == B_HallUp) ||
+			(e.Dirn == "down" && btnType == B_HallDown) ||
+			e.Dirn == "stop" || btnType == B_Cab)
 
 	default:
 		return false
@@ -139,19 +137,19 @@ func requestsClearAtCurrentFloor(e Elevator) Elevator {
 	case CV_InDirn:
 		e.Requests[e.Floor][B_Cab] = 0
 		switch e.Dirn {
-		case D_Up:
+		case "up":
 			if !requestsAbove(e) && e.Requests[e.Floor][B_HallUp] == 0 {
 				e.Requests[e.Floor][B_HallDown] = 0
 			}
 			e.Requests[e.Floor][B_HallUp] = 0
 
-		case D_Down:
+		case "down":
 			if !requestsBelow(e) && e.Requests[e.Floor][B_HallDown] == 0 {
 				e.Requests[e.Floor][B_HallUp] = 0
 			}
 			e.Requests[e.Floor][B_HallDown] = 0
 
-		case D_Stop:
+		case "stop":
 		default:
 			e.Requests[e.Floor][B_HallUp] = 0
 			e.Requests[e.Floor][B_HallDown] = 0
