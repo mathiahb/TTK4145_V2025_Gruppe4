@@ -137,6 +137,54 @@ func Test_P2P_Message_String(t *testing.T) {
 	}
 }
 
+func Test_Message_Horizon(t *testing.T) {
+	resolver := New_Dependency_Resolver()
+	clock := New_Lamport_Clock()
+
+	// 1 more than horizon
+	for i := 0; i < Constants.P2P_MSG_TIME_HORIZON+1; i++ {
+		clock.Event()
+
+		p2p_message := New_P2P_Message("SENDER", MESSAGE, clock, "BODY")
+		resolver.Emplace_New_Message(p2p_message)
+
+		dependency := New_Dependency("SENDER", clock)
+
+		resolved_p2p_message, ok := resolver.Get_Message(dependency)
+
+		if !ok {
+			t.Fatalf("Failed to get an ok on sending %s:\n", p2p_message.To_String())
+		}
+
+		if p2p_message.To_String() != resolved_p2p_message.To_String() {
+			t.Fatalf("Returned string was ok, but not correct! %s != %s\n",
+				p2p_message.To_String(), resolved_p2p_message.To_String())
+		}
+	}
+
+	first_dependency := New_Dependency("SENDER", New_Lamport_Clock_From_String("1"))
+	second_dependency := New_Dependency("SENDER", New_Lamport_Clock_From_String("2"))
+
+	message, ok := resolver.Get_Message(first_dependency)
+
+	if ok {
+		t.Fatalf("Received a message that was supposed to be out of horizon!\n Resolver returned: %s\n",
+			message.To_String())
+	}
+
+	message, ok = resolver.Get_Message(second_dependency)
+
+	if !ok {
+		t.Fatal("Did not find the second message that was supposed to be in horizon!")
+	}
+
+	p2p_message := New_P2P_Message("SENDER", MESSAGE, New_Lamport_Clock_From_String("2"), "BODY")
+	if message.To_String() != p2p_message.To_String() {
+		t.Fatalf("Returned second dependency was ok, but not correct! %s != %s\n",
+			message.To_String(), p2p_message.To_String())
+	}
+}
+
 func Test_Network(t *testing.T) {
 	defer time.Sleep(time.Second) // Let the servers shut down before doing anything else...
 

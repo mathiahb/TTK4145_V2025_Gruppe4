@@ -21,9 +21,9 @@ type P2P_Network struct {
 
 	tcp_server_address string
 
-	message_controller *Message_Controller
-	dependency_handler Dependency_Handler
-	clock              Lamport_Clock
+	dependency_resolver *Dependency_Resolver
+	dependency_handler  Dependency_Handler
+	clock               Lamport_Clock
 }
 
 func New_P2P_Network(server_port string) *P2P_Network {
@@ -42,9 +42,9 @@ func New_P2P_Network(server_port string) *P2P_Network {
 
 		tcp_server_address: server_address,
 
-		message_controller: New_Message_Controller(),
-		dependency_handler: New_Dependency_Handler(),
-		clock:              New_Lamport_Clock(),
+		dependency_resolver: New_Dependency_Resolver(),
+		dependency_handler:  New_Dependency_Handler(),
+		clock:               New_Lamport_Clock(),
 	}
 
 	tcp_manager.Open_Server(server_port)
@@ -62,7 +62,7 @@ func (network *P2P_Network) Close() {
 }
 
 func (network *P2P_Network) Broadcast(message P2P_Message) {
-	network.message_controller.Emplace_New_Message(message)
+	network.dependency_resolver.Emplace_New_Message(message)
 	network.TCP.Broadcast(message.To_String())
 }
 

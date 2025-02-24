@@ -11,8 +11,6 @@ type P2P_Message_Type string
 const (
 	MESSAGE                    P2P_Message_Type = "MSGSND"
 	REQUEST_MISSING_DEPENDENCY P2P_Message_Type = "REQDEP"
-	HEARTBEAT                  P2P_Message_Type = "HEARTB"
-	REQUEST_LAMPORT_CLOCK      P2P_Message_Type = "REQCLK"
 )
 
 type P2P_Message struct {

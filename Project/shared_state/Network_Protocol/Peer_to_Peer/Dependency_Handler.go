@@ -7,17 +7,17 @@ import (
 )
 
 // Example from Golang container documentation for IntHeap
-type Dependency_Heap []Dependency
+type dependency_heap []Dependency
 
-func (h Dependency_Heap) Len() int               { return len(h) }
-func (h Dependency_Heap) Less(i int, j int) bool { return h[i].Is_Less_Than(h[j]) }
-func (h Dependency_Heap) Swap(i int, j int)      { h[i], h[j] = h[j], h[i] }
+func (h dependency_heap) Len() int               { return len(h) }
+func (h dependency_heap) Less(i int, j int) bool { return h[i].Is_Less_Than(h[j]) }
+func (h dependency_heap) Swap(i int, j int)      { h[i], h[j] = h[j], h[i] }
 
-func (h *Dependency_Heap) Push(dependency any) {
+func (h *dependency_heap) Push(dependency any) {
 	*h = append(*h, dependency.(Dependency))
 }
 
-func (h *Dependency_Heap) Pop() any {
+func (h *dependency_heap) Pop() any {
 	old := *h
 	n := len(old)
 	x := old[n-1]
@@ -28,12 +28,12 @@ func (h *Dependency_Heap) Pop() any {
 type Dependency_Handler struct {
 	mu sync.Mutex
 
-	min_heap   *Dependency_Heap
+	min_heap   *dependency_heap
 	lookup_map map[Dependency]struct{}
 }
 
 func New_Dependency_Handler() Dependency_Handler {
-	min_heap := make(Dependency_Heap, 0)
+	min_heap := make(dependency_heap, 0)
 
 	heap.Init(&min_heap)
 
