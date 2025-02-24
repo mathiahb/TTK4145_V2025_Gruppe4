@@ -3,6 +3,7 @@ package peer_to_peer
 import (
 	"Constants"
 	"container/heap"
+	"sync"
 )
 
 // Example from Golang container documentation for IntHeap
@@ -25,6 +26,8 @@ func (h *Dependency_Heap) Pop() any {
 }
 
 type Dependency_Handler struct {
+	mu sync.Mutex
+
 	min_heap   *Dependency_Heap
 	lookup_map map[Dependency]struct{}
 }
@@ -45,6 +48,8 @@ func (handler *Dependency_Handler) Add_Dependency(dependency Dependency) {
 		// No dependency.
 		return
 	}
+	handler.mu.Lock()
+	defer handler.mu.Unlock()
 
 	if handler.min_heap.Len() == Constants.P2P_DEP_TIME_HORIZON {
 		old_dependency := heap.Pop(handler.min_heap).(Dependency)
@@ -56,6 +61,9 @@ func (handler *Dependency_Handler) Add_Dependency(dependency Dependency) {
 }
 
 func (handler *Dependency_Handler) Has_Dependency(dependency Dependency) bool {
+	handler.mu.Lock()
+	defer handler.mu.Unlock()
+
 	if dependency.Dependency_Owner == "" {
 		return true
 	}

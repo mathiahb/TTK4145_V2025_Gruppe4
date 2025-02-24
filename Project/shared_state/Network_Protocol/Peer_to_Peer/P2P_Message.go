@@ -30,6 +30,21 @@ type P2P_Message struct {
 // LAMPORT_CLOCK\r\n
 // DEPENDENCY\r\n
 // BODY/REQUEST\r\n
+func New_P2P_Message(Sender string, Type P2P_Message_Type, Time Lamport_Clock, Message string) P2P_Message {
+	return P2P_Message{
+		Sender:  Sender,
+		Type:    Type,
+		Time:    Time,
+		Message: Message,
+
+		dependency: Dependency{},
+	}
+}
+
+func (message *P2P_Message) Depend_On(dependency_message P2P_Message) {
+	message.dependency = New_Dependency(dependency_message.Sender, dependency_message.Time)
+}
+
 func (message P2P_Message) To_String() string {
 	var result string = ""
 

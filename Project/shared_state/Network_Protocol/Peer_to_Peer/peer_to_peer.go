@@ -70,17 +70,10 @@ func (network *P2P_Network) Send(message P2P_Message, recipient string) {
 	network.TCP.Send(message.To_String(), recipient)
 }
 
-func (network *P2P_Network) Create_Message(message string, message_type P2P_Message_Type, dependency Dependency) P2P_Message {
+func (network *P2P_Network) Create_Message(message string, message_type P2P_Message_Type) P2P_Message {
 	network.clock.Event()
 
-	return P2P_Message{
-		Sender:  network.tcp_server_address,
-		Type:    message_type,
-		Time:    network.clock,
-		Message: message,
-
-		dependency: dependency,
-	}
+	return New_P2P_Message(network.tcp_server_address, message_type, network.clock, message)
 }
 
 func (network *P2P_Network) reader() {
@@ -130,7 +123,7 @@ func (network *P2P_Network) publisher(message P2P_Message) {
 }
 
 func (network *P2P_Network) request_dependency(dependency Dependency) {
-	message := network.Create_Message(dependency.To_String(), REQUEST_MISSING_DEPENDENCY, Dependency{})
+	message := network.Create_Message(dependency.To_String(), REQUEST_MISSING_DEPENDENCY)
 	network.Send(message, dependency.Dependency_Owner)
 }
 
