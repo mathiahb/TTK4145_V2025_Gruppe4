@@ -40,6 +40,11 @@ func (manager *TCP_Connection_Manager) Remove_Connection(connection TCP_Connecti
 	fmt.Printf("Connection %s removed!\n", connection.connection_name)
 }
 
+func (manager *TCP_Connection_Manager) Does_Connection_Exist(connection_name string) bool {
+	_, ok := manager.Connections[connection_name]
+	return ok
+}
+
 func (manager *TCP_Connection_Manager) Close_All() {
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
