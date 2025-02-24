@@ -50,7 +50,7 @@ func Test_P2P_Message_String(t *testing.T) {
 
 	test_tcp_message :=
 		sender_field + Constants.P2P_FIELD_DELIMINATOR +
-			type_field + Constants.P2P_FIELD_DELIMINATOR +
+			string(type_field) + Constants.P2P_FIELD_DELIMINATOR +
 			time_field.String() + Constants.P2P_FIELD_DELIMINATOR +
 			dependency_field.To_String() + Constants.P2P_FIELD_DELIMINATOR +
 			body_field
@@ -63,7 +63,7 @@ func Test_P2P_Message_String(t *testing.T) {
 		t.Fatalf("Sender field mismatch!\n%s != %s\n", p2p_message.Sender, sender_field)
 	}
 
-	if string(p2p_message.Type) != type_field {
+	if string(p2p_message.Type) != string(type_field) {
 		t.Fatalf("Type field mismatch!\n%s != %s\n", p2p_message.Type, type_field)
 	}
 
@@ -87,25 +87,16 @@ func Test_P2P_Message_String(t *testing.T) {
 }
 
 func Test_Network(t *testing.T) {
+	defer time.Sleep(time.Second) // Let the servers shut down before doing anything else...
+
 	network_1 := New_P2P_Network("20005")
 	network_2 := New_P2P_Network("20006")
+	defer network_1.Close()
+	defer network_2.Close()
 
 	time.Sleep(time.Second)
 
-	sender_field := "SENDER"
-	type_field := MESSAGE
-	time_field := New_Lamport_Clock_From_String("6")
-	dependency_field := New_Dependency("OTHER", New_Lamport_Clock_From_String("3"))
-	body_field := "Hello from body!"
-
-	test_tcp_message :=
-		sender_field + Constants.P2P_FIELD_DELIMINATOR +
-			type_field + Constants.P2P_FIELD_DELIMINATOR +
-			time_field.String() + Constants.P2P_FIELD_DELIMINATOR +
-			dependency_field.To_String() + Constants.P2P_FIELD_DELIMINATOR +
-			body_field
-
-	p2p_message := P2P_Message_From_String(test_tcp_message)
+	p2p_message := network_1.Create_Message("Hello!", MESSAGE, Dependency{})
 
 	network_1.Broadcast(p2p_message)
 
@@ -116,6 +107,101 @@ func Test_Network(t *testing.T) {
 		if p2p_message.To_String() != received_message.To_String() {
 			t.Fatalf("Error Peer2Peer! Message received did not match sent!\n%s != %s\n",
 				p2p_message.To_String(), received_message.To_String())
+		}
+	default:
+		t.Fatal("Error Peer2Peer! Message was never received!")
+	}
+}
+
+func Test_Dependency_Resend(t *testing.T) {
+	defer time.Sleep(time.Second)
+
+	network_1 := New_P2P_Network("20007")
+	network_2 := New_P2P_Network("20008")
+	defer network_1.Close()
+	defer network_2.Close()
+
+	time.Sleep(time.Second)
+
+	p2p_message := network_1.Create_Message("Hello!", MESSAGE, Dependency{})
+
+	network_1.Broadcast(p2p_message)
+
+	time.Sleep(time.Second)
+
+	network_3 := New_P2P_Network("20009")
+	defer network_3.Close()
+
+	time.Sleep(time.Second)
+
+	select {
+	case received_message := <-network_2.Read_Channel:
+		if p2p_message.To_String() != received_message.To_String() {
+			t.Fatalf("Error Peer2Peer! Message received did not match sent!\n%s != %s\n",
+				p2p_message.To_String(), received_message.To_String())
+		}
+
+		p2p_depended_message := network_2.Create_Message(
+			"Hello 2!", MESSAGE, New_Dependency(received_message.Sender, received_message.Time))
+
+		network_2.Broadcast(p2p_depended_message)
+
+		time.Sleep(time.Second)
+
+		select {
+		case received_message_network_3 := <-network_3.Read_Channel:
+			if p2p_message.To_String() != received_message_network_3.To_String() {
+				t.Fatalf("Error Peer2Peer! Depended message received did not match sent!\n%s != %s\n",
+					p2p_message.To_String(), received_message.To_String())
+			}
+
+			select {
+			case received_depended_message := <-network_3.Read_Channel:
+				if p2p_depended_message.To_String() != received_depended_message.To_String() {
+					t.Fatalf("Error Peer2Peer! Depended message received did not match sent!\n%s != %s\n",
+						p2p_message.To_String(), received_message.To_String())
+				}
+			default:
+				t.Fatal("Error Peer2Peer Network 3! Hello 2 Message was never received!")
+			}
+
+		default:
+			t.Fatal("Error Peer2Peer Network 3! Hello Message was never received!")
+		}
+
+	default:
+		t.Fatal("Error Peer2Peer Network 2! Message was never received!")
+	}
+}
+
+func Test_Double_Send(t *testing.T) {
+	defer time.Sleep(time.Second) // Let the servers shut down before doing anything else...
+
+	network_1 := New_P2P_Network("20005")
+	network_2 := New_P2P_Network("20006")
+	defer network_1.Close()
+	defer network_2.Close()
+
+	time.Sleep(time.Second)
+
+	p2p_message := network_1.Create_Message("Hello!", MESSAGE, Dependency{})
+
+	network_1.Broadcast(p2p_message)
+	network_1.Broadcast(p2p_message)
+
+	time.Sleep(time.Second)
+
+	select {
+	case received_message := <-network_2.Read_Channel:
+		if p2p_message.To_String() != received_message.To_String() {
+			t.Fatalf("Error Peer2Peer! Message received did not match sent!\n%s != %s\n",
+				p2p_message.To_String(), received_message.To_String())
+		}
+
+		select {
+		case spurious_message := <-network_2.Read_Channel:
+			t.Fatalf("Error Peer2Peer, a message got sent twice! %s", spurious_message.To_String())
+		default:
 		}
 	default:
 		t.Fatal("Error Peer2Peer! Message was never received!")

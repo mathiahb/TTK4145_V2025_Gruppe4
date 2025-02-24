@@ -19,6 +19,19 @@ func (connection_manager *TCP_Connection_Manager) setup_TCP_Connection(connectio
 	go connection_object.handle_TCP_Connection(connection_manager)
 }
 
+func (connection_manager *TCP_Connection_Manager) tcp_listener(listener *net.Listener) {
+	// Accept all incoming connections
+	for {
+		connection, err := (*listener).Accept()
+		if err != nil {
+			fmt.Println("Error in accepting connection: ", err)
+			return
+		}
+
+		connection_manager.setup_TCP_Connection(connection)
+	}
+}
+
 func (connection_manager *TCP_Connection_Manager) create_TCP_Server(port string) {
 	// Ensure correct format for net library ":port".
 	address_to_listen := port
@@ -33,16 +46,9 @@ func (connection_manager *TCP_Connection_Manager) create_TCP_Server(port string)
 	}
 	defer listener.Close()
 
-	// Accept all incoming connections
-	for {
-		connection, err := listener.Accept()
-		if err != nil {
-			fmt.Println("Error in accepting connection: ", err)
-			return
-		}
+	go connection_manager.tcp_listener(&listener)
 
-		connection_manager.setup_TCP_Connection(connection)
-	}
+	<-connection_manager.stop_server_channel
 }
 
 func (connection_manager *TCP_Connection_Manager) create_TCP_Client(address string) {
