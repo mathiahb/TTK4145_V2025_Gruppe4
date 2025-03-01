@@ -1,9 +1,8 @@
 package elevator
 
 import (
-	"fmt"
-
 	elevio "Driver-Elevio"
+	"fmt"
 )
 
 // FSM (Finite State Machine) styrer heisens tilstand og oppførsel basert på knappetrykk, etasjeanløp og dørlukkingshendelser.
@@ -12,21 +11,19 @@ import (
 // Må opprette en assigner, fjerne funksjoner som bestemmer logikk for valg av etasje - erstattes av kostfunksjonen, beholde logikk som gir retning.
 // En kanal for assigning og en for meldinger. Enveis kommunikasjon.
 
-// Global heistilstand og output-enhet fra elevio
-var elevator Elevator
+var ElevatorID string
 var outputDevice elevio.ElevOutputDevice
 
-// **init**: Initialiserer heisens tilstandsmaskin
-func init() {
-	elevator = ElevatorUninitialized()
-
-	// Henter konfigurasjon fra fil
-	config := LoadConfig("elevator.con")
-	elevator.Config.ClearRequestVariant = config.ClearRequestVariant
-	elevator.Config.DoorOpenDurationS = config.DoorOpenDurationS
-
-	// Henter hardware output-funksjoner fra elevio
+func InitFSM() {
+	InitSharedState()
+	ElevatorID = getElevatorID()
 	outputDevice = elevio.GetOutputDevice()
+
+	// Initialize elevator in the global state
+	localElevator = ElevatorUninitialized()
+	UpdateSharedState()
+
+	fmt.Println("FSM initialized for elevator:", ElevatorID)
 }
 
 func convertDirnToMotor(d Dirn) elevio.MotorDirection {
@@ -41,115 +38,154 @@ func convertDirnToMotor(d Dirn) elevio.MotorDirection {
 }
 
 // **setAllLights**: Oppdaterer alle heisknapper med riktig lysstatus
-func setAllLights(e Elevator) {
+func setAllLights() {
+	sharedState := GetSharedState()
+	hallRequests := sharedState.HallRequests
+	elevator := GetLocalElevator()
+
 	for floor := 0; floor < N_FLOORS; floor++ {
-		for btn := 0; btn < N_BUTTONS; btn++ {
-			outputDevice.RequestButtonLight(floor, elevio.ButtonType(btn), e.Requests[floor][btn] != 0)
+		// Cab requests
+		outputDevice.RequestButtonLight(floor, elevio.BT_Cab, elevator.CabRequests[floor])
+
+		// Hall requests fra SharedState
+		outputDevice.RequestButtonLight(floor, elevio.BT_HallUp, hallRequests[floor][B_HallUp])
+		outputDevice.RequestButtonLight(floor, elevio.BT_HallDown, hallRequests[floor][B_HallDown])
+	}
+}
+
+// **FSMStartMoving**: Kalles for å sjekke om heisen skal starte bevegelse
+func FSMStartMoving() {
+	elevator := GetLocalElevator()
+	sharedState := GetSharedState()
+
+	// Hvis heisen er idle og har forespørsler, velg retning og start motor
+	if elevator.Behaviour == EB_Idle && hasPendingRequests(elevator, sharedState.HallRequests) {
+		elevator.Dirn = requestsChooseDirection(elevator)
+
+		if elevator.Dirn != D_Stop {
+			elevator.Behaviour = EB_Moving
+			outputDevice.MotorDirection(convertDirnToMotor(elevator.Dirn))
 		}
+
+		UpdateLocalElevator(elevator)
+		UpdateSharedState()
 	}
 }
 
 // **FSMOnInitBetweenFloors**: Kalles hvis heisen starter mellom etasjer
 func FSMOnInitBetweenFloors() {
+	elevator := GetLocalElevator()
+
 	outputDevice.MotorDirection(elevio.MD_Down)
-	elevator.Dirn = "down"
+	elevator.Dirn = D_Down
 	elevator.Behaviour = EB_Moving
+
+	UpdateLocalElevator(elevator) // Oppdater lokalt
+	UpdateSharedState()           // Synkroniser med SharedState
 }
 
-// **FSMOnRequestButtonPress**: Kalles når en knapp i heisen trykkes
+// **FSMOnRequestButtonPress**: Kalles når en knapp trykkes
 func FSMOnRequestButtonPress(btnFloor int, btnType elevio.ButtonType) {
-	fmt.Printf("\n\nFSMOnRequestButtonPress(%d, %d)\n", btnFloor, btnType)
-	ElevatorPrint(elevator)
+	fmt.Printf("FSMOnRequestButtonPress(%d, %d)\n", btnFloor, btnType)
 
-	switch elevator.Behaviour { // Hva gjør heisen nå?
-	case EB_DoorOpen:
-		if requestsShouldClearImmediately(elevator, btnFloor, btnType) {
-			TimerStart(elevator.Config.DoorOpenDurationS)
-		} else {
-			elevator.Requests[btnFloor][btnType] = 1
-		}
+	elevator := GetLocalElevator()
+	sharedState := GetSharedState()
 
-	case EB_Moving:
-		elevator.Requests[btnFloor][btnType] = 1
-
-	case EB_Idle:
-		elevator.Requests[btnFloor][btnType] = 1
-		pair := requestsChooseDirection(elevator)
-
-		fmt.Printf("requestsChooseDirection returned Dirn=%v, Behaviour=%v\n", pair.Dirn, pair.Behaviour)
-
-		elevator.Dirn = pair.Dirn
-		elevator.Behaviour = pair.Behaviour
-
-		switch pair.Behaviour {
-		case EB_DoorOpen:
-			outputDevice.DoorLight(true)
-			TimerStart(elevator.Config.DoorOpenDurationS)
-			elevator = requestsClearAtCurrentFloor(elevator)
-
-		case EB_Moving:
-			fmt.Printf("FSMOnRequestButtonPress: Setting motor direction to %v\n", elevio.MotorDirection(convertDirnToMotor(elevator.Dirn)))
-			//outputDevice.MotorDirection(elevio.MotorDirection(elevator.Dirn))
-			outputDevice.MotorDirection(elevio.MotorDirection(convertDirnToMotor(elevator.Dirn)))
-
-		case EB_Idle:
-			// Ikke gjør noe
-		}
+	// 1. Oppdater lokal tilstand eller SharedState basert på type request
+	if btnType == elevio.BT_Cab {
+		elevator.CabRequests[btnFloor] = true
+		UpdateLocalElevator(elevator) // Kun lokal oppdatering
+		UpdateSharedState()           // Synkroniser med SharedState
+	} else {
+		sharedState.HallRequests[btnFloor][btnType] = true
+		GlobalState.mu.Lock()
+		GlobalState.HRA = sharedState
+		GlobalState.mu.Unlock()
 	}
 
-	setAllLights(elevator)
+	// 2. Be om ny oppdragsfordeling
+	AssignRequestChannel <- struct{}{}
+	assignments := <-AssignResultChannel
 
-	fmt.Println("\nNew state:")
-	ElevatorPrint(elevator)
+	// 3. Oppdater SharedState med nye oppdrag
+	if assignedRequests, exists := assignments[ElevatorID]; exists {
+		GlobalState.mu.Lock()
+		GlobalState.HRA.HallRequests = assignedRequests
+		GlobalState.mu.Unlock()
+		fmt.Printf("Updated assignments for %s: %+v\n", ElevatorID, assignedRequests)
+	}
+
+	// 4. Start bevegelse hvis nødvendig
+	FSMStartMoving()
+
+	setAllLights()
 }
 
 // **FSMOnFloorArrival**: Kalles når heisen ankommer en ny etasje
 func FSMOnFloorArrival(newFloor int) {
-	fmt.Printf("\n\nFSMOnFloorArrival(%d)\n", newFloor)
-	ElevatorPrint(elevator)
+	fmt.Printf("\nFSMOnFloorArrival(%d)\n", newFloor)
 
+	elevator := GetLocalElevator()
+	sharedState := GetSharedState()
+
+	// 1. Oppdater etasjeindikator og lagre ny etasje i lokal state
 	elevator.Floor = newFloor
 	outputDevice.FloorIndicator(newFloor)
+	UpdateLocalElevator(elevator)
 
+	// 2. Sjekk om heisen skal stoppe
 	if elevator.Behaviour == EB_Moving {
-		if requestsShouldStop(elevator) {
+		if requestsShouldStop(elevator, sharedState.HallRequests) {
 			outputDevice.MotorDirection(elevio.MD_Stop)
 			outputDevice.DoorLight(true)
-			elevator = requestsClearAtCurrentFloor(elevator)
-			TimerStart(elevator.Config.DoorOpenDurationS)
-			setAllLights(elevator)
 			elevator.Behaviour = EB_DoorOpen
+			UpdateLocalElevator(elevator)
+
+			// Start dør-timer
+			TimerStart(DoorOpenDurationS)
+
+			// 3. Klarer requests på nåværende etasje
+			elevator = requestsClearAtCurrentFloor(elevator)
+			UpdateLocalElevator(elevator)
+			UpdateSharedState() // Synkroniser
+			setAllLights()
 		}
 	}
-
-	fmt.Println("\nNew state:")
-	ElevatorPrint(elevator)
+	UpdateSharedState()
 }
 
 // **FSMOnDoorTimeout**: Kalles når dør-timeren utløper
 func FSMOnDoorTimeout() {
-	fmt.Println("\n\nFSMOnDoorTimeout()")
-	ElevatorPrint(elevator)
+	fmt.Println("\nFSMOnDoorTimeout()")
 
-	if elevator.Behaviour == EB_DoorOpen { // Hvis døra var åpen så bestemmer vi hva som skal skje videre.
-		pair := requestsChooseDirection(elevator) // returnerer DirnBehaviourPair med ny retning og oppførsel
-		elevator.Dirn = pair.Dirn
-		elevator.Behaviour = pair.Behaviour
+	elevator := GetLocalElevator()
+	sharedState := GetSharedState()
 
-		switch elevator.Behaviour { // Hva skal heisen gjøre nå - med oppdatert retning og oppførsel?
-		case EB_DoorOpen:
-			TimerStart(elevator.Config.DoorOpenDurationS)
-			elevator = requestsClearAtCurrentFloor(elevator)
-			setAllLights(elevator)
+	// Hvis døren er åpen, bestem neste handling
+	if elevator.Behaviour == EB_DoorOpen {
+		elevator.Behaviour = EB_Idle
 
-		case EB_Moving, EB_Idle:
-			outputDevice.DoorLight(false)
-			//outputDevice.MotorDirection(elevio.MotorDirection(elevator.Dirn))
-			outputDevice.MotorDirection(elevio.MotorDirection(convertDirnToMotor(elevator.Dirn)))
+		// Be om ny oppdragsfordeling
+		AssignRequestChannel <- struct{}{}
+		assignments := <-AssignResultChannel
 
+		// Oppdater hall requests basert på nye oppdrag
+		if assignedRequests, exists := assignments[ElevatorID]; exists {
+			GlobalState.mu.Lock()
+			GlobalState.HRA.HallRequests = assignedRequests
+			GlobalState.mu.Unlock()
 		}
-	}
 
-	fmt.Println("\nNew state:")
-	ElevatorPrint(elevator)
+		// Bestem om heisen skal fortsette eller gå i idle
+		if hasPendingRequests(elevator, sharedState.HallRequests) {
+			elevator.Behaviour = EB_Moving
+			outputDevice.DoorLight(false)
+			outputDevice.MotorDirection(convertDirnToMotor(elevator.Dirn))
+		} else {
+			elevator.Behaviour = EB_Idle
+		}
+
+		UpdateLocalElevator(elevator)
+		UpdateSharedState() // Synkroniser
+	}
 }

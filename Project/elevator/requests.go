@@ -1,160 +1,97 @@
 package elevator
 
-import elevio "Driver-Elevio"
-
 // DirnBehaviourPair strukturen holder retningen og oppførselen for heisen
 type DirnBehaviourPair struct {
 	Dirn      Dirn
 	Behaviour ElevatorBehaviour
 }
 
-// requests_above sjekker om det finnes en bestilling over gjeldende etasje
-func requestsAbove(e Elevator) bool {
-	for f := e.Floor + 1; f < N_FLOORS; f++ {
-		for btn := 0; btn < N_BUTTONS; btn++ {
-			if e.Requests[f][btn] != 0 {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// requests_below sjekker om det finnes en bestilling under gjeldende etasje
-func requestsBelow(e Elevator) bool {
-	for f := 0; f < e.Floor; f++ {
-		for btn := 0; btn < N_BUTTONS; btn++ {
-			if e.Requests[f][btn] != 0 {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// requestsHere sjekker om det finnes en bestilling på nåværende etasje
-func requestsHere(e Elevator) bool {
-	for btn := 0; btn < N_BUTTONS; btn++ {
-		if e.Requests[e.Floor][btn] != 0 {
-			return true
-		}
-	}
-	return false
-}
-
-// requestsChooseDirection velger hvilken retning heisen skal gå i
-func requestsChooseDirection(e Elevator) DirnBehaviourPair {
-	switch e.Dirn {
-	case "up":
-		// NYTT TESTING
-		if e.Floor == N_FLOORS-1 { // Hvis heisen er på toppen, skal den ikke gå opp
-			if requestsHere(e) {
-				return DirnBehaviourPair{D_Stop, EB_DoorOpen}
-			} else if requestsBelow(e) {
-				return DirnBehaviourPair{D_Down, EB_Moving}
-			}
-			return DirnBehaviourPair{D_Stop, EB_Idle}
-		}
-		// NYTT TESTING
-		if requestsAbove(e) {
-			return DirnBehaviourPair{D_Up, EB_Moving}
-		} else if requestsHere(e) {
-			return DirnBehaviourPair{D_Down, EB_DoorOpen}
-		} else if requestsBelow(e) {
-			return DirnBehaviourPair{D_Down, EB_Moving}
-		}
-		return DirnBehaviourPair{D_Stop, EB_Idle}
-
-	case "down":
-		if requestsBelow(e) {
-			return DirnBehaviourPair{D_Down, EB_Moving}
-		} else if requestsHere(e) {
-			return DirnBehaviourPair{D_Up, EB_DoorOpen}
-		} else if requestsAbove(e) {
-			return DirnBehaviourPair{D_Up, EB_Moving}
-		}
-		return DirnBehaviourPair{D_Stop, EB_Idle}
-
-	case "stop":
-		if requestsHere(e) {
-			return DirnBehaviourPair{D_Stop, EB_DoorOpen}
-		} else if requestsAbove(e) {
-			return DirnBehaviourPair{D_Up, EB_Moving}
-		} else if requestsBelow(e) {
-			return DirnBehaviourPair{D_Down, EB_Moving}
-		}
-		return DirnBehaviourPair{D_Stop, EB_Idle}
-
-	default:
-		return DirnBehaviourPair{D_Stop, EB_Idle}
-	}
-}
-
 // requestsShouldStop sjekker om heisen skal stoppe på nåværende etasje
-func requestsShouldStop(e Elevator) bool {
-	switch e.Dirn {
-	case "down":
-		return e.Requests[e.Floor][B_HallDown] != 0 ||
-			e.Requests[e.Floor][B_Cab] != 0 ||
-			!requestsBelow(e)
+func requestsShouldStop(e Elevator, hallRequests [][2]bool) bool {
 
-	case "up":
-		return e.Requests[e.Floor][B_HallUp] != 0 ||
-			e.Requests[e.Floor][B_Cab] != 0 ||
-			!requestsAbove(e)
-
-	case "stop":
+	// 1. Stopp alltid hvis en cab-request er på denne etasjen
+	if e.CabRequests[e.Floor] {
 		return true
-	default:
-		return false
 	}
-}
 
-// requestsShouldClearImmediately sjekker om en bestilling skal behandles og slettes umiddelbart.
-func requestsShouldClearImmediately(e Elevator, btnFloor int, btnType elevio.ButtonType) bool {
-	switch e.Config.ClearRequestVariant {
-	case CV_All:
-		return e.Floor == btnFloor
-
-	case CV_InDirn:
-		return e.Floor == btnFloor && ((e.Dirn == "up" && btnType == B_HallUp) ||
-			(e.Dirn == "down" && btnType == B_HallDown) ||
-			e.Dirn == "stop" || btnType == B_Cab)
-
-	default:
-		return false
+	// 2. Stopp hvis hall-forespørsel er tildelt denne heisen i denne etasjen
+	if e.Dirn == D_Up && hallRequests[e.Floor][B_HallUp] {
+		return true
 	}
+	if e.Dirn == D_Down && hallRequests[e.Floor][B_HallDown] {
+		return true
+	}
+
+	// 3. Hvis det ikke er flere hall requests i denne retningen, stopp
+	if e.Dirn == D_Up {
+		for floor := e.Floor + 1; floor < N_FLOORS; floor++ {
+			if hallRequests[floor][B_HallUp] || hallRequests[floor][B_HallDown] {
+				return false // Fortsett å bevege seg
+			}
+		}
+		return true // Stopp siden ingen flere hall requests i denne retningen
+	}
+
+	if e.Dirn == D_Down {
+		for floor := 0; floor < e.Floor; floor++ {
+			if hallRequests[floor][B_HallUp] || hallRequests[floor][B_HallDown] {
+				return false // Fortsett å bevege seg
+			}
+		}
+		return true // Stopp siden ingen flere hall requests i denne retningen
+	}
+
+	return false
 }
 
 // requestsClearAtCurrentFloor rydder bestillinger på gjeldende etasje
 func requestsClearAtCurrentFloor(e Elevator) Elevator {
-	switch e.Config.ClearRequestVariant {
-	case CV_All:
-		for btn := 0; btn < N_BUTTONS; btn++ {
-			e.Requests[e.Floor][btn] = 0
-		}
+	// Clear cab request at this floor
+	e.CabRequests[e.Floor] = false
 
-	case CV_InDirn:
-		e.Requests[e.Floor][B_Cab] = 0
-		switch e.Dirn {
-		case "up":
-			if !requestsAbove(e) && e.Requests[e.Floor][B_HallUp] == 0 {
-				e.Requests[e.Floor][B_HallDown] = 0
-			}
-			e.Requests[e.Floor][B_HallUp] = 0
+	// Hall requests are assigned by hall_request_assigner, no need to clear them locally.
 
-		case "down":
-			if !requestsBelow(e) && e.Requests[e.Floor][B_HallDown] == 0 {
-				e.Requests[e.Floor][B_HallUp] = 0
-			}
-			e.Requests[e.Floor][B_HallDown] = 0
+	return e
+}
 
-		case "stop":
-		default:
-			e.Requests[e.Floor][B_HallUp] = 0
-			e.Requests[e.Floor][B_HallDown] = 0
+func hasPendingRequests(e Elevator, hallRequests [][2]bool) bool {
+
+	// Sjekk cab requests
+	for _, request := range e.CabRequests {
+		if request {
+			return true
 		}
 	}
 
-	return e
+	// Sjekk hall requests
+	for floor := 0; floor < N_FLOORS; floor++ {
+		if hallRequests[floor][B_HallUp] || hallRequests[floor][B_HallDown] {
+			return true
+		}
+	}
+
+	return false
+}
+
+// requestsChooseDirection velger retning basert på forespørsler
+func requestsChooseDirection(e Elevator) Dirn {
+	sharedState := GetSharedState()
+	hallRequests := sharedState.HallRequests
+
+	// Hvis det er noen forespørsler over heisen
+	for f := e.Floor + 1; f < N_FLOORS; f++ {
+		if hallRequests[f][B_HallUp] || hallRequests[f][B_HallDown] || e.CabRequests[f] {
+			return D_Up
+		}
+	}
+
+	// Hvis det er noen forespørsler under heisen
+	for f := 0; f < e.Floor; f++ {
+		if hallRequests[f][B_HallUp] || hallRequests[f][B_HallDown] || e.CabRequests[f] {
+			return D_Down
+		}
+	}
+
+	// Ingen forespørsler, stopp
+	return D_Stop
 }
