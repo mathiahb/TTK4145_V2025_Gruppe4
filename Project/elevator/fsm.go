@@ -166,7 +166,7 @@ func FSMOnDoorTimeout() {
 		elevator.Behaviour = EB_Idle
 
 		// Be om ny oppdragsfordeling
-		AssignRequestChannel <- struct{}{}
+		AssignRequestChannel <- struct{}{} // Sender tom struct for å trigge assigner
 		assignments := <-AssignResultChannel
 
 		// Oppdater hall requests basert på nye oppdrag

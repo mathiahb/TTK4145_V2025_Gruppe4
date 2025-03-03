@@ -19,7 +19,9 @@ var AssignResultChannel = make(chan map[string][][2]bool) // Resultat fra assign
 
 // ===================== SHARED STATE HELPERS ===================== //
 // RequestAssigner listens for new requests and assigns them to elevators
-// The calls will come from FSM whenever a new request appears or an elevator changes state.K
+// The calls to the AssignRequestChannel will come from FSM whenever a new request appears or an elevator changes state.K
+
+// TODO: RequestAssigner må kjøre i en egen goroutine
 func RequestAssigner() {
 	for {
 		<-AssignRequestChannel
