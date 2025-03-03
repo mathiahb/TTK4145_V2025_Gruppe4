@@ -29,6 +29,11 @@ func (manager *TCP_Connection_Manager) Add_Connection(connection TCP_Connection)
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
 
+	if manager.Does_Connection_Exist(connection.connection_name) {
+		connection.Close()
+		return
+	}
+
 	manager.Connections[connection.connection_name] = connection
 	fmt.Printf("Connection %s added!\n", connection.connection_name)
 }
@@ -57,8 +62,12 @@ func (manager *TCP_Connection_Manager) Close_All() {
 	}
 }
 
-func (manager *TCP_Connection_Manager) Open_Server(port string) {
-	go manager.create_TCP_Server(port)
+func (manager *TCP_Connection_Manager) Open_Server() string {
+	address_channel := make(chan string)
+
+	go manager.create_TCP_Server(address_channel)
+
+	return <-address_channel
 }
 
 func (manager *TCP_Connection_Manager) Connect_Client(address string) {
@@ -77,6 +86,8 @@ func (manager *TCP_Connection_Manager) Broadcast(message string) {
 func (manager *TCP_Connection_Manager) Send(message string, recipient string) {
 	if !manager.Does_Connection_Exist(recipient) {
 		fmt.Printf("Error, connection %s did not exist! Failed sending %s\n", recipient, message)
+		manager.Connect_Client(recipient)
+		return
 	}
 
 	manager.Connections[recipient].Write_Channel <- message

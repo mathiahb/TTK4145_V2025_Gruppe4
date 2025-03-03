@@ -4,6 +4,7 @@ import (
 	"Constants"
 	"Network-Protocol/TCP"
 	"Network-Protocol/UDP"
+	"fmt"
 	"math/rand"
 	"time"
 )
@@ -19,6 +20,8 @@ type P2P_Network struct {
 	TCP *TCP.TCP_Connection_Manager
 	UDP UDP.UDP_Channel
 
+	close_channel chan bool
+
 	tcp_server_address string
 
 	dependency_resolver *Dependency_Resolver
@@ -26,19 +29,23 @@ type P2P_Network struct {
 	clock               Lamport_Clock
 }
 
-func New_P2P_Network(server_port string) *P2P_Network {
+func New_P2P_Network() *P2P_Network {
 	read_channel := make(chan P2P_Message, Constants.P2P_BUFFER_SIZE)
 
 	tcp_manager := TCP.New_TCP_Connection_Manager()
 	udp_channel := UDP.New_UDP_Channel()
 
-	server_address := UDP.Get_local_IP().String() + ":" + server_port
+	server_port := tcp_manager.Open_Server()
+	server_address := UDP.Get_local_IP().String() + server_port
+	fmt.Printf("Opened server at: %s\n", server_address)
 
 	network := P2P_Network{
 		Read_Channel: read_channel,
 
 		TCP: tcp_manager,
 		UDP: udp_channel,
+
+		close_channel: make(chan bool),
 
 		tcp_server_address: server_address,
 
@@ -47,9 +54,6 @@ func New_P2P_Network(server_port string) *P2P_Network {
 		clock:               New_Lamport_Clock(),
 	}
 
-	tcp_manager.Open_Server(server_port)
-	time.Sleep(Constants.TCP_SERVER_BOOTUP_TIME) // Let the TCP server start up first.
-
 	go network.peer_detection()
 	go network.reader()
 
@@ -57,6 +61,7 @@ func New_P2P_Network(server_port string) *P2P_Network {
 }
 
 func (network *P2P_Network) Close() {
+	close(network.close_channel)
 	network.TCP.Close_All()
 	network.UDP.Close()
 }
@@ -78,11 +83,19 @@ func (network *P2P_Network) Create_Message(message string, message_type P2P_Mess
 
 func (network *P2P_Network) reader() {
 	for {
-		tcp_message := <-network.TCP.Global_Read_Channel
-		p2p_message := P2P_Message_From_String(tcp_message)
+		select {
+		case tcp_message := <-network.TCP.Global_Read_Channel:
+			p2p_message := P2P_Message_From_String(tcp_message)
 
-		network.clock.Update(p2p_message.Time)
-		go network.publisher(p2p_message)
+			network.clock.Update(p2p_message.Time)
+			go network.publisher(p2p_message)
+
+		case <-network.close_channel:
+			return
+
+		default:
+			time.Sleep(time.Microsecond)
+		}
 	}
 }
 
@@ -101,6 +114,8 @@ func (network *P2P_Network) publisher(message P2P_Message) {
 		select {
 		case <-timeout.C:
 			return // Timed out.
+		case <-network.close_channel:
+			return // Network closed.
 		default:
 		}
 
@@ -143,6 +158,8 @@ func (network *P2P_Network) peer_detection() {
 
 	for {
 		select {
+		case <-network.close_channel:
+			return // P2P Connection closed
 		case <-renew_presence_ticker.C:
 			network.announce_presence()
 

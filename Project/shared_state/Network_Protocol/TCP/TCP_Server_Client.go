@@ -32,19 +32,17 @@ func (connection_manager *TCP_Connection_Manager) tcp_listener(listener *net.Lis
 	}
 }
 
-func (connection_manager *TCP_Connection_Manager) create_TCP_Server(port string) {
-	// Ensure correct format for net library ":port".
-	address_to_listen := port
-	if port[0] != ':' {
-		address_to_listen = ":" + address_to_listen
-	}
-
+func (connection_manager *TCP_Connection_Manager) create_TCP_Server(addr_channel chan string) {
 	// Create a listener
-	listener, err := net.Listen("tcp", address_to_listen)
+	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
 		panic(err)
 	}
 	defer listener.Close()
+
+	// Address from a listener is on the form [::]:xxxxx
+	const port_offset = 4
+	addr_channel <- listener.Addr().String()[port_offset:]
 
 	go connection_manager.tcp_listener(&listener)
 

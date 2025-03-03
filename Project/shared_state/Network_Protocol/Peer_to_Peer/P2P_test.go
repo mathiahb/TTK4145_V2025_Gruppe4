@@ -186,10 +186,8 @@ func Test_Message_Horizon(t *testing.T) {
 }
 
 func Test_Network(t *testing.T) {
-	defer time.Sleep(time.Second) // Let the servers shut down before doing anything else...
-
-	network_1 := New_P2P_Network("20005")
-	network_2 := New_P2P_Network("20006")
+	network_1 := New_P2P_Network()
+	network_2 := New_P2P_Network()
 	defer network_1.Close()
 	defer network_2.Close()
 
@@ -213,22 +211,18 @@ func Test_Network(t *testing.T) {
 }
 
 func Test_Dependency_Resend(t *testing.T) {
-	defer time.Sleep(time.Second)
-
-	network_1 := New_P2P_Network("20007")
-	network_2 := New_P2P_Network("20008")
+	network_1 := New_P2P_Network()
+	network_2 := New_P2P_Network()
 	defer network_1.Close()
 	defer network_2.Close()
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Second) // Let the networks connect to each other. Takes about 1.2x UDP SERVER LIFETIME (~300ms)
 
 	p2p_message := network_1.Create_Message("Hello!", MESSAGE)
 
 	network_1.Broadcast(p2p_message)
 
-	time.Sleep(time.Second)
-
-	network_3 := New_P2P_Network("20009")
+	network_3 := New_P2P_Network()
 	defer network_3.Close()
 
 	time.Sleep(time.Second)
@@ -274,10 +268,8 @@ func Test_Dependency_Resend(t *testing.T) {
 }
 
 func Test_Double_Send(t *testing.T) {
-	defer time.Sleep(time.Second) // Let the servers shut down before doing anything else...
-
-	network_1 := New_P2P_Network("20005")
-	network_2 := New_P2P_Network("20006")
+	network_1 := New_P2P_Network()
+	network_2 := New_P2P_Network()
 	defer network_1.Close()
 	defer network_2.Close()
 
