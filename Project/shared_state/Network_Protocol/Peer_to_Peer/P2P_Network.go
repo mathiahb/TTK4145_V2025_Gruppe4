@@ -5,7 +5,6 @@ import (
 	"Network-Protocol/TCP"
 	"Network-Protocol/UDP"
 	"fmt"
-	"math/rand"
 	"time"
 )
 
@@ -142,46 +141,20 @@ func (network *P2P_Network) request_dependency(dependency Dependency) {
 	network.Send(message, dependency.Dependency_Owner)
 }
 
-// An UDP Port is limited in availability should the elevators be on the same machine / IP.
-// Try to open a server, keep it alive for server lifetime defined in Constants.
-// If not opened, try again after a random delay.
-//
-// TODO: Separate the function into more readable parts
 func (network *P2P_Network) peer_detection() {
 	renew_presence_ticker := time.NewTicker(Constants.UDP_WAIT_BEFORE_TRANSMITTING_AGAIN)
-
-	timer_until_looking_for_peers := time.NewTimer(Constants.UDP_UNTIL_SERVER_BOOT)
-	timer_until_stopping := time.NewTimer(Constants.UDP_SERVER_LIFETIME)
-	timer_until_stopping.Stop() // Server starts closed
-
-	server_open := false
 
 	for {
 		select {
 		case <-network.close_channel:
 			return // P2P Connection closed
+
 		case <-renew_presence_ticker.C:
 			network.announce_presence()
 
-		case <-timer_until_looking_for_peers.C:
-			err := network.UDP.Start_Reading()
-
-			if err == nil {
-				server_open = true
-				timer_until_stopping.Reset(Constants.UDP_SERVER_LIFETIME)
-			} else {
-				// Someone else is using this resource, wait a random amount of time!
-				timer_until_looking_for_peers.Reset(time.Duration(1 + rand.Intn(int(Constants.UDP_UNTIL_SERVER_BOOT))))
-			}
-
-		case <-timer_until_stopping.C:
-			network.UDP.Stop_Reading()
-			server_open = false
-			timer_until_looking_for_peers.Reset(Constants.UDP_UNTIL_SERVER_BOOT)
-
-		default:
-			if server_open {
-				network.detect_and_connect_to_peers()
+		case address := <-network.UDP.Read_Channel:
+			if !network.TCP.Does_Connection_Exist(address) {
+				network.TCP.Connect_Client(address)
 			}
 		}
 	}
@@ -189,15 +162,4 @@ func (network *P2P_Network) peer_detection() {
 
 func (network *P2P_Network) announce_presence() {
 	network.UDP.Broadcast(network.tcp_server_address)
-}
-
-func (network *P2P_Network) detect_and_connect_to_peers() {
-	select {
-	case address := <-network.UDP.Read_Channel:
-		if !network.TCP.Does_Connection_Exist(address) {
-			network.TCP.Connect_Client(address)
-		}
-	default:
-		return
-	}
 }
