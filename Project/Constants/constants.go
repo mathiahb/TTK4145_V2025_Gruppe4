@@ -50,7 +50,7 @@ const NETWORK_TIMEOUT_HEARTBEAT time.Duration = NETWORK_WAIT_HEARTBEAT * 4 // 3 
 
 // Constants for UDP connection
 const UDP_PORT string = ":10005"
-const UDP_BROADCAST_IP_PORT string = "255.255.255.255" + UDP_PORT
+const UDP_BROADCAST_IP_PORT string = "239.255.255.255" + UDP_PORT
 
 // Deadlines
 const UDP_READ_DEADLINE time.Duration = time.Millisecond
