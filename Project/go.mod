@@ -2,7 +2,10 @@ module github.com/mathiahb/TTK4145_V2025_Gruppe4
 
 require tests v0.0.0
 
-require Constants v0.0.0
+require (
+	Constants v0.0.0
+	golang.org/x/net v0.35.0 // indirect
+)
 
 replace tests => ./tests/
 

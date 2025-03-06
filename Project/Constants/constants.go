@@ -19,7 +19,7 @@ const TCP_BUFFER_SIZE int = 4096
 const P2P_BUFFER_SIZE int = 4096
 
 // Constants for P2P communication
-const P2P_FIELD_DELIMINATOR string = "\r\n"
+const P2P_FIELD_DELIMINATOR string = "\\\r\n"
 const P2P_DEP_DELIMINATOR string = "/"
 const P2P_DEP_TIME_HORIZON int = 100 // Amount of dependencies stored in memory
 const P2P_MSG_TIME_HORIZON int = 10  // Amount of messages sent stored in memory

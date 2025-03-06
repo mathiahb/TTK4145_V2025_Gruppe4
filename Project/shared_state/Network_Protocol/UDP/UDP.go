@@ -43,6 +43,26 @@ func (channel UDP_Channel) Broadcast(message string) {
 	channel.Write_Channel <- message
 }
 
+func New_UDP_Channel() UDP_Channel {
+	channel_write := make(chan string, 1024)
+	channel_read := make(chan string, 1024)
+	channel_quit := make(chan bool)
+
+	channel := UDP_Channel{
+		Write_Channel: channel_write,
+		Read_Channel:  channel_read,
+		quit_channel:  channel_quit,
+	}
+
+	channel.create_UDP_client()
+	err := channel.create_UDP_server()
+	if err != nil {
+		fmt.Printf("Error when starting UDP server: %s\n", err.Error())
+	}
+
+	return channel
+}
+
 // --------------------------------------------------------------------
 
 func Get_local_IP() net.IP {
@@ -145,24 +165,4 @@ func (channel *UDP_Channel) create_UDP_server() error {
 	go channel.udp_server(packet_conn)
 
 	return nil
-}
-
-func New_UDP_Channel() UDP_Channel {
-	channel_write := make(chan string, 1024)
-	channel_read := make(chan string, 1024)
-	channel_quit := make(chan bool)
-
-	channel := UDP_Channel{
-		Write_Channel: channel_write,
-		Read_Channel:  channel_read,
-		quit_channel:  channel_quit,
-	}
-
-	channel.create_UDP_client()
-	err := channel.create_UDP_server()
-	if err != nil {
-		fmt.Printf("Error when starting UDP server: %s\n", err.Error())
-	}
-
-	return channel
 }
