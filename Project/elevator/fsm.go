@@ -14,6 +14,11 @@ import (
 var ElevatorID string
 var outputDevice elevio.ElevOutputDevice
 
+func InitElevator() {
+	elevio.Init("localhost:15657", N_FLOORS)
+	InitFSM()
+}
+
 func InitFSM() {
 	InitSharedState()
 	ElevatorID = getElevatorID()
@@ -131,7 +136,6 @@ func FSMOnFloorArrival(newFloor int) {
 	// 1. Oppdater etasjeindikator og lagre ny etasje i lokal state
 	elevator.Floor = newFloor
 	outputDevice.FloorIndicator(newFloor)
-	UpdateLocalElevator(elevator)
 
 	// 2. Sjekk om heisen skal stoppe
 	if elevator.Behaviour == EB_Moving {
@@ -139,19 +143,19 @@ func FSMOnFloorArrival(newFloor int) {
 			outputDevice.MotorDirection(elevio.MD_Stop)
 			outputDevice.DoorLight(true)
 			elevator.Behaviour = EB_DoorOpen
-			UpdateLocalElevator(elevator)
 
 			// Start dør-timer
 			TimerStart(DoorOpenDurationS)
 
 			// 3. Klarer requests på nåværende etasje
 			elevator = requestsClearAtCurrentFloor(elevator)
-			UpdateLocalElevator(elevator)
-			UpdateSharedState() // Synkroniser
-			setAllLights()
+
 		}
 	}
+
+	UpdateLocalElevator(elevator)
 	UpdateSharedState()
+	setAllLights()
 }
 
 // **FSMOnDoorTimeout**: Kalles når dør-timeren utløper

@@ -1,11 +1,10 @@
 package main
 
 import (
+	"Constants"
+	elevator "Driver-Elevator"
 	"fmt"
 	"os"
-	"tests"
-
-	"Constants"
 )
 
 func main() {
@@ -39,8 +38,14 @@ func main() {
 	}
 
 	if is_testing {
-		tests.Test_Creating_Connection(id)
-		return
+		// tests.Test_Creating_Connection(id)
+		// return
+		elevator.InitElevator()
+
+		go elevator.RequestAssigner()
+
+		select {}
+
 	}
 
 	/*

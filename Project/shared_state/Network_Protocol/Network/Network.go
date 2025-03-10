@@ -19,6 +19,8 @@ type Node struct {
 	// Every so often (A few times a second?)
 	active_synchronization     *protocols.Synchronization_Vote
 	has_active_synchronization bool
+
+	alive_nodes []string
 }
 
 func New_Node(name string) Node {
@@ -32,6 +34,7 @@ func New_Node(name string) Node {
 
 		active_synchronization:     &protocols.Synchronization_Vote{},
 		has_active_synchronization: false,
+		alive_nodes: make([]string, 0),
 	}
 
 	go network.reader()
@@ -48,18 +51,26 @@ func (node Node) reader() {
 		switch message_type{
 		case Constants.SYNC_MESSAGE:
 
+		case Constants.ACKNOWLEDGE:
+			node.active_vote.Add_Vote()
+			if node.active_vote.Is_Committable(){
+				node.COMMIT()
+			} else if node.active_vote.Is_Aborted(){
+				node.ABORT()
+			}
 		}
 	}
 }
 
-func (_ Node) get_shared_state() string {
-	return ""
+func (node Node) shared_state_connection(message_from_shared_state chan string, command_to_shared_state chan string){
+
 }
 
-func (network Node) get_voters() []string {
-	result := make([]string, 1)
 
-	result[0] = network.name
+func (node Node) poll_for_alive_nodes() {
+	
+}
 
-	return result
+func (node Node) Get_Alive_Nodes() []string{
+	return node.alive_nodes
 }

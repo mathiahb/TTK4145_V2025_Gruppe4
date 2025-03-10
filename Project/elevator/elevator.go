@@ -13,6 +13,8 @@ var GlobalState *SharedState
 // Lokal tilstand for denne heisen
 var localElevator Elevator
 
+// Opprette
+
 // Kanaler for å sende og motta oppdrag
 var AssignRequestChannel = make(chan struct{})            // Signaler for ny oppdragsfordeling
 var AssignResultChannel = make(chan map[string][][2]bool) // Resultat fra assigner
@@ -38,8 +40,6 @@ func InitSharedState() {
 			States:       make(map[string]Elevator),
 		},
 	}
-	// Sett opp lokal heistilstand
-	localElevator = ElevatorUninitialized()
 }
 
 // Update the state of a single elevator
