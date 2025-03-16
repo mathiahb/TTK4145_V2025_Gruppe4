@@ -116,8 +116,8 @@ func (node *Node) reader() {
 			node.doLocalCommit(cmd)
 			node.ACK()
 
-		case Constants.ACKNOWLEDGE:
-			node.comm <- Constants.ACKNOWLEDGE
+		case Constants.ACK:
+			node.comm <- Constants.ACK
 
 			// node.active_vote.Add_Vote()
 			// if node.active_vote.Is_Committable() {

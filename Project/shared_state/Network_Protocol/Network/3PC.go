@@ -10,6 +10,7 @@ import (
 type Command struct {
 	Field     string
 	New_Value string
+	// TxID      string
 }
 
 // Jeg har en endring jeg har lyst til at alle skal gjøre, kan dere gjøre den?
@@ -114,6 +115,6 @@ func (node *Node) ABORT() { // If aborted, wait a random amount of time before t
 
 // Kun brukt til å si at de har hørt commit/abort. Ingenting mer.
 func (node *Node) ACK() { // All-Ack
-	ackMessage := node.p2p.Create_Message(Constants.ACKNOWLEDGE, peer_to_peer.MESSAGE)
+	ackMessage := node.p2p.Create_Message(Constants.ACK, peer_to_peer.MESSAGE)
 	node.p2p.Broadcast(ackMessage)
 }

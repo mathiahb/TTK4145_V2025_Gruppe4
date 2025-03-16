@@ -35,7 +35,7 @@ const PRE_COMMIT string = "PREC"     // PREPare
 const PRE_COMMIT_ACK string = "PRCA" // PREPare ACKnowledge
 const COMMIT string = "COMT"         // COMmiT
 const ABORT_COMMIT string = "ERRC"   // Error commit
-const ACKNOWLEDGE string = "ACKS"    // ACKnowledgeS
+const ACK string = "ACKS"            // ACKnowledgeS
 
 // Network messages [4 bytes long]
 const HEARTBEAT_MESSAGE string = "HART"     // HeARTbeat
