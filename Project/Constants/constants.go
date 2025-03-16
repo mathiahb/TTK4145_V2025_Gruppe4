@@ -28,9 +28,14 @@ const LAMPORT_CLOCK_WRAPAROUND_LOWER_EDGE int = -1e10
 const LAMPORT_CLOCK_WRAPAROUND_UPPER_EDGE int = 1e10
 
 // 3-phase commit messages
-const ACKNOWLEDGE string = "ACKS"     // ACKnowledgeS
-const ALL_ACKNOWLEDGE string = "AACK" // All ACK
-const ABORT_COMMIT string = "ERRC"    // Error commit
+
+const PREPARE string = "PREP"        // SYNchronize
+const PREPARE_ACK string = "PREA"    // SYNchronize ACKnowledge
+const PRE_COMMIT string = "PREC"     // PREPare
+const PRE_COMMIT_ACK string = "PRCA" // PREPare ACKnowledge
+const COMMIT string = "COMT"         // COMmiT
+const ABORT_COMMIT string = "ERRC"   // Error commit
+const ACKNOWLEDGE string = "ACKS"    // ACKnowledgeS
 
 // Network messages [4 bytes long]
 const HEARTBEAT_MESSAGE string = "HART"     // HeARTbeat
