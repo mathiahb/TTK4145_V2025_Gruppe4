@@ -54,7 +54,7 @@ func requestsClearAtCurrentFloor(e Elevator) Elevator {
 	return e
 }
 
-func hasPendingRequests(e Elevator, hallRequests [][2]bool) bool {
+func hasRequests(e Elevator, hallRequests [][2]bool) bool {
 
 	// Sjekk cab requests
 	for _, request := range e.CabRequests {

@@ -1,4 +1,12 @@
-package shared_state
+Shared State
+---
+Not implemented yet.
+
+Provides the shared state, a state that is shared between all nodes on the network provided by the Network-Protocol.
+Accepts updates from the network, and defers updates from the elevator to the network.
+
+---
+
 
 // Implements the shared_state between all nodes.
 // Provides communication with the elevator:
@@ -28,3 +36,15 @@ struct Shared_State
 
  - Defers updates from elevator to network (which will start an update protocol sequence which should end in an update to shared state.)
 */
+
+
+Plan for kodingen
+
+- fikse oppp i elevator
+- implementere shared_states
+
+elevator <-> shared state <-> HRA
+
+network <-> shared state
+
+
