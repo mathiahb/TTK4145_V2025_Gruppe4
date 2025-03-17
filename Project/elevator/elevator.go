@@ -1,64 +1,28 @@
 package elevator
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 )
 
-// Global instance of SharedState
-var GlobalState *SharedState
 
-// Lokal tilstand for denne heisen
-var localElevator Elevator
 
-// Opprette
+r
 
-// Kanaler for å sende og motta oppdrag
-var AssignRequestChannel = make(chan struct{})            // Signaler for ny oppdragsfordeling
-var AssignResultChannel = make(chan map[string][][2]bool) // Resultat fra assigner
-
-// ===================== SHARED STATE HELPERS ===================== //
-// RequestAssigner listens for new requests and assigns them to elevators
-// The calls to the AssignRequestChannel will come from FSM whenever a new request appears or an elevator changes state.K
-
-// TODO: RequestAssigner må kjøre i en egen goroutine
-func RequestAssigner() {
-	for {
-		<-AssignRequestChannel
-		assignments := getHallRequestAssignments()
-		AssignResultChannel <- assignments
-	}
-}
-
-// Initialize shared state with default values
-func InitSharedState() {
-	GlobalState = &SharedState{
-		HRA: HRAInput{
-			HallRequests: make([][2]bool, N_FLOORS),
-			States:       make(map[string]Elevator),
-		},
-	}
-}
-
-// Update the state of a single elevator
-func UpdateLocalElevator(e Elevator) {
-	localElevator = e
-}
-
-// Oppdaterer SharedState med denne heisens lokale tilstand
-func UpdateSharedState() {
-	GlobalState.mu.Lock()
-	defer GlobalState.mu.Unlock()
-	GlobalState.HRA.States[getElevatorID()] = localElevator
-}
 
 // Retrieve a copy of all elevator states
 func GetLocalElevator() Elevator {
 	// Function can become useful when/if local elevator is replaced
 	return localElevator
 }
+
+// Oppdaterer SharedState med denne heisens lokale tilstand
+func UpdateSharedState() { //denne må endres til å interagere med en anne modul (kanal)
+	GlobalState.mu.Lock()
+	defer GlobalState.mu.Unlock()
+	GlobalState.HRA.States[getElevatorID()] = localElevator
+}
+
 
 // Henter en kopi av hele SharedState
 func GetSharedState() HRAInput {
@@ -115,37 +79,4 @@ func ElevatorPrint(es Elevator) {
 	fmt.Println("  +--------------------+")
 }
 
-// ===================== REQUEST ASSIGNER ===================== //
-// Calls `hall_request_assigner` to get updated assignments for all elevators
-func getHallRequestAssignments() map[string][][2]bool {
-	// Fetch latest state
-	sharedState := GetSharedState()
 
-	// Convert to JSON
-	jsonBytes, err := json.Marshal(sharedState)
-	if err != nil {
-		fmt.Println("json.Marshal error:", err)
-		return nil
-	}
-
-	// Call `hall_request_assigner`
-	ret, err := exec.Command("../hall_request_assigner/hall_request_assigner", "-i", string(jsonBytes)).CombinedOutput()
-	if err != nil {
-		fmt.Println("exec.Command error:", err)
-		fmt.Println(string(ret))
-		return nil
-	}
-
-	// Debugging: Print raw response
-	fmt.Println("Raw response from hall_request_assigner:", string(ret))
-
-	// Parse JSON response
-	output := make(map[string][][2]bool)
-	err = json.Unmarshal(ret, &output)
-	if err != nil {
-		fmt.Println("json.Unmarshal error:", err)
-		return nil
-	}
-
-	return output
-}

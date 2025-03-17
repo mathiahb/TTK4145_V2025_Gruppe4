@@ -1,7 +1,5 @@
 package elevator
 
-import "sync"
-
 // ===================== CONSTANTS ===================== //
 const (
 	N_FLOORS          = 4
@@ -43,15 +41,3 @@ type Elevator struct {
 	CabRequests []bool            `json:"cabRequests"`
 }
 
-// Input struct for `hall_request_assigner`
-type HRAInput struct {
-	HallRequests [][2]bool           `json:"hallRequests"`
-	States       map[string]Elevator `json:"states"`
-}
-
-// ===================== SHARED STATE ===================== //
-// SharedState keeps track of all elevator states and hall requests.
-type SharedState struct {
-	mu  sync.Mutex
-	HRA HRAInput
-}
