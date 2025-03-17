@@ -4,22 +4,33 @@ import (
 	"Constants"
 	peer_to_peer "Network-Protocol/Peer_to_Peer"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 )
+
+// Name:ID
+type TxID string
+
+type Message struct {
+	message_type string
+	id           TxID
+	payload      string
+}
 
 type Node struct {
 	p2p *peer_to_peer.P2P_Network
 
 	name string // Elevator ID
 
-	active_voter_names []string
+	voting_on          TxID
+	mu_voting_resource sync.Mutex // TryLock to see if you can vote.
+	coordinating       bool
 
-	voting_on   string
-	busy_voting sync.Mutex // TryLock to see if you can vote.
+	next_id int
 
 	alive_nodes []string
-	comm        chan string // Kanal for å motta 3PC-meldinger
+	comm        chan Message // Kanal for å motta 3PC-meldinger
 }
 
 func New_Node(name string) Node {
@@ -29,15 +40,68 @@ func New_Node(name string) Node {
 
 		name: name,
 
-		active_voter_names: make([]string, 0),
+		coordinating: false,
+
+		next_id: 0,
 
 		alive_nodes: make([]string, 0),
-		comm:        make(chan string, 32), // Velg en passende bufferstørrelse
+		comm:        make(chan Message, 32), // Velg en passende bufferstørrelse
 	}
 
 	go network.reader()
 
 	return network
+}
+
+// Format: message_type txid=id r=payload
+func (message Message) String() string {
+	return fmt.Sprintf("%s txid=%s r=%s",
+		message.message_type,
+		message.id,
+		message.payload,
+	)
+}
+
+func Message_From_String(message string) Message {
+	result := Message{}
+
+	split := strings.SplitN(message, "=", 3) // Returns [garbage, txid + space + r, payload]
+	if len(split) != 3 {
+		fmt.Printf("ERROR: Badly formatted message! %s\n", message)
+		return result
+	}
+
+	result.message_type = message[0:Constants.SIZE_TYPE_FIELD]
+	id := split[1][0 : len(split[1])-2] // Remove last 2 letters since they are a space and r.
+	result.id = TxID(id)
+	result.payload = split[2]
+
+	return result
+}
+
+func (node *Node) create_Message(message_type string, id TxID, message string) Message {
+	return Message{
+		message_type: message_type,
+		id:           id,
+		payload:      message,
+	}
+}
+
+func (node *Node) create_Vote_Message(message_type string, message string) Message {
+	id := TxID(strconv.Itoa(node.next_id))
+	node.next_id++
+	return node.create_Message(message_type, id, message)
+}
+
+func (node *Node) Broadcast(message Message) {
+	p2p_message := node.p2p.Create_Message(message.String(), peer_to_peer.MESSAGE)
+	node.p2p.Broadcast(p2p_message)
+}
+
+func (node *Node) Broadcast_Response(message Message, responding_to peer_to_peer.P2P_Message) {
+	p2p_message := node.p2p.Create_Message(message.String(), peer_to_peer.MESSAGE)
+	p2p_message.Depend_On(responding_to)
+	node.p2p.Broadcast(p2p_message)
 }
 
 // func generateTxID() string {
@@ -60,7 +124,6 @@ func (node *Node) handleSYN(message peer_to_peer.P2P_Message) {
 		node.ABORT()
 	}
 }
-
 func (node *Node) doLocalCommit(cmd Command) {
 	// Gjør endringen
 }
@@ -89,29 +152,29 @@ func parseCommit(msg string) Command {
 
 func (node *Node) reader() {
 	for {
-		message := <-node.p2p.Read_Channel
-		message_type := message.Message[0:Constants.SIZE_TYPE_FIELD]
+		p2p_message := <-node.p2p.Read_Channel
+		message := Message_From_String(p2p_message.Message)
 
-		switch message_type {
+		switch message.message_type {
 
 		case Constants.PREPARE: // Received a synchronization request
-			node.handleSYN(message) // Decide whether to commit or abort
+			node.handleSYN(p2p_message) // Decide whether to commit or abort
 
 		case Constants.PREPARE_ACK: // Received a synchronization acknowledgement
-			node.comm <- Constants.PREPARE_ACK
+			node.comm <- message
 
 		case Constants.ABORT_COMMIT: // Received an abort commit message
-			node.comm <- Constants.ABORT_COMMIT
+			node.comm <- message
 			// TODO: abort current synchronization
 			continue
 
 		case Constants.COMMIT: // Received a commit message
-			cmd := parseCommit(message.Message)
+			cmd := parseCommit(p2p_message.Message)
 			node.doLocalCommit(cmd)
 			node.ACK()
 
 		case Constants.ACK:
-			node.comm <- Constants.ACK
+			node.comm <- message
 
 			// node.active_vote.Add_Vote()
 			// if node.active_vote.Is_Committable() {
