@@ -39,15 +39,14 @@ func (node *Node) SYN(cmd Command) { // Prepare command - First message in 3PC
 		case <-timeout:
 			node.ABORT() // Abort if timeout is reached
 			return
+		default:
 		}
 		if acks == total {
 			// Instead of committing we should send a prepare message (in order to have a real 3PC)
 			node.PREPARE_COMMIT(cmd)
-			break
+			return
 		}
-
 	}
-
 }
 
 // Jeg kan gjøre endringen

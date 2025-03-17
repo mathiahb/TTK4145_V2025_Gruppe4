@@ -2,10 +2,11 @@ package peer_to_peer
 
 import (
 	"Constants"
-	"Network-Protocol/TCP"
-	"Network-Protocol/UDP"
 	"fmt"
 	"time"
+
+	"Network-Protocol/Peer_to_Peer/TCP"
+	"Network-Protocol/Peer_to_Peer/UDP"
 )
 
 // Package peer_to_peer

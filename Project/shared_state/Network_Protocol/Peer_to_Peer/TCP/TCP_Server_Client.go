@@ -3,6 +3,7 @@ package TCP
 import (
 	"fmt"
 	"net"
+	"time"
 )
 
 func (connection_manager *TCP_Connection_Manager) setup_TCP_Connection(connection net.Conn) {
@@ -25,7 +26,7 @@ func (connection_manager *TCP_Connection_Manager) tcp_listener(listener *net.Lis
 		connection, err := (*listener).Accept()
 		if err != nil {
 			fmt.Println("Error in accepting connection: ", err)
-			return
+			continue
 		}
 
 		connection_manager.setup_TCP_Connection(connection)
@@ -50,11 +51,21 @@ func (connection_manager *TCP_Connection_Manager) create_TCP_Server(addr_channel
 }
 
 func (connection_manager *TCP_Connection_Manager) create_TCP_Client(address string) {
-	connection, err := net.Dial("tcp", address)
-	if err != nil {
-		fmt.Println("Error setting up connection: ", err)
+	timeout := time.Second
+
+	for {
+		connection, err := net.DialTimeout("tcp", address, timeout)
+
+		// Check the error if it's of the type Network Operation Timeout.
+		if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
+			continue // Retry!
+		}
+		if err != nil {
+			fmt.Println("Error setting up connection: ", err)
+			return
+		}
+
+		connection_manager.setup_TCP_Connection(connection)
 		return
 	}
-
-	connection_manager.setup_TCP_Connection(connection)
 }

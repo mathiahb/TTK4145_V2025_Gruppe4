@@ -2,10 +2,10 @@ package network
 
 import (
 	"Constants"
-	protocols "Network-Protocol/Network/Protocols"
 	peer_to_peer "Network-Protocol/Peer_to_Peer"
 	"fmt"
 	"strings"
+	"sync"
 )
 
 type Node struct {
@@ -15,12 +15,8 @@ type Node struct {
 
 	active_voter_names []string
 
-	// When to Synchronize:
-	// When you see someone who shouldn't be there
-	// When you suspect someone is disconnected
-	// Every so often (A few times a second?)
-	active_synchronization     *protocols.Synchronization_Vote
-	has_active_synchronization bool
+	voting_on   string
+	busy_voting sync.Mutex // TryLock to see if you can vote.
 
 	alive_nodes []string
 	comm        chan string // Kanal for å motta 3PC-meldinger
@@ -35,10 +31,8 @@ func New_Node(name string) Node {
 
 		active_voter_names: make([]string, 0),
 
-		active_synchronization:     &protocols.Synchronization_Vote{},
-		has_active_synchronization: false,
-		alive_nodes:                make([]string, 0),
-		comm:                       make(chan string, 32), // Velg en passende bufferstørrelse
+		alive_nodes: make([]string, 0),
+		comm:        make(chan string, 32), // Velg en passende bufferstørrelse
 	}
 
 	go network.reader()
@@ -96,7 +90,7 @@ func parseCommit(msg string) Command {
 func (node *Node) reader() {
 	for {
 		message := <-node.p2p.Read_Channel
-		message_type := message.Message[0:4]
+		message_type := message.Message[0:Constants.SIZE_TYPE_FIELD]
 
 		switch message_type {
 

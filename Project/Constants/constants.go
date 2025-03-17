@@ -27,8 +27,8 @@ const P2P_MSG_TIME_HORIZON int = 10  // Amount of messages sent stored in memory
 const LAMPORT_CLOCK_WRAPAROUND_LOWER_EDGE int = -1e10
 const LAMPORT_CLOCK_WRAPAROUND_UPPER_EDGE int = 1e10
 
-// 3-phase commit messages
-
+// 3-phase commit messages - 4 bytes long
+const SIZE_TYPE_FIELD int = 4        // 4 Bytes per message type
 const PREPARE string = "PREP"        // SYNchronize
 const PREPARE_ACK string = "PREA"    // SYNchronize ACKnowledge
 const PRE_COMMIT string = "PREC"     // PREPare
@@ -37,21 +37,15 @@ const COMMIT string = "COMT"         // COMmiT
 const ABORT_COMMIT string = "ERRC"   // Error commit
 const ACK string = "ACKS"            // ACKnowledgeS
 
-// Network messages [4 bytes long]
-const HEARTBEAT_MESSAGE string = "HART"     // HeARTbeat
-const SYNC_MESSAGE string = "SYNC"          // SYNChronize
-const HELLO_MESSAGE string = "HELO"         // HELlO
-const UPDATE_MESSAGE string = "UPDT"        // UPDaTe
-const NOT_CONNECTED_MESSAGE string = "NOTC" // NOT Connected
+// Discovery messages [4 bytes long]
+const DISCOVERY_BEGIN string = "NDSC"      // Node DiSCovery
+const DISCOVERY_HELLO string = "HELO"      // discovery HELlO
+const DISCOVERY_COMPLETE string = "DSCC"   // DiSCovery Complete
+const SYNC_AFTER_DISCOVERY string = "SYNC" // SYNChronize
+const SYNC_RESPONSE string = "SRSP"        // Synchronize ReSPonse
+const SYNC_RESULT string = "SRST"          // Synchronize ReSulT
 
 const NETWORK_FIELD_DELIMITER = "\\\n"
-
-const ACKNOWLEDGED bool = true
-const ABORTED bool = false
-
-// Network timing
-const NETWORK_WAIT_HEARTBEAT time.Duration = time.Millisecond * 10
-const NETWORK_TIMEOUT_HEARTBEAT time.Duration = NETWORK_WAIT_HEARTBEAT * 4 // 3 missed heartbeats, 4 because of out of phase beats
 
 // Constants for UDP connection
 const UDP_PORT string = ":10005"
