@@ -101,11 +101,10 @@ func (network *P2P_Network) reader() {
 
 func (network *P2P_Network) publisher(message P2P_Message) {
 	new_dependency := New_Dependency(message.Sender, message.Time)
-	if network.dependency_handler.Has_Dependency(new_dependency) {
-		// Already received this message, discard.
+
+	if network.dependency_handler.Have_Seen_Dependency_Before(new_dependency) {
 		return
 	}
-	network.dependency_handler.Add_Dependency(new_dependency)
 
 	timeout := time.NewTimer(time.Second)
 
