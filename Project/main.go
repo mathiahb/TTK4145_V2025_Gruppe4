@@ -48,25 +48,32 @@ func main() {
 
 	}
 
-	/*
 
-		- Spawn Elevator
-		- Spawn Shared State
-		- Spawn Network Node
+	/* channels for communication between modules */
 
-		elevator <-> shared state <-> network node
+	//elevator <-> shared states
 
-		Connect them via go channels.
+	elevatorStateChannel  := make(chan Elevator) // fra elevator til shared states, sender tilstandene når en tilstand på heisen endres
 
-	*/
+	newHallRequestChannel := make(chan HallRequestType) // fra elevator til shared states, sender ny HallRequest, når knapp trykket inn
+	approvedHallRequestChannel  := make(chan HallRequestType) // fra shared state til elevator, sender godkjent HallRequest etter konferering med nettverket
 
-	hallRequestChannel := make(chan HRAOutput) // fra shared state til elevator
-	elevatorStateChannel := make(chan Elevator) // fra elevator til shared states
-	newHallRequestChannel := make(chan NewHallRequest) // fra elevator til shared states
-	aliveNodesChannel := make(chan Node) //NodeIDs
 
-	go elevator(newHallRequestChannel, elevatorStateChannel, hallRequestChannel)
-	go sharedState(newHallRequestChannel, elevatorStateChannel, hallRequestChannel)
-	go network(aliveNodesChannel)
-	//mangler kobling med nettverket
+	//network <-> shared states communication
+	
+	startSynchChannel := make(chan struct{}) // fra nettverk til shared state, ønsker å starte synkronisering
+	updatedSharedStateForSynchChannel := make(chan HRAType) // fra nettverk til shared state, inneholder oppdatert shared states
+	sendSharedStateForSynchChannel := make(chan HRAType) //fra shared state til nettverk
+
+	notifyNewHallRequestChannel  := make(chan HallRequestType)// shared state ønsker endring i hallRequest, sender til nettverk
+	approvedNewHallRequestChannel := make(chan HallRequesType) // network sender en godkjent endring
+
+	informNewStateChannel := make(chan Elevator) // shared state ønsker endring i state, sender til nettverk
+	informedNewStateChannel := make(chan Elevator) // network sender en godkjent endring
+
+	/* Threads for the different modules */
+	go elevator(elevatorStateChannel , newHallRequestChannel , approvedHallRequestChannel )
+	go sharedState(elevatorStateChannel , newHallRequestChannel , approvedHallRequestChannel , startSynchChannel, updatedSharedStateForSynchChannel, sendSharedStateForSynchChannel, notifyNewHallRequestChannel , approvedNewHallRequestChannel, informNewStateChannel, informedNewStateChannel)
+	go network(startSynchChannel, updatedSharedStateForSynchChannel, sendSharedStateForSynchChannel, notifyNewHallRequestChannel , approvedNewHallRequestChannel, informNewStateChannel, informedNewStateChannel)
+	
 }
