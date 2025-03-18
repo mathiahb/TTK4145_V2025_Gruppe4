@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"Network-Protocol/Peer_to_Peer/TCP"
-	"Network-Protocol/Peer_to_Peer/UDP"
+	"github.com/mathiahb/TTK4145_V2025_Gruppe4/Network_Protocol/Network/Peer_to_Peer/TCP"
+	"github.com/mathiahb/TTK4145_V2025_Gruppe4/Network_Protocol/Network/Peer_to_Peer/UDP"
 )
 
 // Package peer_to_peer

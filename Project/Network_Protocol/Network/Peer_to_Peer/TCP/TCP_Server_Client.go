@@ -25,8 +25,13 @@ func (connection_manager *TCP_Connection_Manager) tcp_listener(listener *net.Lis
 	for {
 		connection, err := (*listener).Accept()
 		if err != nil {
-			fmt.Println("Error in accepting connection: ", err)
-			continue
+			select {
+			case <-connection_manager.stop_server_channel:
+				return
+			default:
+				fmt.Println("Error in accepting connection: ", err)
+				continue
+			}
 		}
 
 		connection_manager.setup_TCP_Connection(connection)

@@ -5,11 +5,6 @@ import (
 	"os"
 )
 
-
-
-r
-
-
 // Retrieve a copy of all elevator states
 func GetLocalElevator() Elevator {
 	// Function can become useful when/if local elevator is replaced
@@ -22,7 +17,6 @@ func UpdateSharedState() { //denne må endres til å interagere med en anne modu
 	defer GlobalState.mu.Unlock()
 	GlobalState.HRA.States[getElevatorID()] = localElevator
 }
-
 
 // Henter en kopi av hele SharedState
 func GetSharedState() HRAInput {
@@ -78,5 +72,3 @@ func ElevatorPrint(es Elevator) {
 	}
 	fmt.Println("  +--------------------+")
 }
-
-

@@ -57,6 +57,10 @@ func (node *Node) generateTxID() TxID {
 	return TxID(node.name + ":" + id)
 }
 
+func (node *Node) isTxIDFromUs(id TxID) bool {
+	return strings.HasPrefix(string(id), node.name)
+}
+
 func (node *Node) create_Message(message_type string, id TxID, message string) Message {
 	return Message{
 		message_type: message_type,

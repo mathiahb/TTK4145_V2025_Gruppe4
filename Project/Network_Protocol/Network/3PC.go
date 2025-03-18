@@ -1,13 +1,5 @@
 package network
 
-import (
-	"Constants"
-	"fmt"
-	"time"
-
-	peer_to_peer "github.com/mathiahb/TTK4145_V2025_Gruppe4/Network_Protocol/Network/Peer_to_Peer"
-)
-
 type Command struct {
 	Field     string
 	New_Value string
@@ -19,7 +11,7 @@ type Command struct {
 
 //--------------------------------------------------------------------------------------------
 
-func (node *Node) SYN(cmd Command) { // Prepare command - First message in 3PC
+/*func (node *Node) SYN(cmd Command) { // Prepare command - First message in 3PC
 	aliveNodes := node.Get_Alive_Nodes()
 	synMessage := fmt.Sprintf("%s %s=%s", Constants.SYNC_MESSAGE, cmd.Field, cmd.New_Value) // SYN Floor=3
 	node.p2p.Broadcast(node.p2p.Create_Message(synMessage, peer_to_peer.MESSAGE))
@@ -118,3 +110,4 @@ func (node *Node) ACK() { // All-Ack
 	ackMessage := node.p2p.Create_Message(Constants.ACK, peer_to_peer.MESSAGE)
 	node.p2p.Broadcast(ackMessage)
 }
+*/

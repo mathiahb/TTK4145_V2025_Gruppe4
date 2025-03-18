@@ -12,19 +12,24 @@ import (
 type Node struct {
 	p2p *peer_to_peer.P2P_Network
 
-	name string // Elevator ID
+	name    string // Elevator ID
+	next_id int
 
 	voting_on          TxID
 	mu_voting_resource sync.Mutex // TryLock to see if you can vote.
 	coordinating       bool
 
-	next_id int
+	alive_nodes_manager AliveNodeManager
 
-	alive_nodes []string
-	comm        chan Message // Kanal for å motta 3PC-meldinger
+	comm chan Message // Kanal for å motta 3PC-meldinger
+
+	close_channel chan bool
+
+	// Shared State connection
+	new_alive_nodes chan []string
 }
 
-func New_Node(name string) Node {
+func New_Node(name string, new_alive_nodes_channel chan []string) *Node {
 
 	network := Node{
 		p2p: peer_to_peer.New_P2P_Network(),
@@ -35,13 +40,25 @@ func New_Node(name string) Node {
 
 		next_id: 0,
 
-		alive_nodes: make([]string, 0),
-		comm:        make(chan Message, 32), // Velg en passende bufferstørrelse
+		alive_nodes_manager: AliveNodeManager{
+			alive_nodes: make([]string, 0),
+		},
+
+		comm: make(chan Message, 32), // Velg en passende bufferstørrelse
+
+		close_channel: make(chan bool),
+
+		new_alive_nodes: new_alive_nodes_channel,
 	}
 
 	go network.reader()
 
-	return network
+	return &network
+}
+
+func (node *Node) Close() {
+	node.p2p.Close()
+	close(node.close_channel)
 }
 
 func (node *Node) Broadcast(message Message) {
@@ -55,10 +72,6 @@ func (node *Node) Broadcast_Response(message Message, responding_to peer_to_peer
 	node.p2p.Broadcast(p2p_message)
 }
 
-// func generateTxID() string {
-// 	panic("unimplemented")
-// }
-
 func (node *Node) handleSYN(message peer_to_peer.P2P_Message) {
 	// Gjør en vurdering på om heisen kan utføre endringen
 
@@ -70,9 +83,9 @@ func (node *Node) handleSYN(message peer_to_peer.P2P_Message) {
 	// Deretter send PREPARE_ACK eller ABORT
 
 	if canCommit {
-		node.PREPARE_ACK()
+		//node.PREPARE_ACK()
 	} else {
-		node.ABORT()
+		//node.ABORT()
 	}
 }
 func (node *Node) doLocalCommit(cmd Command) {
@@ -102,37 +115,69 @@ func parseCommit(msg string) Command {
 }
 
 func (node *Node) reader() {
+	fmt.Printf("[%s]: Began reading on Node %s\n", node.name, node.name)
+
 	for {
-		p2p_message := <-node.p2p.Read_Channel
-		message := Message_From_String(p2p_message.Message)
+		select {
+		case <-node.close_channel:
+			return
+		case p2p_message := <-node.p2p.Read_Channel:
+			message := Message_From_String(p2p_message.Message)
 
-		switch message.message_type {
+			fmt.Printf("[%s] Received message: %s, decoded to \"%s: %s %s\"\n",
+				node.name, p2p_message.Message, message.id, message.message_type, message.payload)
 
-		case Constants.PREPARE: // Received a synchronization request
-			node.handleSYN(p2p_message) // Decide whether to commit or abort
+			switch message.message_type {
+			// DISCOVERY
+			case Constants.DISCOVERY_BEGIN:
+				go node.participate_In_Discovery(p2p_message, message.id)
 
-		case Constants.PREPARE_ACK: // Received a synchronization acknowledgement
-			node.comm <- message
+			case Constants.DISCOVERY_HELLO:
+				fmt.Printf("[%s]: Decoded message %s to Hello! Node coordinating = %t\n", node.name, message.String(), node.coordinating)
+				node.comm <- message
 
-		case Constants.ABORT_COMMIT: // Received an abort commit message
-			node.comm <- message
-			// TODO: abort current synchronization
-			continue
+			case Constants.DISCOVERY_COMPLETE:
+				node.comm <- message
+				// SYNCHRONIZATION
 
-		case Constants.COMMIT: // Received a commit message
-			cmd := parseCommit(p2p_message.Message)
-			node.doLocalCommit(cmd)
-			node.ACK()
+			case Constants.SYNC_AFTER_DISCOVERY:
+				go node.participate_In_Synchronization(p2p_message, message.id)
 
-		case Constants.ACK:
-			node.comm <- message
+			case Constants.SYNC_RESPONSE:
+				if node.coordinating {
+					node.comm <- message
+				}
 
-			// node.active_vote.Add_Vote()
-			// if node.active_vote.Is_Committable() {
-			// 	node.COMMIT()
-			// } else if node.active_vote.Is_Aborted() {
-			// 	node.ABORT()
-			// }
+			case Constants.SYNC_RESULT:
+				node.comm <- message
+
+				// 2PC
+			case Constants.PREPARE: // Received a synchronization request
+				node.handleSYN(p2p_message) // Decide whether to commit or abort
+
+			case Constants.PREPARE_ACK: // Received a synchronization acknowledgement
+				node.comm <- message
+
+			case Constants.ABORT_COMMIT: // Received an abort commit message
+				node.comm <- message
+				// TODO: abort current synchronization
+				continue
+
+			case Constants.COMMIT: // Received a commit message
+				cmd := parseCommit(p2p_message.Message)
+				node.doLocalCommit(cmd)
+				//node.ACK()
+
+			case Constants.ACK:
+				node.comm <- message
+
+				// node.active_vote.Add_Vote()
+				// if node.active_vote.Is_Committable() {
+				// 	node.COMMIT()
+				// } else if node.active_vote.Is_Aborted() {
+				// 	node.ABORT()
+				// }
+			}
 		}
 	}
 }
@@ -142,5 +187,5 @@ func (node *Node) shared_state_connection(message_from_shared_state chan Command
 }
 
 func (node *Node) Get_Alive_Nodes() []string {
-	return node.alive_nodes
+	return node.alive_nodes_manager.Get_Alive_Nodes()
 }

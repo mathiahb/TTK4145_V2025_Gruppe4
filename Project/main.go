@@ -60,10 +60,10 @@ func main() {
 
 	*/
 
-	hallRequestChannel := make(chan HRAOutput) // fra shared state til elevator
-	elevatorStateChannel := make(chan Elevator) // fra elevator til shared states
+	hallRequestChannel := make(chan HRAOutput)         // fra shared state til elevator
+	elevatorStateChannel := make(chan Elevator)        // fra elevator til shared states
 	newHallRequestChannel := make(chan NewHallRequest) // fra elevator til shared states
-	aliveNodesChannel := make(chan Node) //NodeIDs
+	aliveNodesChannel := make(chan Node)               //NodeIDs
 
 	go elevator(newHallRequestChannel, elevatorStateChannel, hallRequestChannel)
 	go sharedState(newHallRequestChannel, elevatorStateChannel, hallRequestChannel)
