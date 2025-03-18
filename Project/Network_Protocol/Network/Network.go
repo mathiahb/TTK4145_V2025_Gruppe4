@@ -27,9 +27,10 @@ type Node struct {
 
 	// Shared State connection
 	new_alive_nodes chan []string
+	synchronzation  SynchronizationChannels
 }
 
-func New_Node(name string, new_alive_nodes_channel chan []string) *Node {
+func New_Node(name string, new_alive_nodes_channel chan []string, synchronization_channels SynchronizationChannels) *Node {
 
 	network := Node{
 		p2p: peer_to_peer.New_P2P_Network(),
@@ -49,6 +50,7 @@ func New_Node(name string, new_alive_nodes_channel chan []string) *Node {
 		close_channel: make(chan bool),
 
 		new_alive_nodes: new_alive_nodes_channel,
+		synchronzation:  synchronization_channels,
 	}
 
 	go network.reader()

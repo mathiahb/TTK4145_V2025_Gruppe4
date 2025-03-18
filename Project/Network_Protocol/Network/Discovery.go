@@ -46,30 +46,6 @@ func (node *Node) coordinate_Discovery() {
 	}
 }
 
-func (node *Node) broadcast_Discovery_Result(id TxID, result []string) {
-	result_string := ""
-
-	for i, name := range result {
-		if i != 0 {
-			result_string = result_string + ":"
-		}
-		result_string = result_string + name
-	}
-
-	message := node.create_Message(Constants.DISCOVERY_COMPLETE, id, result_string)
-	node.Broadcast(message)
-}
-
-func (node *Node) abort_Discovery(id_discovery TxID) {
-	message := node.create_Message(Constants.ABORT_COMMIT, id_discovery, "")
-	node.Broadcast(message)
-}
-
-func (node *Node) say_Hello_To_Discovery(p2p_message peer_to_peer.P2P_Message, id_discovery TxID) {
-	message := node.create_Message(Constants.DISCOVERY_HELLO, id_discovery, node.name)
-	node.Broadcast_Response(message, p2p_message)
-}
-
 func (node *Node) participate_In_Discovery(p2p_message peer_to_peer.P2P_Message, id_discovery TxID) {
 	if node.isTxIDFromUs(id_discovery) {
 		fmt.Printf("[%s] Detected discovery started by us!\n", node.name)
@@ -102,8 +78,32 @@ func (node *Node) participate_In_Discovery(p2p_message peer_to_peer.P2P_Message,
 				return
 			}
 		case <-timeout:
-			fmt.Printf("ERROR: Discovery %s halted in progress!\n", id_discovery)
+			fmt.Printf("[ERROR %s] Discovery %s halted in progress!\n", node.name, id_discovery)
 			return
 		}
 	}
+}
+
+func (node *Node) broadcast_Discovery_Result(id TxID, result []string) {
+	result_string := ""
+
+	for i, name := range result {
+		if i != 0 {
+			result_string = result_string + ":"
+		}
+		result_string = result_string + name
+	}
+
+	message := node.create_Message(Constants.DISCOVERY_COMPLETE, id, result_string)
+	node.Broadcast(message)
+}
+
+func (node *Node) abort_Discovery(id_discovery TxID) {
+	message := node.create_Message(Constants.ABORT_COMMIT, id_discovery, "")
+	node.Broadcast(message)
+}
+
+func (node *Node) say_Hello_To_Discovery(p2p_message peer_to_peer.P2P_Message, id_discovery TxID) {
+	message := node.create_Message(Constants.DISCOVERY_HELLO, id_discovery, node.name)
+	node.Broadcast_Response(message, p2p_message)
 }
