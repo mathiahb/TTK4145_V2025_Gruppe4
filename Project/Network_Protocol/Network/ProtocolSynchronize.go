@@ -8,29 +8,40 @@ import (
 	peer_to_peer "github.com/mathiahb/TTK4145_V2025_Gruppe4/Network_Protocol/Network/Peer_to_Peer"
 )
 
-// Protocol SYNCHRONIZATION
-// ---
-// Event that triggers Synchronization ->
-// Coordinator sends a SYNC_AFTER_DISCOVERY message with it's own payload.
-// Every voter responds with
-
-// Channels to speak with whatever manages the Synchronization interpreting and sharing
+// PROTOCOL - Synchronize
 /*
-Expected usage if WE initiated the synchronization:
-ProtocolRequestInformation <- true
--- Receive information from the other side via ResponToInformationRequest
-Waits for everyone else
-ProtocolRequestInterpretation <- responses (In the form of map[InformationOwner]Information)
--- Receive the correct interpretation from the other side via RespondWithInterpretation
-Waits for result
-ResultFromSynchronization <- result (should be the same as the interpretation.)
-///////////////////////////////////////////////////////////////////////////////////////
-Expected usage if SOMEONE ELSE initiated the synchronization:
-ProtocolRequestInformation <-true
--- Receive information from the other side via RespondToInformationRequest
-Wait for protocol result
-ResultFromSynchronization <- result
+	Message				:	CODE	PAYLOAD
+	---
+	Synchronize Begin	: 	SYNC
+	Synchronize Response:	SRSP	INFO_TO_SYNCHRONIZE
+	Synchronize Result	:	SRST	INFO_UPDATED
+	Abort Commit		:	ERRC
+	---
+
+	Expected procedure
+	---
+	Coordinator: Synchronize dispatched -> go coordinate_Synchronization(success_channel)
+	Coordinator: Broadcast Synchronize Begin
+	Coordinator: Acquires it's own information via the synchronization channels.
+
+	Participants: Other nodes receives Synchronize Begin -> go participate_Synchronization()
+	Participants: Acquires their information via the synchronization channels.
+	Participants: Every node responds Synchronize Response OR Abort Commit
+
+	Coordinator: Receives responses
+	If Abort Commit OR Timeout passes:
+		Coordinator: Broadcast Abort Commit
+		Coordinator: Returns false on the success_channel
+
+	If All nodes deliver information:
+		Coordinator: Compiles results and requests result from the synchronization channels
+		Coordinator: Broadcast Synchronize Result
+		Coordinator: Passes the result to synchronizechannels.ResultFromSynchronization
+		Coordinator: Returns true on the success_channel
+		Participants: Receives Synchronize Result
+		Participants: Passes the result to synchronizechannels.ResultFromSynchronization
 */
+
 type SynchronizationChannels struct {
 	ProtocolRequestInformation  chan bool
 	RespondToInformationRequest chan string

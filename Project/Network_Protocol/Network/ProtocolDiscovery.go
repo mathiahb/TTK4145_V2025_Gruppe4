@@ -9,11 +9,41 @@ import (
 	peer_to_peer "github.com/mathiahb/TTK4145_V2025_Gruppe4/Network_Protocol/Network/Peer_to_Peer"
 )
 
+// PROTOCOL - Discovery
+/*
+	Message				:	CODE	PAYLOAD
+	---
+	Discovery Begin		: 	NDSC
+	Discovery Hello		:	HELO	NodeName
+	Discovery Complete	:	DSCC	NodeName1:NodeName2:NodeName3:...
+	Abort Commit		:	ERRC
+	---
+
+	Expected procedure
+	---
+	Coordinator: Discovery dispatched -> go coordinate_Discovery(success_channel)
+	Coordinator: Broadcast Discovery Begin
+
+	Participants: Other nodes receives Discovery Begin -> go participate_Discovery()
+	Participants: Every node responds Discovery Hello OR Abort Commit
+
+	Coordinator: Receives responses
+	If Abort Commit:
+		Coordinator: Broadcast Abort Commit
+		Coordinator: Returns false on the success_channel
+
+	Timeout passes:
+		Coordinator: Compiles results
+		Coordinator: Broadcast Discovery Complete
+		Coordinator: Passes the new node list to new_node_channel
+		Coordinator: Returns true on the success_channel
+		Participants: Receives Discovery Complete and recompiles result
+		Participants: Passes the new node list to new_node_channel
+*/
+
 func (node *Node) coordinate_Discovery(success_channel chan bool) {
 	node.mu_voting_resource.Lock()
 	defer node.mu_voting_resource.Unlock()
-
-	node.coordinating = true
 
 	message := node.create_Vote_Message(Constants.DISCOVERY_BEGIN, "")
 	node.Broadcast(message)

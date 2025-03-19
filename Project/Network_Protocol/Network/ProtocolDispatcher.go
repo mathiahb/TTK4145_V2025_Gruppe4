@@ -64,6 +64,8 @@ func (node *Node) start_dispatcher() {
 	go node.dispatcher()
 }
 
+// Dispatcher awaits calls to perform a protocol on the network, then queues the protocol for dispatch.
+// Priority: Discovery > Synchronize > Commands
 func (node *Node) dispatcher() {
 	success_channel := make(chan bool)
 

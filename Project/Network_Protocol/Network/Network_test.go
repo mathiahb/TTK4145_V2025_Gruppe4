@@ -84,7 +84,7 @@ func TestDiscoveryMany(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 150)
 
-	result := make([]string, 0)
+	var result []string
 
 	select {
 	case result = <-response_channel:
@@ -246,9 +246,7 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 
 		name: name2,
 
-		coordinating: false,
-
-		next_id: 0,
+		next_TxID_number: 0,
 
 		alive_nodes_manager: AliveNodeManager{
 			alive_nodes: make([]string, 0),
@@ -353,9 +351,7 @@ func testSynchronizationRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 
 		name: Node2.name,
 
-		coordinating: false,
-
-		next_id: 0,
+		next_TxID_number: 0,
 
 		alive_nodes_manager: AliveNodeManager{
 			alive_nodes: make([]string, 0),
@@ -389,9 +385,7 @@ func TestDispatchRetry(t *testing.T) {
 
 		name: name2,
 
-		coordinating: false,
-
-		next_id: 0,
+		next_TxID_number: 0,
 
 		alive_nodes_manager: AliveNodeManager{
 			alive_nodes: make([]string, 0),

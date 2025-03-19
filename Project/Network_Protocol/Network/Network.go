@@ -11,11 +11,10 @@ import (
 type Node struct {
 	p2p *peer_to_peer.P2P_Network
 
-	name    string // Elevator ID
-	next_id int
+	name             string // Elevator ID
+	next_TxID_number int
 
 	mu_voting_resource sync.Mutex // TryLock to see if you can vote.
-	coordinating       bool
 
 	alive_nodes_manager AliveNodeManager
 	protocol_dispatcher ProtocolDispatcher
@@ -36,9 +35,7 @@ func New_Node(name string, new_alive_nodes_channel chan []string, synchronizatio
 
 		name: name,
 
-		coordinating: false,
-
-		next_id: 0,
+		next_TxID_number: 0,
 
 		alive_nodes_manager: AliveNodeManager{
 			alive_nodes: make([]string, 0),
@@ -158,9 +155,7 @@ func (node *Node) reader() {
 				go node.participate_In_Synchronization(p2p_message, message.id)
 
 			case Constants.SYNC_RESPONSE:
-				if node.coordinating {
-					node.comm <- message
-				}
+				node.comm <- message
 
 			case Constants.SYNC_RESULT:
 				node.comm <- message
