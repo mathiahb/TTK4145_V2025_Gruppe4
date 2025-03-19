@@ -65,12 +65,8 @@ func (node *Node) PREPARE(message Message) { // Prepare command - First message 
 // Jeg kan gjøre endringen
 func (node *Node) PREPARE_ACK(msg Message) { // Say that you acknowledge the sync request and agree to the change
 	msg.message_type = Constants.PREPARE_ACK
-	//message := node.p2p.Create_Message(msg.String(), peer_to_peer.MESSAGE)
-	//node.p2p.Broadcast(message)
-
-	// Sender kun til koordinator istedenfor Broadcast
-	ackMessage := node.p2p.Create_Message(msg.String(), peer_to_peer.MESSAGE)
-	node.p2p.Send(ackMessage, msg.sender)
+	message := node.p2p.Create_Message(msg.String(), peer_to_peer.MESSAGE)
+	node.p2p.Broadcast(message)
 
 }
 
