@@ -14,24 +14,24 @@ type Node struct {
 	name    string // Elevator ID
 	next_id int
 
-	voting_on          TxID
 	mu_voting_resource sync.Mutex // TryLock to see if you can vote.
 	coordinating       bool
 
 	alive_nodes_manager AliveNodeManager
+	protocol_dispatcher ProtocolDispatcher
 
 	comm chan Message // Kanal for å motta 3PC-meldinger
 
 	close_channel chan bool
 
 	// Shared State connection
-	new_alive_nodes chan []string
-	synchronzation  SynchronizationChannels
+	new_alive_nodes          chan []string
+	synchronization_channels SynchronizationChannels
 }
 
 func New_Node(name string, new_alive_nodes_channel chan []string, synchronization_channels SynchronizationChannels) *Node {
 
-	network := Node{
+	node := Node{
 		p2p: peer_to_peer.New_P2P_Network(),
 
 		name: name,
@@ -43,18 +43,20 @@ func New_Node(name string, new_alive_nodes_channel chan []string, synchronizatio
 		alive_nodes_manager: AliveNodeManager{
 			alive_nodes: make([]string, 0),
 		},
+		protocol_dispatcher: *New_Protocol_Dispatcher(),
 
 		comm: make(chan Message, 32), // Velg en passende bufferstørrelse
 
 		close_channel: make(chan bool),
 
-		new_alive_nodes: new_alive_nodes_channel,
-		synchronzation:  synchronization_channels,
+		new_alive_nodes:          new_alive_nodes_channel,
+		synchronization_channels: synchronization_channels,
 	}
 
-	go network.reader()
+	node.start_reader()
+	node.start_dispatcher()
 
-	return &network
+	return &node
 }
 
 func (node *Node) Close() {
@@ -94,7 +96,7 @@ func (node *Node) doLocalCommit(msg Message) {
 
 	node.ACK(msg)
 }
-func (node *Node) doLocalAbort(msg Message) {
+func (node *Node) doLocalAbort(Message) {
 	fmt.Printf("[Local %s] Doing abort.\n", node.name)
 }
 
@@ -118,6 +120,15 @@ func (node *Node) doLocalAbort(msg Message) {
 // 	}
 // }
 
+func (node *Node) protocol_timed_out() {
+	node.protocol_dispatcher.should_do_discovery <- true
+	node.protocol_dispatcher.should_do_synchronize <- true
+}
+
+func (node *Node) start_reader() {
+	go node.reader()
+}
+
 func (node *Node) reader() {
 	fmt.Printf("[%s]: Began reading on Node %s\n", node.name, node.name)
 
@@ -137,13 +148,12 @@ func (node *Node) reader() {
 				go node.participate_In_Discovery(p2p_message, message.id)
 
 			case Constants.DISCOVERY_HELLO:
-				fmt.Printf("[%s]: Decoded message %s to Hello! Node coordinating = %t\n", node.name, message.String(), node.coordinating)
 				node.comm <- message
 
 			case Constants.DISCOVERY_COMPLETE:
 				node.comm <- message
-				// SYNCHRONIZATION
 
+			// SYNCHRONIZATION
 			case Constants.SYNC_AFTER_DISCOVERY:
 				go node.participate_In_Synchronization(p2p_message, message.id)
 
@@ -183,10 +193,6 @@ func (node *Node) reader() {
 			}
 		}
 	}
-}
-
-func (node *Node) shared_state_connection(message_from_shared_state chan Command, command_to_shared_state chan Command) {
-
 }
 
 func (node *Node) Get_Alive_Nodes() []string {

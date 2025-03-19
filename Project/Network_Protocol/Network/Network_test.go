@@ -40,9 +40,9 @@ func TestDiscovery(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 100)
 
-	go Node1.coordinate_Discovery()
+	Node1.protocol_dispatcher.Do_Discovery()
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Millisecond * 150)
 
 	// Is Node1 a result?
 	select {
@@ -78,9 +78,9 @@ func TestDiscoveryMany(t *testing.T) {
 	}
 
 	time.Sleep(time.Millisecond * 100)
-	go Node1.coordinate_Discovery()
+	Node1.protocol_dispatcher.Do_Discovery()
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Millisecond * 150)
 
 	result := make([]string, 0)
 
@@ -119,11 +119,11 @@ func TestSynchronization(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 100)
 
-	go Node1.coordinate_Discovery()
+	Node1.protocol_dispatcher.Do_Discovery()
 
 	time.Sleep(time.Millisecond * 150)
 
-	go Node1.coordinate_Synchronization()
+	Node1.protocol_dispatcher.Do_Synchronization()
 
 	info1 := "Node1 Hi"
 	info2 := "Node2 Hello"
@@ -182,4 +182,19 @@ func TestSynchronization(t *testing.T) {
 	default:
 		t.Errorf("Did not receive result from Node 2!")
 	}
+}
+
+func Test2PC(t *testing.T) {
+	Node1 := New_Node("Node1", make(chan []string), New_SynchronizationChannels())
+	Node2 := New_Node("Node2", make(chan []string), New_SynchronizationChannels())
+	defer Node1.Close()
+	defer Node2.Close()
+
+	time.Sleep(time.Millisecond * 100)
+
+	Node1.protocol_dispatcher.Do_Discovery()
+
+	time.Sleep(time.Millisecond * 150)
+
+	// Do Test Here.
 }

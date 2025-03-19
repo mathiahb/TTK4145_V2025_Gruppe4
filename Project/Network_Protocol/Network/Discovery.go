@@ -9,7 +9,7 @@ import (
 	peer_to_peer "github.com/mathiahb/TTK4145_V2025_Gruppe4/Network_Protocol/Network/Peer_to_Peer"
 )
 
-func (node *Node) coordinate_Discovery() {
+func (node *Node) coordinate_Discovery(success_channel chan bool) {
 	node.mu_voting_resource.Lock()
 	defer node.mu_voting_resource.Unlock()
 
@@ -34,6 +34,8 @@ func (node *Node) coordinate_Discovery() {
 			// Aborted
 			if response.message_type == Constants.ABORT_COMMIT && response.id == message.id {
 				node.abort_Discovery(message.id)
+
+				success_channel <- false
 				return
 			}
 		case <-time_to_complete:
@@ -41,6 +43,7 @@ func (node *Node) coordinate_Discovery() {
 			node.alive_nodes_manager.Set_Alive_Nodes(result)
 			node.new_alive_nodes <- result
 
+			success_channel <- true
 			return
 		}
 	}
