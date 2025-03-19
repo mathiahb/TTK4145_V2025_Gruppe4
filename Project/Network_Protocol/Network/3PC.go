@@ -62,12 +62,10 @@ func (node *Node) PREPARE(message Message) { // Prepare command - First message 
 
 }
 
-// Jeg kan gjøre endringen
-func (node *Node) PREPARE_ACK(msg Message) { // Say that you acknowledge the sync request and agree to the change
+// Jeg kan gjøre endringen, send meg en commit
+func (node *Node) PREPARE_ACK(msg Message, respondingTo peer_to_peer.P2P_Message) {
 	msg.message_type = Constants.PREPARE_ACK
-	message := node.p2p.Create_Message(msg.String(), peer_to_peer.MESSAGE)
-	node.p2p.Broadcast(message)
-
+	node.Broadcast_Response(msg, respondingTo)
 }
 
 /*
@@ -128,8 +126,7 @@ func (node *Node) ABORT(msg Message) { // If aborted, wait a random amount of ti
 }
 
 // Kun brukt til å si at de har hørt commit/abort. Ingenting mer.
-func (node *Node) ACK() { // All-Ack
-	ackMessage := node.p2p.Create_Message(Constants.ACK, peer_to_peer.MESSAGE)
-	node.p2p.Broadcast(ackMessage)
-	// TODO: Send ACK til kun kooridnator istedenfor
+func (node *Node) ACK(msg Message) { // All-Ack
+	msg.message_type = Constants.ACK
+	node.p2p.Broadcast(node.p2p.Create_Message(msg.String(), peer_to_peer.MESSAGE))
 }

@@ -73,7 +73,7 @@ func (node *Node) Broadcast_Response(message Message, responding_to peer_to_peer
 	node.p2p.Broadcast(p2p_message)
 }
 
-func (node *Node) handleSYN(msg Message) {
+func (node *Node) handleSYN(msg Message, originalP2PMsg peer_to_peer.P2P_Message) {
 	// Gjør en vurdering på om heisen kan utføre endringen
 
 	// Sjekk om kommandoen er gyldig
@@ -84,13 +84,15 @@ func (node *Node) handleSYN(msg Message) {
 	// Deretter send PREPARE_ACK eller ABORT
 
 	if canCommit {
-		node.PREPARE_ACK(msg)
+		node.PREPARE_ACK(msg, originalP2PMsg)
 	} else {
 		node.ABORT(msg)
 	}
 }
 func (node *Node) doLocalCommit(msg Message) {
-	// Gjør endringen
+	// TODO:  Gjør endringen lokalt
+
+	node.ACK(msg)
 }
 func (node *Node) doLocalAbort(msg Message) {
 	fmt.Printf("[Local %s] Doing abort.\n", node.name)
@@ -155,7 +157,7 @@ func (node *Node) reader() {
 
 				// 2PC
 			case Constants.PREPARE: // Received a synchronization request
-				node.handleSYN(message) // Decide whether to commit or abort
+				node.handleSYN(message, p2p_message) // Decide whether to commit or abort
 
 			case Constants.PREPARE_ACK: // Received a synchronization acknowledgement
 				node.comm <- message

@@ -36,6 +36,7 @@ const PRE_COMMIT_ACK string = "PRCA" // PREPare ACKnowledge
 const COMMIT string = "COMT"         // COMmiT
 const ABORT_COMMIT string = "ERRC"   // Error commit
 // TODO: Skill mellom to typer ABORT, den som brukes i sync/discovery og den som brukes i 3PC
+
 const ACK string = "ACKS" // ACKnowledgeS
 
 // Discovery messages [4 bytes long]
