@@ -35,7 +35,8 @@ const PRE_COMMIT string = "PREC"     // PREPare
 const PRE_COMMIT_ACK string = "PRCA" // PREPare ACKnowledge
 const COMMIT string = "COMT"         // COMmiT
 const ABORT_COMMIT string = "ERRC"   // Error commit
-const ACK string = "ACKS"            // ACKnowledgeS
+// TODO: Skill mellom to typer ABORT, den som brukes i sync/discovery og den som brukes i 3PC
+const ACK string = "ACKS" // ACKnowledgeS
 
 // Discovery messages [4 bytes long]
 const DISCOVERY_BEGIN string = "NDSC"      // Node DiSCovery

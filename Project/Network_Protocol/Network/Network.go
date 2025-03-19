@@ -3,7 +3,6 @@ package network
 import (
 	"Constants"
 	"fmt"
-	"strings"
 	"sync"
 
 	peer_to_peer "github.com/mathiahb/TTK4145_V2025_Gruppe4/Network_Protocol/Network/Peer_to_Peer"
@@ -74,7 +73,7 @@ func (node *Node) Broadcast_Response(message Message, responding_to peer_to_peer
 	node.p2p.Broadcast(p2p_message)
 }
 
-func (node *Node) handleSYN(message peer_to_peer.P2P_Message) {
+func (node *Node) handleSYN(msg Message) {
 	// Gjør en vurdering på om heisen kan utføre endringen
 
 	// Sjekk om kommandoen er gyldig
@@ -85,36 +84,37 @@ func (node *Node) handleSYN(message peer_to_peer.P2P_Message) {
 	// Deretter send PREPARE_ACK eller ABORT
 
 	if canCommit {
-		//node.PREPARE_ACK()
+		node.PREPARE_ACK(msg)
 	} else {
-		//node.ABORT()
+		node.ABORT(msg)
 	}
 }
-func (node *Node) doLocalCommit(cmd Command) {
+func (node *Node) doLocalCommit(msg Message) {
 	// Gjør endringen
 }
-func (node *Node) doLocalAbort() {
+func (node *Node) doLocalAbort(msg Message) {
 	fmt.Printf("[Local %s] Doing abort.\n", node.name)
 }
-func parseCommit(msg string) Command {
-	// msg example: "COMMIT floor=3"
 
-	// Drop "COMMIT " from the beginning.
-	payload := strings.TrimPrefix(msg, "COMT ")
-	// Now payload might be "floor=3"
+// func parseCommit(msg string) Command {
+// 	// msg example: "COMMIT floor=3"
 
-	// Split on the first '='
-	parts := strings.SplitN(payload, "=", 2)
+// 	// Drop "COMMIT " from the beginning.
+// 	payload := strings.TrimPrefix(msg, "COMT ")
+// 	// Now payload might be "floor=3"
 
-	if len(parts) < 2 {
-		fmt.Printf("Error: Could not parse commit message (not two parts): %s\n", msg)
-	}
+// 	// Split on the first '='
+// 	parts := strings.SplitN(payload, "=", 2)
 
-	return Command{
-		Field:     parts[0],
-		New_Value: parts[1],
-	}
-}
+// 	if len(parts) < 2 {
+// 		fmt.Printf("Error: Could not parse commit message (not two parts): %s\n", msg)
+// 	}
+
+// 	return Command{
+// 		Field:     parts[0],
+// 		New_Value: parts[1],
+// 	}
+// }
 
 func (node *Node) reader() {
 	fmt.Printf("[%s]: Began reading on Node %s\n", node.name, node.name)
@@ -155,7 +155,7 @@ func (node *Node) reader() {
 
 				// 2PC
 			case Constants.PREPARE: // Received a synchronization request
-				node.handleSYN(p2p_message) // Decide whether to commit or abort
+				node.handleSYN(message) // Decide whether to commit or abort
 
 			case Constants.PREPARE_ACK: // Received a synchronization acknowledgement
 				node.comm <- message
@@ -166,8 +166,7 @@ func (node *Node) reader() {
 				continue
 
 			case Constants.COMMIT: // Received a commit message
-				cmd := parseCommit(p2p_message.Message)
-				node.doLocalCommit(cmd)
+				node.doLocalCommit(message)
 				//node.ACK()
 
 			case Constants.ACK:
