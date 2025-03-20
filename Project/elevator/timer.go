@@ -9,6 +9,8 @@ var timerEndTime time.Time
 var timerActive bool
 
 // TimerStart starter timeren med angitt varighet
+
+//hvor skal det defineres hvor lenge døren skal være åpne?
 func TimerStart(duration float64) {
 	timerEndTime = time.Now().Add(time.Duration(duration) * time.Second)
 	timerActive = true
