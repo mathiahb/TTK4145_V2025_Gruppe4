@@ -48,13 +48,26 @@ func main() {
 
 	}
 
+	// channels and threads for communication within the different parts of the elevator
+	buttonChannel := make(chan elevio.ButtonEvent) //het før drv_..., men det er feil konvensjon, må fikses opp
+	floorsChannel := make(chan int)
+	obstructionChannel := make(chan bool)
+	doorTimerIsUp := make(chan bool)
+
+	go elevio.PollButtons(buttonChannel)
+	go elevio.PollFloorSensor(floorsChannel)
+	go elevio.PollObstructionSwitch(obstructionChannel )
+
+
 
 	/* channels for communication between modules */
 
 	//elevator <-> shared states
 
 	elevatorStateChannel  := make(chan Elevator) // fra elevator til shared states, sender tilstandene når en tilstand på heisen endres
-
+	clearCabRequestChannel := make(chan Elevator)
+	clearHallRequestChannel := make(chan HallRequestsType)
+	approvedClearHallRequestsChannel := make(chan HallRequestsType)
 	newHallRequestChannel := make(chan HallRequestType) // fra elevator til shared states, sender ny HallRequest, når knapp trykket inn
 	approvedHallRequestChannel  := make(chan HallRequestType) // fra shared state til elevator, sender godkjent HallRequest etter konferering med nettverket
 
@@ -72,7 +85,7 @@ func main() {
 	informedNewStateChannel := make(chan Elevator) // network sender en godkjent endring
 
 	/* Threads for the different modules */
-	go elevator(elevatorStateChannel , newHallRequestChannel , approvedHallRequestChannel )
+	go elevator(elevatorStateChannel, newHallRequestChannel, approvedHallRequestChannel) 
 	go sharedState(elevatorStateChannel , newHallRequestChannel , approvedHallRequestChannel , startSynchChannel, updatedSharedStateForSynchChannel, sendSharedStateForSynchChannel, notifyNewHallRequestChannel , approvedNewHallRequestChannel, informNewStateChannel, informedNewStateChannel)
 	go network(startSynchChannel, updatedSharedStateForSynchChannel, sendSharedStateForSynchChannel, notifyNewHallRequestChannel , approvedNewHallRequestChannel, informNewStateChannel, informedNewStateChannel)
 	
