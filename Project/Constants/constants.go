@@ -37,7 +37,9 @@ const PRE_COMMIT string = "PREC"     // PREPare
 const PRE_COMMIT_ACK string = "PRCA" // PREPare ACKnowledge
 const COMMIT string = "COMT"         // COMmiT
 const ABORT_COMMIT string = "ERRC"   // Error commit
-const ACK string = "ACKS"            // ACKnowledgeS
+// TODO: Skill mellom to typer ABORT, den som brukes i sync/discovery og den som brukes i 3PC
+
+const ACK string = "ACKS" // ACKnowledgeS
 
 // Discovery messages [4 bytes long]
 const DISCOVERY_BEGIN string = "NDSC"      // Node DiSCovery
@@ -57,8 +59,6 @@ const UDP_BROADCAST_IP_PORT string = "239.255.255.255" + UDP_PORT
 const UDP_READ_DEADLINE time.Duration = time.Millisecond
 const UDP_WAIT_BEFORE_TRANSMITTING_AGAIN time.Duration = 50 * time.Millisecond // Writing: 20 Hz
 const UDP_WAIT_BEFORE_READING_AGAIN time.Duration = 50 * time.Millisecond      // Reading: 20 Hz
-const UDP_SERVER_LIFETIME time.Duration = 200 * time.Millisecond               // Lifetime: 5 Hz
-const UDP_UNTIL_SERVER_BOOT time.Duration = 200 * time.Millisecond             // Reboot: 5 Hz
 
 const TCP_READ_DEADLNE time.Duration = time.Millisecond              // 1 Millisecond read deadline.
-const TCP_WAIT_BEFORE_READING_AGAIN time.Duration = time.Millisecond // Checks TCP ~1000 times a second
+const TCP_WAIT_BEFORE_READING_AGAIN time.Duration = time.Millisecond // Checks TCP 500~1000 times a second

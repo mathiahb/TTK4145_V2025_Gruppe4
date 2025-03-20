@@ -51,10 +51,14 @@ func Message_From_String(message string) Message {
 // Node actions to create a message to be sent
 
 func (node *Node) generateTxID() TxID {
-	id := strconv.Itoa(node.next_id)
-	node.next_id++
+	id := strconv.Itoa(node.next_TxID_number)
+	node.next_TxID_number++
 
 	return TxID(node.name + ":" + id)
+}
+
+func (node *Node) isTxIDFromUs(id TxID) bool {
+	return strings.HasPrefix(string(id), node.name)
 }
 
 func (node *Node) create_Message(message_type string, id TxID, message string) Message {

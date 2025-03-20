@@ -43,13 +43,11 @@ func New_Dependency_Handler() Dependency_Handler {
 	}
 }
 
-func (handler *Dependency_Handler) Add_Dependency(dependency Dependency) {
+func (handler *Dependency_Handler) add_Dependency(dependency Dependency) {
 	if dependency.Dependency_Owner == "" {
 		// No dependency.
 		return
 	}
-	handler.mu.Lock()
-	defer handler.mu.Unlock()
 
 	if handler.min_heap.Len() == Constants.P2P_DEP_TIME_HORIZON {
 		old_dependency := heap.Pop(handler.min_heap).(Dependency)
@@ -60,14 +58,39 @@ func (handler *Dependency_Handler) Add_Dependency(dependency Dependency) {
 	handler.lookup_map[dependency] = struct{}{} // Creates an instance of an empty struct.
 }
 
-func (handler *Dependency_Handler) Has_Dependency(dependency Dependency) bool {
+func (handler *Dependency_Handler) Add_Dependency(dependency Dependency) {
 	handler.mu.Lock()
 	defer handler.mu.Unlock()
 
+	handler.add_Dependency(dependency)
+}
+
+func (handler *Dependency_Handler) has_Dependency(dependency Dependency) bool {
 	if dependency.Dependency_Owner == "" {
 		return true
 	}
 
 	_, ok := handler.lookup_map[dependency]
 	return ok
+}
+
+func (handler *Dependency_Handler) Has_Dependency(dependency Dependency) bool {
+	handler.mu.Lock()
+	defer handler.mu.Unlock()
+
+	return handler.has_Dependency(dependency)
+}
+
+// Performs the action of checking for dependency and adding it to the list
+func (handler *Dependency_Handler) Have_Seen_Dependency_Before(dependency Dependency) bool {
+	handler.mu.Lock()
+	defer handler.mu.Unlock()
+
+	result := handler.has_Dependency(dependency)
+
+	if !result {
+		handler.add_Dependency(dependency)
+	}
+
+	return result
 }

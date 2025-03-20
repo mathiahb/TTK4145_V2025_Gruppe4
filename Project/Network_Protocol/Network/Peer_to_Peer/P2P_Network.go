@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"Network-Protocol/Peer_to_Peer/TCP"
-	"Network-Protocol/Peer_to_Peer/UDP"
+	"github.com/mathiahb/TTK4145_V2025_Gruppe4/Network_Protocol/Network/Peer_to_Peer/TCP"
+	"github.com/mathiahb/TTK4145_V2025_Gruppe4/Network_Protocol/Network/Peer_to_Peer/UDP"
 )
 
 // Package peer_to_peer
@@ -101,11 +101,10 @@ func (network *P2P_Network) reader() {
 
 func (network *P2P_Network) publisher(message P2P_Message) {
 	new_dependency := New_Dependency(message.Sender, message.Time)
-	if network.dependency_handler.Has_Dependency(new_dependency) {
-		// Already received this message, discard.
+
+	if network.dependency_handler.Have_Seen_Dependency_Before(new_dependency) {
 		return
 	}
-	network.dependency_handler.Add_Dependency(new_dependency)
 
 	timeout := time.NewTimer(time.Second)
 

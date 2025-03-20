@@ -1,8 +1,10 @@
 package main
 
 import (
-	"Constants"
-	elevator "Driver-Elevator"
+	"elevator_project/Constants"
+	"elevator_project/elevator"
+
+	// "shared_states"
 	"fmt"
 	"os"
 )
