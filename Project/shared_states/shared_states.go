@@ -1,5 +1,7 @@
 package shared_states
 
+// hvordan koble sammen elevator og nettverk mtp importering etc.?
+
 import (
 	"encoding/json"
 	"fmt"
@@ -9,9 +11,11 @@ import (
 /*
 Hvordan shared state skal kommunisere med heis og nettverk
 
+-> upsis, ikke oppdatert! mangler clearHalRequests og clearCabRequests...
+
 a) heisen får en ny hallRequest (knapp har blitt trykket)
 	1. si ifra til nettverk: notifyNewHallRequestChannel // fra shared_state til nettverk
-	
+
 b) Nettverket godkjenner ny HallRequest
 	1. oppdatere HRAInputVariable
 	2. sende HRAInput til getHallRequestAssignments
@@ -32,9 +36,6 @@ e) Dersom nettverket ønsker å starte synkronisering
 
 Obs! med denne implementasjonen operere en heis som er disconnected fra resten av nettverket som en enkelt enhet og bruker HRA alene helt fram til den kobles til.
 Spm: hva skjer dersom heisen kobles fra heis, altså at den mister informasjon om sin egen tilstand. Håndteres det av nettverket? Hvordan bør shared state funke i så tilfelle?
-
--spm: høres dette forløpet logisk ut? Er dette slik nettverket bør kobles på?
--spm: hva synes dere om navngigningen til kanalene. Brukte lang tid på å reflektere rundt hva som er mest logisk, og dette er mitt forlag. Si ifra hvis noe er utydelig.
 
 */
 
@@ -92,6 +93,7 @@ func sharedState(elevatorStateChannel chan Elevator, newHallRequestChannel chan 
 	var HRAInputVariable HRAType 
 	var localID = getElevatorID() //denne funksjonen eksisterer i FSM
 
+
 	for{
 		select{
 
@@ -102,18 +104,29 @@ func sharedState(elevatorStateChannel chan Elevator, newHallRequestChannel chan 
 				HRAInputVariable.HallRequests[newHallRequest.floor][newHallRequest.button] = true // oppdaterer hall requests basert på lokal heis
 				approvedHallRequestChannel  <- getHallRequestAssignments(HRAInputVariable) // Be om ny oppdragsfordeling og sende til lokal heis
 
-			case newElevatorState := <- elevatorStateChannel : // tilstand endret på lokal heis, samme logikk som over
-				informNewStateChannel <- newElevatorState 
+			case newElevatorState := <- elevatorStateChannel: // tilstand endret på lokal heis, samme logikk som over
+				informNewStateChannel <- newElevatorState // kan formatere selv, men må være en streng!!
 				
 			case approvedElevatorState := <- approvedNewelevatorStateChannel : 
 				HRAInputVariable.States[localID] = approvedElevatorState 
 				approvedHallRequestChannel  <- getHallRequestAssignments(HRAInputVariable)
-		
+
+			case clearCabRequest := <- clearCabRequestChannel:  // hmm er denne nødvendig da? slik den står nå er den litt misvisende
+				informNewStateChannel <- clearCabRequest // 	
+			
+
+			case clearHallRequest := <- clearHallRequestChannel:
+				approveClearHallRequest <- clearHallRequest
+
+			case <- approvedClearHallRequestsChannel:
+				HRAInputVariable.HallRequests[newHallRequest.floor][newHallRequest.button] = false // oppdaterer hall requests basert på lokal heis
+				approvedHallRequestChannel  <- getHallRequestAssignments(HRAInputVariable) 
+
 			case <- startSynchChannel: //nettverket ønsker å starte synkronisering
-				sendStateForSynchChannel <- HRAInputVariable 
+				sendStateForSynchChannel <- HRAInputVariable  // dette må være en json-marshall-streng
 			
 			case updatedSharedStates := <- updatedSharedStateForSynchChannel //shared states får oppdaterte states fra heiser som er koblet på nettverket
-				HRAInputVariable = updatedSharedStates
+				HRAInputVariable = updatedSharedStates //ups denne kommer som en streng
 				approvedHallRequestChannel <- getHallRequestAssignments(HRAInputVariable)
 		}
 	}
