@@ -187,8 +187,8 @@ func TestSynchronization(t *testing.T) {
 }
 
 func Test2PC(t *testing.T) {
-	Node1 := New_Node("Node1", make(chan []string), New_SynchronizationChannels())
-	Node2 := New_Node("Node2", make(chan []string), New_SynchronizationChannels())
+	Node1 := New_Node("Node1", make(chan []string, 1), New_SynchronizationChannels())
+	Node2 := New_Node("Node2", make(chan []string, 1), New_SynchronizationChannels())
 	defer Node1.Close()
 	defer Node2.Close()
 
@@ -201,9 +201,10 @@ func Test2PC(t *testing.T) {
 	// Do Test Here.
 	Node1.protocol_dispatcher.Do_Command("some_command")
 
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 100)
 
-	
+	// Lat som jeg er shared state og sjekk om jeg får tilbake en commit.
+
 }
 
 func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {

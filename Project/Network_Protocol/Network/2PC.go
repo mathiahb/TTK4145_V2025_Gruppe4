@@ -59,7 +59,6 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 	defer node.mu_voting_resource.Unlock()
 
 	// Build a message with type = PREPARE, and payload = "Field=New_Value"
-	txid := node.generateTxID()
 	prepareMsg := node.create_Vote_Message(Constants.PREPARE, cmd)
 
 	// Broadcast the PREPARE to all nodes
@@ -70,12 +69,14 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 	neededAcks := len(node.Get_Alive_Nodes())
 	ackCount := 0
 
+	ackCount++ // Coordinator votes for itself
+
 	time_to_complete := time.After(time.Millisecond * 100)
 
 	for {
 		if ackCount == neededAcks {
 			// Everyone acknowledged, so let's COMMIT
-			node.commit2PC(txid, cmd)
+			node.commit2PC(prepareMsg.id, cmd)
 			success_channel <- true
 
 			// TODO: Her forlater vi funksjonen, uten å låse den igjen i commit2PC.
@@ -86,7 +87,7 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 		select {
 		case msg := <-node.comm:
 			// We only care about messages with our TxID
-			if msg.id != txid {
+			if msg.id != prepareMsg.id {
 				continue
 			}
 			switch msg.message_type {
@@ -98,7 +99,7 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 			case Constants.ABORT_COMMIT:
 				// Some participant aborted -> we must abort
 				fmt.Printf("[%s] 2PC coordinator sees ABORT from %s => ABORT.\n", node.name, msg.sender)
-				node.abort2PC(txid)
+				node.abort2PC(prepareMsg.id)
 				success_channel <- false
 				return
 			}
@@ -106,7 +107,7 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 		case <-time_to_complete:
 			// Timed out waiting for all ACKs => ABORT
 			fmt.Printf("[%s] 2PC coordinator timed out waiting for ACKs => ABORT.\n", node.name)
-			node.abort2PC(txid)
+			node.abort2PC(prepareMsg.id)
 			success_channel <- false
 			// TOOD: initiate a discovery?
 			return
@@ -115,6 +116,11 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 }
 
 func (node *Node) participate_2PC(p2p_message peer_to_peer.P2P_Message, prepareMsg Message) {
+	if node.isTxIDFromUs(prepareMsg.id) {
+		// We don't want to vote for ourselves
+		return
+	}
+
 	// Attempt to lock so no other protocols run concurrently
 	ok := node.mu_voting_resource.TryLock()
 	if !ok {
@@ -185,7 +191,7 @@ func (node *Node) abort2PC(txid TxID) {
 func (node *Node) doLocalCommit(msg Message) {
 
 	// Parse the payload to get the command
-
+	fmt.Printf("[%s] Doing commit.\n", node.name)
 	// TODO:  Do changes locally based on the command
 	// Send informasjon over kanal til shared state.
 

@@ -96,7 +96,6 @@ func (node *Node) dispatcher() {
 				go node.protocol_dispatcher.Do_Command(command)
 				Random_Wait()
 			}
-
 		}
 		Wait_After_Protocol()
 	}
