@@ -1,7 +1,7 @@
 package network
 
 import (
-	"Constants"
+	Constants "elevator_project/constants"
 	"fmt"
 	"strconv"
 	"strings"

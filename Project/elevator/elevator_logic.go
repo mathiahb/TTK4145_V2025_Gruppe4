@@ -1,7 +1,7 @@
 package elevator
 
 import (
-	//. "elevator_project/constants" 
+	//. "elevator_project/constants"
 	"elevator_project/elevio"
 	"elevator_project/shared_states"
 )
@@ -38,13 +38,13 @@ func ElevatorThread(elevatorChannels ElevatorChannels, betweenElevatorAndSharedS
 	for {
 		select {
 
-		case buttonEvent := <- Button:
+		case buttonEvent := <-Button:
 			localElevator = FSMButtonPress(buttonEvent.btnFloor, buttonEvent.btnType, localElevator, elevatorStateChannel, newHallRequestChannel)
 
-		case newFloor := <- Foor:
+		case newFloor := <-Foor:
 			localElevator, hallRequests = FSMOnFloorArrival(newFloor, localElevator, hallRequests, clearHallRequestChannel, clearCabRequestChannel, elevatorStateChannel)
 
-		case isObstructed = <- Obstruction: // dette føles rart, men er nødt til å vite om noen prøver å obstructe døren
+		case isObstructed = <-Obstruction: // dette føles rart, men er nødt til å vite om noen prøver å obstructe døren
 
 			if isObstructed {
 

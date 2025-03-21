@@ -1,11 +1,11 @@
 package network
 
 import (
-	"Constants"
+	Constants "elevator_project/constants"
 	"fmt"
 	"sync"
 
-	peer_to_peer "github.com/mathiahb/TTK4145_V2025_Gruppe4/Network_Protocol/Network/Peer_to_Peer"
+	peer_to_peer "elevator_project/Network_Protocol/Network/Peer_to_Peer"
 )
 
 type Node struct {

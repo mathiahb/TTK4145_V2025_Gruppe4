@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"Constants"
+	Constants "elevator_project/constants"
 )
 
 // Package TCP

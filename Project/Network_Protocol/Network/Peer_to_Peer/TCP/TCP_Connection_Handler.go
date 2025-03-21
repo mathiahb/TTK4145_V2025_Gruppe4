@@ -1,7 +1,7 @@
 package TCP
 
 import (
-	"Constants"
+	Constants "elevator_project/constants"
 	"fmt"
 	"io"
 	"time"
