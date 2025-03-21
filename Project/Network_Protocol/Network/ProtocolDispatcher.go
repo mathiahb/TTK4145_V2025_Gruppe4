@@ -88,9 +88,14 @@ func (node *Node) dispatcher() {
 			}
 
 		case command := <-node.protocol_dispatcher.command_queue:
-			command.Field = "" // Dummy task
-		}
+			go node.coordinate_2PC(command, success_channel)
+			success := <-success_channel
+			if !success {
+				go node.protocol_dispatcher.Do_Command(command)
+				Random_Wait()
+			}
 
-		Wait_After_Protocol()
+			Wait_After_Protocol()
+		}
 	}
 }

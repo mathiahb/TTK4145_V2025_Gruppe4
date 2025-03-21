@@ -72,51 +72,6 @@ func (node *Node) Broadcast_Response(message Message, responding_to peer_to_peer
 	node.p2p.Broadcast(p2p_message)
 }
 
-func (node *Node) handleSYN(msg Message, originalP2PMsg peer_to_peer.P2P_Message) {
-	// Gjør en vurdering på om heisen kan utføre endringen
-
-	// Sjekk om kommandoen er gyldig
-	// Etasjen er innenfor scopet feks
-	// Heisen er i en tilstand hvor den kan utføre endringen
-
-	canCommit := true
-	// Deretter send PREPARE_ACK eller ABORT
-
-	if canCommit {
-		node.PREPARE_ACK(msg, originalP2PMsg)
-	} else {
-		node.ABORT(msg)
-	}
-}
-func (node *Node) doLocalCommit(msg Message) {
-	// TODO:  Gjør endringen lokalt
-
-	node.ACK(msg)
-}
-func (node *Node) doLocalAbort(Message) {
-	fmt.Printf("[Local %s] Doing abort.\n", node.name)
-}
-
-// func parseCommit(msg string) Command {
-// 	// msg example: "COMMIT floor=3"
-
-// 	// Drop "COMMIT " from the beginning.
-// 	payload := strings.TrimPrefix(msg, "COMT ")
-// 	// Now payload might be "floor=3"
-
-// 	// Split on the first '='
-// 	parts := strings.SplitN(payload, "=", 2)
-
-// 	if len(parts) < 2 {
-// 		fmt.Printf("Error: Could not parse commit message (not two parts): %s\n", msg)
-// 	}
-
-// 	return Command{
-// 		Field:     parts[0],
-// 		New_Value: parts[1],
-// 	}
-// }
-
 func (node *Node) protocol_timed_out() {
 	node.protocol_dispatcher.should_do_discovery <- true
 	node.protocol_dispatcher.should_do_synchronize <- true
@@ -162,7 +117,7 @@ func (node *Node) reader() {
 
 				// 2PC
 			case Constants.PREPARE: // Received a synchronization request
-				node.handleSYN(message, p2p_message) // Decide whether to commit or abort
+				go node.participate_2PC(p2p_message, message)
 
 			case Constants.PREPARE_ACK: // Received a synchronization acknowledgement
 				node.comm <- message
@@ -173,18 +128,11 @@ func (node *Node) reader() {
 				continue
 
 			case Constants.COMMIT: // Received a commit message
-				node.doLocalCommit(message)
+				node.comm <- message
 				//node.ACK()
 
 			case Constants.ACK:
 				node.comm <- message
-
-				// node.active_vote.Add_Vote()
-				// if node.active_vote.Is_Committable() {
-				// 	node.COMMIT()
-				// } else if node.active_vote.Is_Aborted() {
-				// 	node.ABORT()
-				// }
 			}
 		}
 	}
