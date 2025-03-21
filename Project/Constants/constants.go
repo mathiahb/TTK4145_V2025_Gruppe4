@@ -55,18 +55,12 @@ type Elevator struct {
 	CabRequests []bool            `json:"cabRequests"`
 }
 
-// type HallRequestType [][2]bool
-
-type HallRequestType struct {
-    FloorRequest  int        `json: "floor"`
-    Button elevio.ButtonType `json:"button"` //spørmsål er dette nødvendig nå
-}
+type HallRequestType [][2]bool
 
 type HRAType struct {  // Hall request assignment type
 	HallRequests HallRequestType     `json:"hallRequests"`
 	States       map[string]Elevator `json:"states"`
 }
-
 
 
 // ---------------- NETWORK --------------------

@@ -80,7 +80,6 @@ func SharedStateThread(betweenElevatorAndSharedStatesChannels BetweenElevatorAnd
 				HRAInputVariable.HallRequests[newHallRequest.floor][newHallRequest.button] = false // oppdaterer hall requests basert på lokal heis
 				approvedHallRequestChannel  <- getHallRequestAssignments(HRAInputVariable) 
 
-			
 			case <- startSynchChannel: //nettverket ønsker å starte synkronisering
 				translatedHRAInputVariable := translateHRAToNetwork(HRAInputVariable)
 				sendStateForSynchChannel <- translatedHRAInputVariable  // dette må være en json-marshall-streng

@@ -63,6 +63,8 @@ det jeg har:
 
 (hvor cab requests sendes på nettverket som en new state)
 
+requestCommit(chan string)
+commitApproved(chan string)
 
 
 discovery
