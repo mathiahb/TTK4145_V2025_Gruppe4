@@ -1,11 +1,9 @@
 package shared_states
 
-// hvordan koble sammen elevator og nettverk mtp importering etc.?
-
 import (
 	"encoding/json"
 	"fmt"
-	"os/exec"
+	. "elevator_project/constants"
 )
 
 /*
@@ -39,91 +37,53 @@ Spm: hva skjer dersom heisen kobles fra heis, altså at den mister informasjon o
 
 */
 
-
-
-type HRAType struct { 
-	HallRequests HallRequestsType    `json:"hallRequests"`
-	States       map[string]Elevator `json:"states"`
-}
-
-type HallRequestType struct {
-	floor int
-	button elevio.ButtonType
-}
-
-// ===================== REQUEST ASSIGNER ===================== //
-
-func getHallRequestAssignments(HRAInputVariable HRAType) map[string][][2]bool {
-
-	// Convert to JSON
-	jsonBytes, err := json.Marshal(HRAInputVariable) 
-	if err != nil {
-		fmt.Println("json.Marshal error:", err)
-		return nil
-	}
-
-	// Call `hall_request_assigner`
-	ret, err := exec.Command("../hall_request_assigner/hall_request_assigner", "-i", string(jsonBytes)).CombinedOutput()
-	if err != nil {
-		fmt.Println("exec.Command error:", err)
-		fmt.Println(string(ret))
-		return nil
-	}
-
-	// Debugging: Print raw response
-	fmt.Println("Raw response from hall_request_assigner:", string(ret))
-
-	// Parse JSON response
-	output := make(map[string][][2]bool)
-	err = json.Unmarshal(ret, &output)
-	if err != nil {
-		fmt.Println("json.Unmarshal error:", err)
-		return nil
-	}
-
-	return output
-}
-
-
 // ===================== SHARED STATE ===================== //
 // Bridge between network and the elevator. The shared states communicates also with the HRA.
 
-func sharedState(elevatorStateChannel chan Elevator, newHallRequestChannel chan HallRequestType, approvedHallRequestChannel  chan HallRequestType, startSynchChannel chan struct{}, updatedSharedStateForSynchChannel chan HRAType, sendSharedStateForSynchChannel chan HRAType, notifyNewHallRequestChannel  chan HallRequestType, approvedNewHallRequestChannel chan HallRequestType, informNewStateChannel chan Elevator, informedNewStateChannel chan Elevator){
+func SharedStateThread(betweenElevatorAndSharedStatesChannels BetweenElevatorAndSharedStatesChannels){
 
 	var HRAInputVariable HRAType 
-	var localID = getElevatorID() //denne funksjonen eksisterer i FSM
+	var localID = getElevatorID() // denne funksjonen eksisterer i FSM
+	var aliveNodes = []string // ser ikke poenget med denne
 
 
 	for{
 		select{
 
 			case newHallRequest := <- newHallRequestChannel: // knapp trykket på lokal heis
-				notifyNewHallRequestChannel  <- newHallRequest // be om godkjennelse fra nettverk
+				translatedNewHallRequest := translateHallRequestToNetwork(newHallRequest)
+				notifyNewHallRequestChannel  <- translatedNewHallRequest // be om godkjennelse fra nettverk
 
 			case approvedRequest := <- approvedNewHallRequestChannel: // endring godkjent av nettverk
+				// translate from network
 				HRAInputVariable.HallRequests[newHallRequest.floor][newHallRequest.button] = true // oppdaterer hall requests basert på lokal heis
 				approvedHallRequestChannel  <- getHallRequestAssignments(HRAInputVariable) // Be om ny oppdragsfordeling og sende til lokal heis
 
 			case newElevatorState := <- elevatorStateChannel: // tilstand endret på lokal heis, samme logikk som over
-				informNewStateChannel <- newElevatorState // kan formatere selv, men må være en streng!!
+				translatedNewElevatorState := translateElevatorStateToNetwork(newElevatorState)
+				informNewStateChannel <- translatedNewElevatorState 
 				
-			case approvedElevatorState := <- approvedNewelevatorStateChannel : 
-				HRAInputVariable.States[localID] = approvedElevatorState 
+			case approvedElevatorState := <- approvedNewElevatorStateChannel: 
+				HRAInputVariable.States[localID] = approvedElevatorState // localID???
 				approvedHallRequestChannel  <- getHallRequestAssignments(HRAInputVariable)
 
-			case clearCabRequest := <- clearCabRequestChannel:  // hmm er denne nødvendig da? slik den står nå er den litt misvisende
-				informNewStateChannel <- clearCabRequest // 	
+			case clearCabRequest := <- clearCabRequestChannel: // må dette være en egen kanal?
+				translatedClearCabRequest := translateElevatorStateToNetwork(clearCabRequest)
+				informNewStateChannel <- translatedClearCabRequest   	
 			
-
-			case clearHallRequest := <- clearHallRequestChannel:
-				approveClearHallRequest <- clearHallRequest
+			case clearHallRequest := <- clearHallRequestChannel: // fra elevator til shared state
+				translatedClearHallRequest := translateHallRequestToNetwork(clearHallRequest)
+				approveClearHallRequest <- translatedClearHallRequest
 
 			case <- approvedClearHallRequestsChannel:
+				// må oversette fra nettverket
 				HRAInputVariable.HallRequests[newHallRequest.floor][newHallRequest.button] = false // oppdaterer hall requests basert på lokal heis
 				approvedHallRequestChannel  <- getHallRequestAssignments(HRAInputVariable) 
 
+			
 			case <- startSynchChannel: //nettverket ønsker å starte synkronisering
-				sendStateForSynchChannel <- HRAInputVariable  // dette må være en json-marshall-streng
+				translatedHRAInputVariable := translateHRAToNetwork(HRAInputVariable)
+				sendStateForSynchChannel <- translatedHRAInputVariable  // dette må være en json-marshall-streng
 			
 			case updatedSharedStates := <- updatedSharedStateForSynchChannel //shared states får oppdaterte states fra heiser som er koblet på nettverket
 				HRAInputVariable = updatedSharedStates //ups denne kommer som en streng
