@@ -4,6 +4,7 @@ import (
 	"elevator_project/constants"
 	"elevator_project/elevator"
 	"elevator_project/elevio"
+
 	//"elevator_project/Network_Protocol/Network" // denne mappen er rotete! kalle pakke om mappe det samme kanskje??
 	"elevator_project/shared_states"
 	"fmt"
@@ -44,8 +45,8 @@ func main() {
 
 	}
 
-	elevatorChannels := elevator.MakeElevatorChannels() // channels for communication within the different parts of the elevator
-	betweenElevatorAndSharedStatesChannels := elevator.MakeBetweenElevatorAndSharedStatesChannels()	//elevator <-> shared states communication
+	elevatorChannels := elevator.MakeElevatorChannels()                                             // channels for communication within the different parts of the elevator
+	betweenElevatorAndSharedStatesChannels := elevator.MakeBetweenElevatorAndSharedStatesChannels() //elevator <-> shared states communication
 	//network <-> shared states communication
 	//synchronizationChannels := network.New_SynchronizationChannels() // endre navn til Make, slik at det blir samsvar på tvers av moduler
 	//twoPhaseCommitChannels := network.MakeTwoPhaseCommitChannels() // denne må Atle lage

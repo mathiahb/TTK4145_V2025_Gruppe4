@@ -199,6 +199,11 @@ func Test2PC(t *testing.T) {
 	time.Sleep(time.Millisecond * 150)
 
 	// Do Test Here.
+	Node1.protocol_dispatcher.Do_Command("some_command")
+
+	time.Sleep(time.Millisecond * 10)
+
+	
 }
 
 func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {

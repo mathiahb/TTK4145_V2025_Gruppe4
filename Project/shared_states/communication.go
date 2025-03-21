@@ -1,11 +1,10 @@
 package shared_states
 
-import( 
+import (
 	. "elevator_project/constants"
-
 )
 
-// lager bare kanalene fra shared state til elevator 
+// lager bare kanalene fra shared state til elevator
 // lager kanalene fra shared state til elevator
 // ergo de kanalene fra nettverket som går til shared state skal defineres på nettverksbiten
 
@@ -41,7 +40,7 @@ for er litt redd for circular dependency
 synchronizationChannels
 ------------------
 ProtocolRequestInformation  chan bool <-> startSynchChannel
-RespondToInformationRequest chan string <-> sendStateForSynchChannel 
+RespondToInformationRequest chan string <-> sendStateForSynchChannel
 
 ProtocolRequestsInterpretation chan map[string]string // kart av nodenavn til sharedstaten på noden
 RespondWithInterpretation      chan string // her må jeg returnere tilbake hva det betyr
@@ -50,20 +49,21 @@ ResultFromSynchronization chan string <-> updatedSharedStateForSynchChannel // n
 
 
 
-twoPhaseCommitChannels 
+twoPhaseCommitChannels
 ----------------------
 det jeg har:
 -> Fra shared state
--- notifyNewHallRequestChannel 
+-- notifyNewHallRequestChannel
 -- informNewStateChannel
 
 -> Til shared state
--- approvedHallRequestChannel 
+-- approvedHallRequestChannel
 -- approvedNewelevatorStateChannel:
 
 (hvor cab requests sendes på nettverket som en new state)
 
 requestCommit(chan string)
+
 commitApproved(chan string)
 
 

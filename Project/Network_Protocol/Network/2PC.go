@@ -3,7 +3,6 @@ package network
 import (
 	"Constants"
 	"fmt"
-	"strings"
 	"time"
 
 	peer_to_peer "github.com/mathiahb/TTK4145_V2025_Gruppe4/Network_Protocol/Network/Peer_to_Peer"
@@ -55,14 +54,13 @@ type Command struct {
 	New_Value string
 }
 
-func (node *Node) coordinate_2PC(cmd Command, success_channel chan bool) {
+func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 	node.mu_voting_resource.Lock()
 	defer node.mu_voting_resource.Unlock()
 
 	// Build a message with type = PREPARE, and payload = "Field=New_Value"
 	txid := node.generateTxID()
-	payload := fmt.Sprintf("%s=%s", cmd.Field, cmd.New_Value)
-	prepareMsg := node.create_Message(Constants.PREPARE, txid, payload)
+	prepareMsg := node.create_Vote_Message(Constants.PREPARE, cmd)
 
 	// Broadcast the PREPARE to all nodes
 	node.Broadcast(prepareMsg)
@@ -77,7 +75,7 @@ func (node *Node) coordinate_2PC(cmd Command, success_channel chan bool) {
 	for {
 		if ackCount == neededAcks {
 			// Everyone acknowledged, so let's COMMIT
-			node.commit2PC(txid, payload)
+			node.commit2PC(txid, cmd)
 			success_channel <- true
 
 			// TODO: Her forlater vi funksjonen, uten å låse den igjen i commit2PC.
@@ -126,10 +124,8 @@ func (node *Node) participate_2PC(p2p_message peer_to_peer.P2P_Message, prepareM
 	defer node.mu_voting_resource.Unlock()
 
 	// Parse the payload to get the command
-	field, newVal := parseCommandPayload(prepareMsg.payload)
-
 	// Decide if we can do this command
-	canCommit := checkIfWeCanCommit(field, newVal)
+	canCommit := true
 	if canCommit {
 		// Send PREPARE_ACK back to coordinator
 		ackMsg := node.create_Message(Constants.PREPARE_ACK, prepareMsg.id, "")
@@ -186,25 +182,13 @@ func (node *Node) abort2PC(txid TxID) {
 	// Is this necessary? We're not really doing anything with the abort locally
 }
 
-func parseCommandPayload(payload string) (string, string) {
-	parts := strings.SplitN(payload, "=", 2)
-	if len(parts) < 2 {
-		return payload, ""
-	}
-	return parts[0], parts[1]
-}
-
-func checkIfWeCanCommit(field, newVal string) bool {
-	// TODO: Implement checks on the field and new value (if needed)
-	return true
-}
-
 func (node *Node) doLocalCommit(msg Message) {
 
 	// Parse the payload to get the command
-	field, newVal := parseCommandPayload(msg.payload)
+
 	// TODO:  Do changes locally based on the command
-	fmt.Printf("set Node [%s]  %f=%v\n", node.name, field, newVal)
+	// Send informasjon over kanal til shared state.
+
 }
 
 // func (node *Node) doLocalAbort(Message) {

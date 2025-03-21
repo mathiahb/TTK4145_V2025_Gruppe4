@@ -24,7 +24,7 @@ ProtocolRequestInterpretation <- responses (In the form of map[InformationOwner]
 -- Receive the correct interpretation from the other side via RespondWithInterpretation
 Waits for result
 ResultFromSynchronization <- result (should be the same as the interpretation.)
-///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////	////////////////
 Expected usage if SOMEONE ELSE initiated the synchronization:
 ProtocolRequestInformation <-true
 -- Receive information from the other side via RespondToInformationRequest

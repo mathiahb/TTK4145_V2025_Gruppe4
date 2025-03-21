@@ -6,14 +6,14 @@ import (
 )
 
 type ProtocolDispatcher struct {
-	command_queue         chan Command
+	command_queue         chan string
 	should_do_discovery   chan bool
 	should_do_synchronize chan bool
 }
 
 func New_Protocol_Dispatcher() *ProtocolDispatcher {
 	return &ProtocolDispatcher{
-		command_queue:         make(chan Command, 32),
+		command_queue:         make(chan string, 32),
 		should_do_discovery:   make(chan bool, 32),
 		should_do_synchronize: make(chan bool, 32),
 	}
@@ -27,7 +27,7 @@ func (dispatcher ProtocolDispatcher) Do_Synchronization() {
 	dispatcher.should_do_synchronize <- true
 }
 
-func (dispatcher ProtocolDispatcher) Do_Command(command Command) {
+func (dispatcher ProtocolDispatcher) Do_Command(command string) {
 	dispatcher.command_queue <- command
 }
 
@@ -72,6 +72,7 @@ func (node *Node) dispatcher() {
 	for {
 		select {
 		case <-node.protocol_dispatcher.should_do_discovery:
+			node.protocol_dispatcher.Flush_Discovery_Channel()
 			go node.coordinate_Discovery(success_channel)
 			success := <-success_channel
 			if !success {
@@ -80,6 +81,7 @@ func (node *Node) dispatcher() {
 			}
 
 		case <-node.protocol_dispatcher.should_do_synchronize:
+			node.protocol_dispatcher.Flush_Synchronization_Channel()
 			go node.coordinate_Synchronization(success_channel)
 			success := <-success_channel
 			if !success {
@@ -95,7 +97,7 @@ func (node *Node) dispatcher() {
 				Random_Wait()
 			}
 
-			Wait_After_Protocol()
 		}
+		Wait_After_Protocol()
 	}
 }
