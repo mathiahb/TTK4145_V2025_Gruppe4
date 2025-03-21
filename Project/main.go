@@ -1,7 +1,7 @@
 package main
 
 import (
-	"elevator_project/Constants"
+	"elevator_project/constants"
 	"elevator_project/elevator"
 	"elevator_project/elevio"
 	//"elevator_project/Network_Protocol/Network" // denne mappen er rotete! kalle pakke om mappe det samme kanskje??
@@ -19,16 +19,16 @@ func main() {
 		}
 
 		switch arg {
-		case Constants.ARGV_TEST:
+		case constants.ARGV_TEST:
 			is_testing = true
-		case Constants.ARGV_LISTENER_ONLY:
+		case constants.ARGV_LISTENER_ONLY:
 			// Should not connect an elevator, and should start a listener node.
 			// Will print the shared state to screen, additionally will log the messages sent on the network.
-		case Constants.ARGV_BACKUP:
+		case constants.ARGV_BACKUP:
 			// Spawned by local_heartbeat, will be listening to and sending a heartbeat to the main program
 			// If loss of heartbeat from backup: Kill backup and spawn new
 			// If loss of heartbeat from main: Kill main and takeover as new main.
-		case Constants.ARGV_ELEVATOR_ID:
+		case constants.ARGV_ELEVATOR_ID:
 			id = os.Args[i+1]
 		default:
 			fmt.Printf("Unknown Arg: %s", arg)
