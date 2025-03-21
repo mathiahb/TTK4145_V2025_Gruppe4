@@ -1,6 +1,10 @@
-package Constants
+package constants
 
-import "time"
+import (
+	"time"
+	"elevator_project/elevio"
+
+)
 
 // ----------------- ARGV ----------------------
 const ARGV_TEST string = "--test"
@@ -11,6 +15,57 @@ const ARGV_ELEVATOR_ID string = "--id"
 const NO_ID int = -1
 
 // --------------- ELEVATOR -------------------- //
+
+const (
+	N_FLOORS          = 4
+	N_BUTTONS         = 3
+	DoorOpenDurationS = 3.0
+)
+
+// Elevator direction
+type Dirn string
+
+const (
+	D_Stop Dirn = "stop"
+	D_Up   Dirn = "up"
+	D_Down Dirn = "down"
+)
+
+// Elevator behavior states
+type ElevatorBehaviour string
+
+const (
+	EB_Idle     ElevatorBehaviour = "idle"
+	EB_DoorOpen ElevatorBehaviour = "doorOpen"
+	EB_Moving   ElevatorBehaviour = "moving"
+)
+
+// Button types (Hall Up, Hall Down, Cab)
+const (
+	B_HallUp = iota
+	B_HallDown
+	B_Cab
+)
+
+// Elevator struct representing an elevator's state
+type Elevator struct {
+	Behaviour   ElevatorBehaviour `json:"behaviour"`
+	Floor       int               `json:"floor"`
+	Dirn        Dirn              `json:"direction"`
+	CabRequests []bool            `json:"cabRequests"`
+}
+
+// type HallRequestType [][2]bool
+
+type HallRequestType struct {
+    FloorRequest  int        `json: "floor"`
+    Button elevio.ButtonType `json:"button"` //spørmsål er dette nødvendig nå
+}
+
+type HRAType struct {  // Hall request assignment type
+	HallRequests HallRequestType     `json:"hallRequests"`
+	States       map[string]Elevator `json:"states"`
+}
 
 
 
