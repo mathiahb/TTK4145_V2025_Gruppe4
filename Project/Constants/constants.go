@@ -30,13 +30,11 @@ const LAMPORT_CLOCK_WRAPAROUND_LOWER_EDGE int = -1e10
 const LAMPORT_CLOCK_WRAPAROUND_UPPER_EDGE int = 1e10
 
 // 3-phase commit messages - 4 bytes long
-const SIZE_TYPE_FIELD int = 4        // 4 Bytes per message type
-const PREPARE string = "PREP"        // SYNchronize
-const PREPARE_ACK string = "PREA"    // SYNchronize ACKnowledge
-const PRE_COMMIT string = "PREC"     // PREPare
-const PRE_COMMIT_ACK string = "PRCA" // PREPare ACKnowledge
-const COMMIT string = "COMT"         // COMmiT
-const ABORT_COMMIT string = "ERRC"   // Error commit
+const SIZE_TYPE_FIELD int = 4      // 4 Bytes per message type
+const PREPARE string = "PREP"      // SYNchronize
+const PREPARE_ACK string = "PREA"  // SYNchronize ACKnowledge
+const COMMIT string = "COMT"       // COMmiT
+const ABORT_COMMIT string = "ERRC" // Error commit
 // TODO: Skill mellom to typer ABORT, den som brukes i sync/discovery og den som brukes i 3PC
 
 const ACK string = "ACKS" // ACKnowledgeS
