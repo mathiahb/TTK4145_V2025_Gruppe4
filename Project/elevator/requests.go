@@ -6,9 +6,9 @@ type DirnBehaviourPair struct {
 	Behaviour ElevatorBehaviour
 }
 
-func HallRequestsUninitialized() HallRequestsType {
-	var hallRequests HallRequestsType
-	hallRequests[elevator.N_FLOORS][elevator.N_BUTTONS] = false 
+func HallRequestsUninitialized() HallRequestType {
+	var hallRequests HallRequestType
+	hallRequests[N_FLOORS][2] = false
 	return hallRequests
 }
 
@@ -51,15 +51,15 @@ func requestsShouldStop(localElevator Elevator, hallRequests [][2]bool) bool {
 }
 
 // requestsClearAtCurrentFloor rydder bestillinger på gjeldende etasje
-func requestsClearAtCurrentFloor(localElevator Elevator, hallRequests HallRequestsType, clearHallRequestChannel chan HallRequestsType, clearCabRequestChannel chan Elevator) (Elevator, HallRequestsType){
-	
+func requestsClearAtCurrentFloor(localElevator Elevator, hallRequests HallRequestType, clearHallRequestChannel chan HallRequestType, clearCabRequestChannel chan Elevator) (Elevator, HallRequestType) {
+
 	// Clear cab request at this floor
-	if(localElevator.CabRequests[localElevator.Floor] == true){
+	if localElevator.CabRequests[localElevator.Floor] == true {
 		localElevator.CabRequests[localElevator.Floor] = false
 		clearCabRequestChannel <- localElevator
-	}else {
+	} else {
 		//cleare hallrequest locally and update network
-		hallRequests[hallRequest.floor][hallRequest.button] = false // hvordan oppdatere?
+		hallRequests[hallRequests.floor][hallRequest.button] = false // hvordan oppdatere?
 		clearHallRequestChannel <- localElevator.HallRequests[hallRequest.floor][hallRequest.button]
 	}
 
@@ -86,7 +86,7 @@ func hasRequests(e Elevator, hallRequests [][2]bool) bool {
 }
 
 // requestsChooseDirection velger retning basert på forespørsler
-func requestsChooseDirection(e Elevator, hallRequests HallRequestsType) Dirn {
+func requestsChooseDirection(e Elevator, hallRequests HallRequestType) Dirn {
 
 	// Hvis det er noen forespørsler over heisen
 	for f := e.Floor + 1; f < N_FLOORS; f++ {
