@@ -1,46 +1,56 @@
 package elevator
 
 import (
-	elevio "Driver-Elevio"
-	"shared_states" //hvordan koble ting sammen?
+	"elevator_project/shared_states"
+	"elevator_project/elevio"
 	"fmt"
 )
 
-// getElevatorID returns a unique identifier for this elevator instance.
-func getElevatorID() string {
-	hostname, err := os.Hostname()
-	if err != nil {
-		fmt.Println("Error getting hostname:", err)
-		return "unknown_elevator"
-	}
-	return hostname
+
+type ElevatorChannels struct { // channels and threads for communication within the different parts of the elevator
+	Button chan elevio.ButtonEvent // okei, så problemet har vært med importering av elevio
+	Floor chan int
+	Obstruction chan bool
+	DoorTimerIsUp chan bool
+	
 }
 
-
-func ElevatorUninitialized() Elevator { // Initialize a new elevator with default values
-	turnOffAllLights()
-	return Elevator{
-		Floor:       -1,
-		Dirn:        D_Stop,
-		Behaviour:   EB_Idle,
-		CabRequests: make([]bool, N_FLOORS),
+func MakeElevatorChannels() ElevatorChannels{
+	return ElevatorChannels{
+		Button: make(chan elevio.ButtonEvent),
+		Floor: make(chan int),
+		Obstruction: make(chan bool),
+		DoorTimerIsUp: make(chan bool),
 	}
 }
 
-func turnOffAllLights(){
-	//starter med alle lys avslått
-	for button := 0; button < N_BUTTONS; button++ {
-		for floor := 0; floor < N_FLOORS; floor++ {
-			elevio.SetButtonLamp(elevio.ButtonType(button), floor, false)
-		}
+type BetweenElevatorAndSharedStatesChannels struct {
+	HallRequestChannel chan shared_states.HRAType
+	ElevatorStateChannel chan Elevator
+	ClearCabRequestChannel chan Elevator
+	ClearHallRequestChannel chan HallRequestsType
+	ApprovedClearHallRequestsChannel chan HallRequestsType
+	NewHallRequestChannel chan HallRequestsType
+	ApprovedHallRequestChannel chan HallRequestsType
+
+}
+
+func MakeBetweenElevatorAndSharedStatesChannels() BetweenElevatorAndSharedStatesChannels {
+	return BetweenElevatorAndSharedStatesChannels {
+		HallRequestChannel: make(chan shared_states.HRAType), // fra shared state til elevator
+		ElevatorStateChannel: make(chan Elevator),        // fra elevator til shared states
+		ClearCabRequestChannel: make(chan Elevator),
+		ClearHallRequestChannel: make(chan HallRequestsType),
+		ApprovedClearHallRequestsChannel: make(chan HallRequestsType),
+		NewHallRequestChannel: make(chan HallRequestsType), // fra elevator til shared states, sender ny HallRequest, når knapp trykket inn
+		ApprovedHallRequestChannel: make(chan HallRequestsType), // fra shared state til elevator, sender godkjent HallRequest etter konferering med nettverket
+		
 	}
-	elevio.SetDoorOpenLamp(false)
 }
 
 
 // må legge til alle kanalene
-func elevator(elevatorStateChannel chan Elevator, newHallRequestChannel chan HallRequestsType,  approvedHallRequestChannel chan HallRequestsType, clearHallRequestChannel chan HallRequestsType, clearCabRequestChannel chan Elevator) {
-	
+func ElevatorThread(elevatorChannels ElevatorChannels, betweenElevatorAndSharedStatesChannels BetweenElevatorAndSharedStatesChannels){
 	//føler at det er litt initialisering/konfigurering som mangler
 
 	var localElevator = ElevatorUninitialized() // lager et lokalt heisobjekt

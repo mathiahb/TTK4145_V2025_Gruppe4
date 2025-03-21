@@ -3,8 +3,9 @@ package main
 import (
 	"elevator_project/Constants"
 	"elevator_project/elevator"
-
-	// "shared_states"
+	"elevator_project/elevio"
+	//"elevator_project/Network_Protocol/Network" // denne mappen er rotete! kalle pakke om mappe det samme kanskje??
+	"elevator_project/shared_states"
 	"fmt"
 	"os"
 )
@@ -40,55 +41,20 @@ func main() {
 	}
 
 	if is_testing {
-		// tests.Test_Creating_Connection(id)
-		// return
-		elevator.InitElevator()
-
-		go elevator.RequestAssigner()
-
-		select {}
 
 	}
 
-	// channels and threads for communication within the different parts of the elevator
-	buttonChannel := make(chan elevio.ButtonEvent) //het før drv_..., men det er feil konvensjon, må fikses opp
-	floorsChannel := make(chan int)
-	obstructionChannel := make(chan bool)
-	doorTimerIsUp := make(chan bool)
-
-	go elevio.PollButtons(buttonChannel)
-	go elevio.PollFloorSensor(floorsChannel)
-	go elevio.PollObstructionSwitch(obstructionChannel )
-
-
-
-	/* channels for communication between modules */
-
-	//elevator <-> shared states
-
-	elevatorStateChannel  := make(chan Elevator) // fra elevator til shared states, sender tilstandene når en tilstand på heisen endres
-	clearCabRequestChannel := make(chan Elevator)
-	clearHallRequestChannel := make(chan HallRequestsType)
-	approvedClearHallRequestsChannel := make(chan HallRequestsType)
-	newHallRequestChannel := make(chan HallRequestType) // fra elevator til shared states, sender ny HallRequest, når knapp trykket inn
-	approvedHallRequestChannel  := make(chan HallRequestType) // fra shared state til elevator, sender godkjent HallRequest etter konferering med nettverket
-
-
+	elevatorChannels := elevator.MakeElevatorChannels() // channels for communication within the different parts of the elevator
+	betweenElevatorAndSharedStatesChannels := elevator.MakeBetweenElevatorAndSharedStatesChannels()	//elevator <-> shared states communication
 	//network <-> shared states communication
-	
-	startSynchChannel := make(chan struct{}) // fra nettverk til shared state, ønsker å starte synkronisering
-	updatedSharedStateForSynchChannel := make(chan HRAType) // fra nettverk til shared state, inneholder oppdatert shared states
-	sendSharedStateForSynchChannel := make(chan HRAType) //fra shared state til nettverk
+	//synchronizationChannels := network.New_SynchronizationChannels() // endre navn til Make, slik at det blir samsvar på tvers av moduler
+	//twoPhaseCommitChannels := network.MakeTwoPhaseCommitChannels() // denne må Atle lage
 
-	notifyNewHallRequestChannel  := make(chan HallRequestType)// shared state ønsker endring i hallRequest, sender til nettverk
-	approvedNewHallRequestChannel := make(chan HallRequesType) // network sender en godkjent endring
+	go elevio.PollButtons(elevatorChannels.Button)
+	go elevio.PollFloorSensor(elevatorChannels.Floor)
+	go elevio.PollObstructionSwitch(elevatorChannels.Obstruction)
+	go elevator.ElevatorThread(elevatorChannels, betweenElevatorAndSharedStatesChannels)
+	go shared_states.SharedStateThread(betweenElevatorAndSharedStatesChannels)
+	//go network.NetworkThread(synchronizationChannels) // twoPhaseCommitChannels, skal også sendes til nettverket
 
-	informNewStateChannel := make(chan Elevator) // shared state ønsker endring i state, sender til nettverk
-	informedNewStateChannel := make(chan Elevator) // network sender en godkjent endring
-
-	/* Threads for the different modules */
-	go elevator(elevatorStateChannel, newHallRequestChannel, approvedHallRequestChannel) 
-	go sharedState(elevatorStateChannel , newHallRequestChannel , approvedHallRequestChannel , startSynchChannel, updatedSharedStateForSynchChannel, sendSharedStateForSynchChannel, notifyNewHallRequestChannel , approvedNewHallRequestChannel, informNewStateChannel, informedNewStateChannel)
-	go network(startSynchChannel, updatedSharedStateForSynchChannel, sendSharedStateForSynchChannel, notifyNewHallRequestChannel , approvedNewHallRequestChannel, informNewStateChannel, informedNewStateChannel)
-	
 }
