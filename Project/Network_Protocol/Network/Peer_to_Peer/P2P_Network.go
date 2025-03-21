@@ -1,12 +1,12 @@
 package peer_to_peer
 
 import (
-	"Constants"
+	Constants "elevator_project/constants"
 	"fmt"
 	"time"
 
-	"github.com/mathiahb/TTK4145_V2025_Gruppe4/Network_Protocol/Network/Peer_to_Peer/TCP"
-	"github.com/mathiahb/TTK4145_V2025_Gruppe4/Network_Protocol/Network/Peer_to_Peer/UDP"
+	"elevator_project/Network_Protocol/Network/Peer_to_Peer/TCP"
+	"elevator_project/Network_Protocol/Network/Peer_to_Peer/UDP"
 )
 
 // Package peer_to_peer

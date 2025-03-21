@@ -1,7 +1,7 @@
 package peer_to_peer
 
 import (
-	"Constants"
+	Constants "elevator_project/constants"
 	"fmt"
 	"sync"
 )

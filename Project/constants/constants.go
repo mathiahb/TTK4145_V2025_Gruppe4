@@ -2,8 +2,6 @@ package constants
 
 import (
 	"time"
-	"elevator_project/elevio"
-
 )
 
 // ----------------- ARGV ----------------------
@@ -57,11 +55,10 @@ type Elevator struct {
 
 type HallRequestType [][2]bool
 
-type HRAType struct {  // Hall request assignment type
+type HRAType struct { // Hall request assignment type
 	HallRequests HallRequestType     `json:"hallRequests"`
 	States       map[string]Elevator `json:"states"`
 }
-
 
 // ---------------- NETWORK --------------------
 const NO_DATA string = ""
