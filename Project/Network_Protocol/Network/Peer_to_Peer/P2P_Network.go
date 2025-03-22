@@ -57,6 +57,8 @@ func New_P2P_Network() *P2P_Network {
 	go network.peer_detection()
 	go network.reader()
 
+	time.Sleep(Constants.P2P_TIME_UNTIL_EXPECTED_ALL_CONNECTED)
+
 	return &network
 }
 
