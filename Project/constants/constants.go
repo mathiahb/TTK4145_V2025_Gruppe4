@@ -39,7 +39,12 @@ const (
 	B_HallDown
 	B_Cab
 )
-
+// --------------- SHARED STATES -------------------- //
+const (
+	ADD = "ADD"
+	REMOVE = "REMOVE"
+	UPDATE_STATE = "UPDATE_STATE"
+)
 
 // ---------------- NETWORK --------------------
 const NO_DATA string = ""
