@@ -204,6 +204,8 @@ func Test2PC(t *testing.T) {
 	time.Sleep(time.Millisecond * 100)
 
 	// Lat som jeg er shared state og sjekk om jeg får tilbake en commit.
+	//requestCommit(chan string) - brukes fra shared state til network for å be om commit
+	//commitApproved(chan string) - brukes fra network til shared state for å godkjenne commit
 
 }
 
