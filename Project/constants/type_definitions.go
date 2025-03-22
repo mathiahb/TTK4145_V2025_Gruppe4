@@ -1,5 +1,8 @@
 package constants
-
+import (
+	"fmt"
+	"os"
+)
 // --------------- ELEVATOR -------------------- //
 
 // Elevator behavior states
@@ -23,4 +26,14 @@ type HallRequestType [][2]bool
 type HRAType struct { // Hall request assignment type
 	HallRequests HallRequestType     `json:"hallRequests"`
 	States       map[string]Elevator `json:"states"`
+}
+
+// getElevatorID returns a unique identifier for this elevator instance.
+func GetElevatorID() string {
+	hostname, err := os.Hostname()
+	if err != nil {
+		fmt.Println("Error getting hostname:", err)
+		return "unknown_elevator"
+	}
+	return hostname
 }
