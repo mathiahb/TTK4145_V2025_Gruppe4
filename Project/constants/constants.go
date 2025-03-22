@@ -20,17 +20,12 @@ const (
 	DoorOpenDurationS = 3.0
 )
 
-// Elevator direction
-type Dirn string
 
 const (
 	D_Stop Dirn = "stop"
 	D_Up   Dirn = "up"
 	D_Down Dirn = "down"
 )
-
-// Elevator behavior states
-type ElevatorBehaviour string
 
 const (
 	EB_Idle     ElevatorBehaviour = "idle"
@@ -45,20 +40,6 @@ const (
 	B_Cab
 )
 
-// Elevator struct representing an elevator's state
-type Elevator struct {
-	Behaviour   ElevatorBehaviour `json:"behaviour"`
-	Floor       int               `json:"floor"`
-	Dirn        Dirn              `json:"direction"`
-	CabRequests []bool            `json:"cabRequests"`
-}
-
-type HallRequestType [][2]bool
-
-type HRAType struct { // Hall request assignment type
-	HallRequests HallRequestType     `json:"hallRequests"`
-	States       map[string]Elevator `json:"states"`
-}
 
 // ---------------- NETWORK --------------------
 const NO_DATA string = ""
