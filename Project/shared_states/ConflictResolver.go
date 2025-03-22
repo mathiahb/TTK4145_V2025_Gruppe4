@@ -34,7 +34,8 @@ func resolveDifferences(state1 HRAType, state2 HRAType, owner_of_state2 string) 
 	// If both states have HallRequests, do bitwise OR on every request (Make sure no orders are lost)
 	if len(state1.HallRequests) != 0 && len(state2.HallRequests) != 0 {
 		for i, val := range state2.HallRequests {
-			state1.HallRequests[i] = state1.HallRequests[i] || val
+			state1.HallRequests[i][0] = state1.HallRequests[i][0] || val[0]
+			state1.HallRequests[i][1] = state1.HallRequests[i][1] || val[1]
 		}
 	}
 
@@ -47,7 +48,10 @@ func resolveDifferences(state1 HRAType, state2 HRAType, owner_of_state2 string) 
 }
 
 func ResolveSharedStateConflicts(states map[string]string) string {
-	result := HRAType{}
+	result := HRAType{
+		States:       make(map[string]Elevator),
+		HallRequests: make(HallRequestType, 0),
+	}
 
 	for name, state := range states {
 		new_state := HRAType{}
