@@ -8,27 +8,30 @@ import (
 // lager kanalene fra shared state til elevator
 // ergo de kanalene fra nettverket som går til shared state skal defineres på nettverksbiten
 
-type BetweenElevatorAndSharedStatesChannels struct {
-	HallRequestChannel               chan HRAType
-	ElevatorStateChannel             chan Elevator
-	ClearCabRequestChannel           chan Elevator
-	ClearHallRequestChannel          chan HallRequestType
-	ApprovedClearHallRequestsChannel chan HallRequestType
-	NewHallRequestChannel            chan HallRequestType
-	ApprovedHallRequestChannel       chan HallRequestType
+type ToElevator struct {
+	UpdateHallRequestLights    chan HallRequestType
+	ApprovedCabRequestsChannel chan []bool
+	ApprovedHRAChannel         chan HallRequestType
 }
 
-func MakeBetweenElevatorAndSharedStatesChannels() BetweenElevatorAndSharedStatesChannels {
-	return BetweenElevatorAndSharedStatesChannels{
-		HallRequestChannel:               make(chan HRAType),  // fra shared state til elevator
-		ElevatorStateChannel:             make(chan Elevator), // fra elevator til shared states
-		ClearCabRequestChannel:           make(chan Elevator),
-		ClearHallRequestChannel:          make(chan HallRequestType),
-		ApprovedClearHallRequestsChannel: make(chan HallRequestType),
-		NewHallRequestChannel:            make(chan HallRequestType), // fra elevator til shared states, sender ny HallRequest, når knapp trykket inn
-		ApprovedHallRequestChannel:       make(chan HallRequestType), // fra shared state til elevator, sender godkjent HallRequest etter konferering med nettverket
+type FromElevator struct {
+	NewHallRequestChannel   chan HallRequestType
+	ClearHallRequestChannel chan HallRequestType
+	UpdateState             chan Elevator
+}
 
-	}
+type ToNetwork struct {
+	Inform2PC                   chan string
+	RespondWithInterpretation   chan string
+	RespondToInformationRequest chan string
+}
+
+type FromNetwork struct {
+	New_alive_nodes                chan []string
+	ApprovedBy2PC                  chan string
+	ProtocolRequestInformation     chan bool
+	ProtocolRequestsInterpretation chan map[string]string
+	ResultFromSynchronization      chan string
 }
 
 /*

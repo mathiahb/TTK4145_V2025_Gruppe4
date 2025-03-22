@@ -1,93 +1,125 @@
 package shared_states
 
 import (
-	"encoding/json"
-	"fmt"
 	. "elevator_project/constants"
 )
-
-/*
-Hvordan shared state skal kommunisere med heis og nettverk
-
--> upsis, ikke oppdatert! mangler clearHalRequests og clearCabRequests...
-
-a) heisen får en ny hallRequest (knapp har blitt trykket)
-	1. si ifra til nettverk: notifyNewHallRequestChannel // fra shared_state til nettverk
-
-b) Nettverket godkjenner ny HallRequest
-	1. oppdatere HRAInputVariable
-	2. sende HRAInput til getHallRequestAssignments
-	3. sende hallRequestAssignments til heisen (elevator)
-
-c) heisen har en ny tilstand
-	1. si ifra til nettverk: informNewStateChannel
-
-d) Nettverket informerer om ny tilstand
-	1. oppdatere HRAInputVariable
-	2. sende HRAInput til getHallRequestAssignments
-	3. sende hallRequestAssignments til heisen (elevator)
-
-e) Dersom nettverket ønsker å starte synkronisering
-	1. Alle noder som er koblet til nettverket deler shared state
-	2. Nettverket sender oppdatert state tilbake
-	3. Hver shared state kaller på HRA
-
-Obs! med denne implementasjonen operere en heis som er disconnected fra resten av nettverket som en enkelt enhet og bruker HRA alene helt fram til den kobles til.
-Spm: hva skjer dersom heisen kobles fra heis, altså at den mister informasjon om sin egen tilstand. Håndteres det av nettverket? Hvordan bør shared state funke i så tilfelle?
-
-*/
 
 // ===================== SHARED STATE ===================== //
 // Bridge between network and the elevator. The shared states communicates also with the HRA.
 
-func SharedStateThread(betweenElevatorAndSharedStatesChannels BetweenElevatorAndSharedStatesChannels){
+func makeHRAInputVariable(sharedState HRAType, aliveNodes []string) HRAType {
+	result := HRAType{
+		States:       make(map[string]Elevator),
+		HallRequests: sharedState.HallRequests,
+	}
 
-	var HRAInputVariable HRAType 
-	var localID = getElevatorID() // denne funksjonen eksisterer i FSM
-	var aliveNodes = []string // ser ikke poenget med denne
+	for _, nodeID := range aliveNodes {
+		result.States[nodeID] = sharedState.States[nodeID]
+	}
 
+	return result
+}
 
-	for{
-		select{
+type Command2PC struct {
+	Command string
+	Name    string
+	Data    string
+}
 
-			case newHallRequest := <- newHallRequestChannel: // knapp trykket på lokal heis
-				translatedNewHallRequest := translateHallRequestToNetwork(newHallRequest)
-				notifyNewHallRequestChannel  <- translatedNewHallRequest // be om godkjennelse fra nettverk
+func updateSharedStateByCommand(command Command2PC, sharedState HRAType) HRAType {
 
-			case approvedRequest := <- approvedNewHallRequestChannel: // endring godkjent av nettverk
-				// translate from network
-				HRAInputVariable.HallRequests[newHallRequest.floor][newHallRequest.button] = true // oppdaterer hall requests basert på lokal heis
-				approvedHallRequestChannel  <- getHallRequestAssignments(HRAInputVariable) // Be om ny oppdragsfordeling og sende til lokal heis
+	switch command.Command {
 
-			case newElevatorState := <- elevatorStateChannel: // tilstand endret på lokal heis, samme logikk som over
-				translatedNewElevatorState := translateElevatorStateToNetwork(newElevatorState)
-				informNewStateChannel <- translatedNewElevatorState 
-				
-			case approvedElevatorState := <- approvedNewElevatorStateChannel: 
-				HRAInputVariable.States[localID] = approvedElevatorState // localID???
-				approvedHallRequestChannel  <- getHallRequestAssignments(HRAInputVariable)
+	case ADD:
+		newHallRequest := translateFromNetwork[HallRequestType](command.Data)
 
-			case clearCabRequest := <- clearCabRequestChannel: // må dette være en egen kanal?
-				translatedClearCabRequest := translateElevatorStateToNetwork(clearCabRequest)
-				informNewStateChannel <- translatedClearCabRequest   	
-			
-			case clearHallRequest := <- clearHallRequestChannel: // fra elevator til shared state
-				translatedClearHallRequest := translateHallRequestToNetwork(clearHallRequest)
-				approveClearHallRequest <- translatedClearHallRequest
+		for i, value := range newHallRequest {
+			sharedState.HallRequests[i][0] = sharedState.HallRequests[i][0] || value[0]
+			sharedState.HallRequests[i][1] = sharedState.HallRequests[i][1] || value[1]
+		}
 
-			case <- approvedClearHallRequestsChannel:
-				// må oversette fra nettverket
-				HRAInputVariable.HallRequests[newHallRequest.floor][newHallRequest.button] = false // oppdaterer hall requests basert på lokal heis
-				approvedHallRequestChannel  <- getHallRequestAssignments(HRAInputVariable) 
+	case REMOVE:
+		removeHallRequest := translateFromNetwork[HallRequestType](command.Data)
 
-			case <- startSynchChannel: //nettverket ønsker å starte synkronisering
-				translatedHRAInputVariable := translateHRAToNetwork(HRAInputVariable)
-				sendStateForSynchChannel <- translatedHRAInputVariable  // dette må være en json-marshall-streng
-			
-			case updatedSharedStates := <- updatedSharedStateForSynchChannel //shared states får oppdaterte states fra heiser som er koblet på nettverket
-				HRAInputVariable = updatedSharedStates //ups denne kommer som en streng
-				approvedHallRequestChannel <- getHallRequestAssignments(HRAInputVariable)
+		for i, value := range removeHallRequest {
+			sharedState.HallRequests[i][0] = sharedState.HallRequests[i][0] && (!value[0])
+			sharedState.HallRequests[i][1] = sharedState.HallRequests[i][1] && (!value[1])
+		}
+
+	case UPDATE_STATE:
+
+		newState := translateFromNetwork[Elevator](command.Data)
+		sharedState.States[command.Name] = newState
+	}
+	return sharedState
+
+}
+
+func reactToSharedStateUpdate(sharedState HRAType, aliveNodes []string, localID string, toElevator ToElevator) {
+
+	HRAInputVariable := makeHRAInputVariable(sharedState, aliveNodes)
+	HRAResults := getHallRequestAssignments(HRAInputVariable)
+	approvedCabRequests := sharedState.States[localID].CabRequests // må sende cabRequest separat fra resten av states for å sørge for at heisen ikke "tar" en bestilling uten bekreftelse fra nettverket
+
+	toElevator.ApprovedHRAChannel <- HRAResults[localID]
+	toElevator.UpdateHallRequestLights <- sharedState.HallRequests
+	toElevator.ApprovedCabRequestsChannel <- approvedCabRequests
+}
+
+func SharedStateThread(toElevator ToElevator, fromNetwork FromNetwork, toNetwork ToNetwork, fromElevator FromElevator) {
+
+	var sharedState HRAType
+	var localID string = GetElevatorID()
+	var aliveNodes []string = make([]string, 0)
+
+	for {
+		select {
+		// 2PC
+		case newHallRequest := <-fromElevator.NewHallRequestChannel: // får inn en enkelt hallRequest {false, false} {false, false} {true, false} {false, false}
+			command := Command2PC{
+				Command: ADD,
+				Name:    localID,
+				Data:    translateToNetwork(newHallRequest),
+			}
+			toNetwork.Inform2PC <- translateToNetwork(command)
+
+		case clearHallRequest := <-fromElevator.ClearHallRequestChannel: // får inn en enkelt hallRequest {false, false} {false, false} {true, false} {false, false}
+			command := Command2PC{
+				Command: REMOVE,
+				Name:    localID,
+				Data:    translateToNetwork(clearHallRequest),
+			}
+
+			toNetwork.Inform2PC <- translateToNetwork(command)
+
+		case newState := <-fromElevator.UpdateState:
+			command := Command2PC{
+				Command: UPDATE_STATE,
+				Name:    localID,
+				Data:    translateToNetwork(newState),
+			}
+
+			toNetwork.Inform2PC <- translateToNetwork(command)
+
+		case commandString := <-fromNetwork.ApprovedBy2PC:
+			command := translateFromNetwork[Command2PC](commandString)
+			sharedState = updateSharedStateByCommand(command, sharedState)
+			reactToSharedStateUpdate(sharedState, aliveNodes, localID, toElevator)
+
+		// discovery
+		case aliveNodes = <-fromNetwork.New_alive_nodes:
+			reactToSharedStateUpdate(sharedState, aliveNodes, localID, toElevator)
+
+		// synkronisering
+		case <-fromNetwork.ProtocolRequestInformation:
+			toNetwork.RespondToInformationRequest <- translateToNetwork(sharedState)
+
+		case states := <-fromNetwork.ProtocolRequestsInterpretation:
+			toNetwork.RespondWithInterpretation <- ResolveSharedStateConflicts(states)
+
+		case newSharedState := <-fromNetwork.ResultFromSynchronization:
+			sharedState = translateFromNetwork[HRAType](newSharedState)
+			reactToSharedStateUpdate(sharedState, aliveNodes, localID, toElevator)
 		}
 	}
 }
-

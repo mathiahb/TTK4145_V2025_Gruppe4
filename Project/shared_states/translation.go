@@ -40,41 +40,6 @@ func getHallRequestAssignments(HRAInputVariable HRAType) map[string][][2]bool {
 }
 
 // ===================== TRANSLATION TO NETWORK ===================== //
-func translateHallRequestToNetwork(hallRequest HallRequestType)  string { 
-
-	translatedHallRequest, err := json.Marshal(hallRequest)
-	
-	if err != nil {
-		fmt.Println("json.Marshal error:", err)
-		return ""
-	}
-	return string(translatedHallRequest)
-}
-
-
-func translateElevatorStateToNetwork(elevator Elevator) string{
-	
-	translatedElevator, err := json.Marshal(elevator)
-
-	if err != nil {
-		fmt.Println("json.Marshal error:", err)
-		return ""
-	}
-
-	return string(translatedElevator)
-}
-
-func translateHRAToNetwork(HRAInputVariable HRAType) string{
-	
-	translatedHRA, err := json.Marshal(HRAInputVariable)
-
-	if err != nil {
-		fmt.Println("json.Marshal error:", err)
-		return ""
-	}
-
-	return string(translatedHRA)
-}
 
 func translateToNetwork(variable any) string{
 
@@ -90,6 +55,13 @@ func translateToNetwork(variable any) string{
 
 
 // ===================== TRANSLATION FROM NETWORK ===================== //
-func translateFromNetwork(){
 
+func translateFromNetwork[T any](variable string) T {
+    var translatedVariable T
+    err := json.Unmarshal([]byte(variable), &translatedVariable)
+    if err != nil {
+        fmt.Println("json.Unmarshal error:", err)
+		//returnere hva?
+    }
+    return translatedVariable
 }

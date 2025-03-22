@@ -4,6 +4,7 @@ import (
 	"elevator_project/constants"
 	"encoding/json"
 	"testing"
+	"fmt"
 )
 
 func TestConflictResolver(t *testing.T) {
@@ -111,5 +112,46 @@ func TestConflictResolver(t *testing.T) {
 	if string(expected_string_result) != string(resultstring) {
 		t.Fatalf("Result was not the expected one! %s != %s", expected_string_result, resultstring)
 	}
+
+}
+
+
+
+func TestTranslation(t *testing.T){
+
+	hallRequests1 := [][2]bool{{true, false}, {true, false}, {true, false}, {true, false}}
+
+	elevator1 := constants.Elevator{
+		Behaviour:   constants.EB_Idle,
+		Floor:       2,
+		Dirn:        constants.D_Down,
+		CabRequests: []bool{false, false, false, false},
+	}
+
+	state1 := constants.HRAType{
+		States:       make(map[string]constants.Elevator),
+		HallRequests: hallRequests1,
+	}
+
+	state1.States["Heis nummer 1"] = elevator1
+
+	translatedState1 := translateToNetwork(state1) 
+	deTranslatedState1 := translateFromNetwork[constants.HRAType](translatedState1)
+	//translatedHallRequest := translateToNetwork(hallRequests1) 
+	//deTranslatedHallRequest := translateFromNetwork[HallRequestType](translatedHallRequest) // HallRequestType [][2]bool
+	//HRAInputVariable.HallRequests = deTranslatedHallRequest 
+
+
+	result1 := fmt.Sprintf("%+v",state1)
+	result2 := fmt.Sprintf("%+v", deTranslatedState1)
+	
+	t.Logf("result1 = %s", result1)
+	t.Logf("result2 = %s", result2)
+
+	if(result1 != result2){
+		t.Errorf("Results did not match, %s != %s", result1, result2)
+	}
+	
+
 
 }
