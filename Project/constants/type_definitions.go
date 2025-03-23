@@ -1,8 +1,10 @@
 package constants
+
 import (
 	"fmt"
 	"os"
 )
+
 // --------------- ELEVATOR -------------------- //
 
 // Elevator behavior states
@@ -20,7 +22,6 @@ type Elevator struct {
 }
 
 type HallRequestType [][2]bool
-
 
 // --------------- SHARED STATES -------------------- //
 type HRAType struct { // Hall request assignment type
