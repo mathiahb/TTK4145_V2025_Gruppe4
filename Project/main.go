@@ -19,7 +19,7 @@ func main() {
 	network_channels := transferSharedStateChannelsToNetworkChannels(fromSharedStateToNetwork, toSharedStateFromNetwork)
 
 	Node := network.New_Node(constants.GetElevatorID(), network_channels)
-	Node.Connect()
+	Node.Connect() // Will start the initializing part.
 	defer Node.Close()
 
 	go shared_states.SharedStateThread(
@@ -30,16 +30,12 @@ func main() {
 
 	initialElevator := <-initResponseChannel
 
-	elevatorChannels := elevator.MakeElevatorChannels()                                             // channels for communication within the different parts of the elevator
-	betweenElevatorAndSharedStatesChannels := elevator.MakeBetweenElevatorAndSharedStatesChannels() //elevator <-> shared states communication
-	//network <-> shared states communication
-	//synchronizationChannels := network.New_SynchronizationChannels() // endre navn til Make, slik at det blir samsvar på tvers av moduler
-	//twoPhaseCommitChannels := network.MakeTwoPhaseCommitChannels() // denne må Atle lage
+	elevatorChannels := elevator.MakeElevatorChannels() // channels for communication within the different parts of the elevator
 
 	go elevio.PollButtons(elevatorChannels.Button)
 	go elevio.PollFloorSensor(elevatorChannels.Floor)
 	go elevio.PollObstructionSwitch(elevatorChannels.Obstruction)
-	go elevator.ElevatorThread(elevatorChannels, betweenElevatorAndSharedStatesChannels)
+	go elevator.ElevatorThread(initialElevator, elevatorChannels, fromSharedStateToElevator, toSharedStateFromElevator)
 	//go network.NetworkThread(synchronizationChannels) // twoPhaseCommitChannels, skal også sendes til nettverket
 
 	select {}
