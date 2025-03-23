@@ -1,8 +1,8 @@
 package shared_states
 
 import (
-	network "elevator_project/Network_Protocol/Network"
 	"elevator_project/constants"
+	network "elevator_project/network"
 	"fmt"
 	"testing"
 	"time"
