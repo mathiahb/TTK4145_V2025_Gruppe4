@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"elevator_project/Network_Protocol/Network/Peer_to_Peer/TCP"
-	"elevator_project/Network_Protocol/Network/Peer_to_Peer/UDP"
+	"elevator_project/network/Peer_to_Peer/TCP"
+	"elevator_project/network/Peer_to_Peer/UDP"
 )
 
 // Package peer_to_peer

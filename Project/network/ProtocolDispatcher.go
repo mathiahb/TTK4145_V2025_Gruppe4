@@ -7,6 +7,7 @@ import (
 
 type ProtocolDispatcher struct {
 	command_queue         chan string
+	repeat_command        chan string
 	should_do_discovery   chan bool
 	should_do_synchronize chan bool
 }
@@ -14,6 +15,7 @@ type ProtocolDispatcher struct {
 func New_Protocol_Dispatcher() *ProtocolDispatcher {
 	return &ProtocolDispatcher{
 		command_queue:         make(chan string, 32),
+		repeat_command:        make(chan string, 1),
 		should_do_discovery:   make(chan bool, 32),
 		should_do_synchronize: make(chan bool, 32),
 	}
@@ -79,7 +81,11 @@ func (node *Node) dispatcher() {
 				go node.protocol_dispatcher.Do_Discovery()
 				Random_Wait()
 			}
+			continue
+		default:
+		}
 
+		select {
 		case <-node.protocol_dispatcher.should_do_synchronize:
 			node.protocol_dispatcher.Flush_Synchronization_Channel()
 			go node.coordinate_Synchronization(success_channel)
@@ -88,14 +94,31 @@ func (node *Node) dispatcher() {
 				go node.protocol_dispatcher.Do_Synchronization()
 				Random_Wait()
 			}
+			continue
+		default:
+		}
 
+		select {
+		case command := <-node.protocol_dispatcher.repeat_command:
+			go node.coordinate_2PC(command, success_channel)
+			success := <-success_channel
+			if !success {
+				go func() { node.protocol_dispatcher.repeat_command <- command }()
+				Random_Wait()
+			}
+			continue
+		default:
+		}
+
+		select {
 		case command := <-node.protocol_dispatcher.command_queue:
 			go node.coordinate_2PC(command, success_channel)
 			success := <-success_channel
 			if !success {
-				go node.protocol_dispatcher.Do_Command(command)
+				go func() { node.protocol_dispatcher.repeat_command <- command }()
 				Random_Wait()
 			}
+		default:
 		}
 		Wait_After_Protocol()
 	}

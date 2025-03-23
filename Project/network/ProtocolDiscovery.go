@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	peer_to_peer "elevator_project/Network_Protocol/Network/Peer_to_Peer"
+	peer_to_peer "elevator_project/network/Peer_to_Peer"
 )
 
 // PROTOCOL - Discovery
