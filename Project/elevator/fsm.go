@@ -1,6 +1,7 @@
 package elevator
 
 import (
+	. "elevator_project/constants"
 	"elevator_project/elevio"
 	"fmt"
 	"os"
@@ -12,25 +13,25 @@ import (
 
 var outputDevice elevio.ElevOutputDevice //hva gjør denne?
 
-func InitFSM(elevatorStateChannel chan Elevator, localElevator Elevator) Elevator {
+func InitFSM(localElevator Elevator, UpdateState chan Elevator) Elevator {
 
 	elevio.Init("localhost:15657", N_FLOORS)
 	outputDevice = elevio.GetOutputDevice()
 	fmt.Println("FSM initialized for elevator:", getElevatorID())
 
-	elevatorStateChannel <- localElevator
+	UpdateState <- localElevator
 
 	return localElevator
 }
 
 // **FSMOnInitBetweenFloors**: Kalles hvis heisen starter mellom etasjer
-func FSMOnInitBetweenFloors(localElevator Elevator, elevatorStateChannel chan Elevator) Elevator {
+func FSMOnInitBetweenFloors(localElevator Elevator, UpdateState chan Elevator) Elevator {
 
 	outputDevice.MotorDirection(elevio.MD_Down)
 	localElevator.Dirn = D_Down
 	localElevator.Behaviour = EB_Moving
 
-	elevatorStateChannel <- localElevator
+	UpdateState <- localElevator
 
 	return localElevator
 }
@@ -76,16 +77,19 @@ func convertDirnToMotor(d Dirn) elevio.MotorDirection { // føler ikke at denne 
 	}
 }
 
-// **setAllLights**: Oppdaterer alle heisknapper med riktig lysstatus, håndterer ikke etasjeindikator
-func setAllLights(localElevator Elevator, hallRequests HallRequestType) {
+func setHallLights(localElevator Elevator, hallRequests HallRequestType) {
 
 	for floor := 0; floor < N_FLOORS; floor++ {
-		// Cab requests
-		outputDevice.RequestButtonLight(floor, elevio.BT_Cab, localElevator.CabRequests[floor])
-
 		// Hall requests fra SharedState
 		outputDevice.RequestButtonLight(floor, elevio.BT_HallUp, hallRequests[floor][B_HallUp])
 		outputDevice.RequestButtonLight(floor, elevio.BT_HallDown, hallRequests[floor][B_HallDown])
+	}
+}
+
+func setCabLights(localElevator Elevator, cabRequests []bool) {
+	for floor := 0; floor < N_FLOORS; floor++ {
+		// Hall requests fra SharedState
+		outputDevice.RequestButtonLight(floor, elevio.BT_Cab, localElevator.CabRequests[floor])
 	}
 }
 
@@ -103,32 +107,47 @@ func FSMStartMoving(localElevator Elevator, hallRequests HallRequestType, elevat
 	}
 
 	elevatorStateChannel <- localElevator
-	setAllLights(localElevator, hallRequests)
+	//setAllLights(localElevator, hallRequests)
 
-	return localElevator
+	return localElevatorthree_sec_delay
 }
 
 // **FSMOnRequestButtonPress**: Kalles når en knapp trykkes
-func FSMButtonPress(btnFloor int, btnType elevio.ButtonType, localElevator Elevator, elevatorStateChannel chan Elevator, newHallRequestChannel chan HallRequestType) Elevator {
+func FSMButtonPress(btnFloor int, btnType elevio.ButtonType, localElevator Elevator, updateStateChannel chan Elevator, newHallRequestChannel chan HallRequestType) Elevator {
 	fmt.Printf("FSMOnRequestButtonPress(%d, %d)\n", btnFloor, btnType)
 
 	if btnType == elevio.BT_Cab {
 		localElevator.CabRequests[btnFloor] = true
-		elevatorStateChannel <- localElevator
-	} else {
+		updateStateChannel <- localElevator
 
-		var newHallRequest [btnFloor][btnType]HallRequestType = true //hmm hvordan lage??
+	} else if btnType == elevio.BT_HallUp {
+
+		var newHallRequest HallRequestType
+		newHallRequest[btnFloor][elevio.BT_HallUp] = true
 		newHallRequestChannel <- newHallRequest
+
+	} else if btnType == elevio.BT_HallDown {
+
+		var newHallRequest HallRequestType
+		newHallRequest[btnFloor][elevio.BT_HallDown] = true
+		newHallRequestChannel <- newHallRequest
+
 	}
 	return localElevator
 }
 
 // **FSMOnFloorArrival**: Kalles når heisen ankommer en ny etasje
-func FSMOnFloorArrival(newFloor int, localElevator Elevator, hallRequests HallRequestType, clearHallRequestChannel chan HallRequestType, clearCabRequestChannel chan Elevator, elevatorStateChannel chan Elevator) (Elevator, HallRequestType) {
+func FSMOnFloorArrival(newFloor int,
+	localElevator Elevator,
+	hallRequests HallRequestType,
+	clearHallRequestChannel chan HallRequestType,
+	updateStateChannel chan Elevator) (Elevator, HallRequestType) {
+
 	fmt.Printf("\nFSMOnFloorArrival(%d)\n", newFloor)
 
 	// 1. lagre ny etasje i lokal state
 	localElevator.Floor = newFloor
+	elevio.SetFloorIndicator(localElevator.Floor)
 
 	// 2. Sjekk om heisen skal stoppe
 	if localElevator.Behaviour == EB_Moving {
@@ -139,15 +158,17 @@ func FSMOnFloorArrival(newFloor int, localElevator Elevator, hallRequests HallRe
 
 			// Start dør-timer
 			three_sec_delay := time.NewTimer(time.Second * 3)
-			three_sec_delay.Reset(time.Second * 3) // sette ny timer, hvordan funker det egentlig?? bruke det som allerede er definert?
+			<-three_sec_delay.C
 
 			// 3. Fjerner requests på nåværende etasje
-			localElevator, hallRequests = requestsClearAtCurrentFloor(localElevator, hallRequests, clearHallRequestChannel, clearCabRequestChannel)
+			localElevator, hallRequests = requestsClearAtCurrentFloor(localElevator, hallRequests, clearHallRequestChannel, updateStateChannel)
 
 		}
 	}
-	elevatorStateChannel <- localElevator
-	setAllLights(localElevator, hallRequests)
+	updateStateChannel <- localElevator
+
+	// setAllLights(localElevator, hallRequests)
+	// // setLight(floor, btn type, value) // må lage en egen funksjon for å oppdatere lysene
 
 	return localElevator, hallRequests
 }
@@ -187,4 +208,24 @@ func FSMHoldDoors(localElevator Elevator, doorTimerIsUp chan bool, elevatorState
 	elevatorStateChannel <- localElevator
 
 	return localElevator
+}
+
+func obstructionProtocol(Obstruction chan bool, doorTimerIsUp chan bool) {
+	three_sec_delay := time.NewTimer(time.Second * 3)
+	for {
+
+		select {
+		case is_obstructed := <-Obstruction:
+			if !is_obstructed {
+				three_sec_delay.Reset(time.Second * 3)
+			}
+
+		case <-three_sec_delay.C:
+
+			elevio.SetDoorOpenLamp(false)
+			doorTimerIsUp <- true
+			return
+
+		}
+	}
 }

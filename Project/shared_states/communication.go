@@ -8,6 +8,7 @@ import (
 // lager kanalene fra shared state til elevator
 // ergo de kanalene fra nettverket som går til shared state skal defineres på nettverksbiten
 
+
 type ToElevator struct {
 	UpdateHallRequestLights    chan HallRequestType
 	ApprovedCabRequestsChannel chan []bool

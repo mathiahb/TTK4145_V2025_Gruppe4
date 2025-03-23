@@ -73,9 +73,6 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 			// Everyone acknowledged, so let's COMMIT
 			node.commit2PC(prepareMsg.id, cmd)
 			success_channel <- true
-
-			// TODO: Her forlater vi funksjonen, uten å låse den igjen i commit2PC.
-			// SKal vi heller bare dra commit2PC hit slik at låsen forblir?
 			return
 		}
 

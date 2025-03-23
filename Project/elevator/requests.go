@@ -1,5 +1,9 @@
 package elevator
 
+import (
+	. "elevator_project/constants"
+)
+
 // DirnBehaviourPair strukturen holder retningen og oppførselen for heisen
 type DirnBehaviourPair struct {
 	Dirn      Dirn
@@ -10,6 +14,7 @@ func HallRequestsUninitialized() HallRequestType {
 	var hallRequests HallRequestType
 	hallRequests[N_FLOORS][2] = false
 	return hallRequests
+	// TODO: Implementer riktig initialisering av hallRequests
 }
 
 // requestsShouldStop sjekker om heisen skal stoppe på nåværende etasje
@@ -51,16 +56,25 @@ func requestsShouldStop(localElevator Elevator, hallRequests [][2]bool) bool {
 }
 
 // requestsClearAtCurrentFloor rydder bestillinger på gjeldende etasje
-func requestsClearAtCurrentFloor(localElevator Elevator, hallRequests HallRequestType, clearHallRequestChannel chan HallRequestType, clearCabRequestChannel chan Elevator) (Elevator, HallRequestType) {
+// localElevator, hallRequests, clearHallRequestChannel, updateStateChannel
+func requestsClearAtCurrentFloor(localElevator Elevator, hallRequests HallRequestType, clearHallRequestChannel chan HallRequestType, updateStateChannel chan Elevator) (Elevator, HallRequestType) {
 
 	// Clear cab request at this floor
 	if localElevator.CabRequests[localElevator.Floor] == true {
+
 		localElevator.CabRequests[localElevator.Floor] = false
-		clearCabRequestChannel <- localElevator
-	} else {
+		updateStateChannel <- localElevator
+	} else if hallRequests[localElevator.Floor][B_HallUp] == true && localElevator.Dirn == D_Up {
 		//cleare hallrequest locally and update network
-		hallRequests[hallRequests.floor][hallRequest.button] = false // hvordan oppdatere?
-		clearHallRequestChannel <- localElevator.HallRequests[hallRequest.floor][hallRequest.button]
+
+		hallRequests[localElevator.Floor][B_HallUp] = false
+		clearHallRequestChannel <- hallRequests
+
+	} else if hallRequests[localElevator.Floor][B_HallDown] == true && localElevator.Dirn == D_Down {
+
+		hallRequests[localElevator.Floor][B_HallDown] = false
+		clearHallRequestChannel <- hallRequests
+
 	}
 
 	return localElevator, hallRequests
