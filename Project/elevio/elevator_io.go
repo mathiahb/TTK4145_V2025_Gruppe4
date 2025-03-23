@@ -190,40 +190,40 @@ func toBool(a byte) bool {
 	return b
 }
 
-// ElevOutputDevice inneholder funksjoner for å styre heisen
-type ElevOutputDevice struct {
-	FloorIndicator     func(int)
-	RequestButtonLight func(int, ButtonType, bool)
-	DoorLight          func(bool)
-	StopButtonLight    func(bool)
-	MotorDirection     func(MotorDirection)
-}
+// // ElevOutputDevice inneholder funksjoner for å styre heisen
+// type ElevOutputDevice struct {
+// 	FloorIndicator     func(int)
+// 	RequestButtonLight func(int, ButtonType, bool)
+// 	DoorLight          func(bool)
+// 	StopButtonLight    func(bool)
+// 	MotorDirection     func(MotorDirection)
+// }
 
-// GetOutputDevice returnerer et nytt ElevOutputDevice med riktige funksjoner
-func GetOutputDevice() ElevOutputDevice {
-	return ElevOutputDevice{
-		FloorIndicator:     SetFloorIndicator,
-		RequestButtonLight: SetButtonLamp,
-		DoorLight:          SetDoorOpenLamp,
-		StopButtonLight:    SetStopLamp,
-		MotorDirection:     SetMotorDirection,
-	}
-}
+// // GetOutputDevice returnerer et nytt ElevOutputDevice med riktige funksjoner
+// func GetOutputDevice() ElevOutputDevice {
+// 	return ElevOutputDevice{
+// 		FloorIndicator:     SetFloorIndicator,
+// 		RequestButtonLight: SetButtonLamp,
+// 		DoorLight:          SetDoorOpenLamp,
+// 		StopButtonLight:    SetStopLamp,
+// 		MotorDirection:     SetMotorDirection,
+// 	}
+// }
 
-// ElevInputDevice inneholder funksjoner for å hente input fra heisen
-type ElevInputDevice struct {
-	FloorSensor   func() int
-	RequestButton func(ButtonType, int) bool
-	StopButton    func() bool
-	Obstruction   func() bool
-}
+// // ElevInputDevice inneholder funksjoner for å hente input fra heisen
+// type ElevInputDevice struct {
+// 	FloorSensor   func() int
+// 	RequestButton func(ButtonType, int) bool
+// 	StopButton    func() bool
+// 	Obstruction   func() bool
+// }
 
-// GetInputDevice returnerer en enhet med riktige input-funksjoner
-func GetInputDevice() ElevInputDevice {
-	return ElevInputDevice{
-		FloorSensor:   GetFloor,
-		RequestButton: GetButton,
-		StopButton:    GetStop,
-		Obstruction:   GetObstruction,
-	}
-}
+// // GetInputDevice returnerer en enhet med riktige input-funksjoner
+// func GetInputDevice() ElevInputDevice {
+// 	return ElevInputDevice{
+// 		FloorSensor:   GetFloor,
+// 		RequestButton: GetButton,
+// 		StopButton:    GetStop,
+// 		Obstruction:   GetObstruction,
+// 	}
+// }
