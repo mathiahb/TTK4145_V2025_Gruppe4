@@ -42,36 +42,18 @@ import (
 		Participants: Passes the result to synchronizechannels.ResultFromSynchronization
 */
 
-type SynchronizationChannels struct {
-	ProtocolRequestInformation  chan bool
-	RespondToInformationRequest chan string
-
-	ProtocolRequestsInterpretation chan map[string]string
-	RespondWithInterpretation      chan string
-
-	ResultFromSynchronization chan string
-}
-
-func New_SynchronizationChannels() SynchronizationChannels {
-	return SynchronizationChannels{
-		ProtocolRequestInformation:  make(chan bool),
-		RespondToInformationRequest: make(chan string),
-
-		ProtocolRequestsInterpretation: make(chan map[string]string),
-		RespondWithInterpretation:      make(chan string),
-
-		ResultFromSynchronization: make(chan string),
-	}
-}
-
 func (node *Node) get_Synchronization_Information() string {
-	node.synchronization_channels.ProtocolRequestInformation <- true
-	return <-node.synchronization_channels.RespondToInformationRequest
+	node.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestInformation <- true
+	return <-node.shared_state_communication.ToNetwork.Synchronization.RespondToInformationRequest
 }
 
 func (node *Node) interpret_Synchronization_Responses(responses map[string]string) string {
-	node.synchronization_channels.ProtocolRequestsInterpretation <- responses
-	return <-node.synchronization_channels.RespondWithInterpretation
+	node.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestsInterpretation <- responses
+	return <-node.shared_state_communication.ToNetwork.Synchronization.RespondWithInterpretation
+}
+
+func (node *Node) send_Synchronization_Result(result string) {
+	node.shared_state_communication.FromNetwork.Synchronization.ResultFromSynchronization <- result
 }
 
 func (node *Node) coordinate_Synchronization(success_channel chan bool) {
@@ -96,7 +78,7 @@ func (node *Node) coordinate_Synchronization(success_channel chan bool) {
 					result := node.interpret_Synchronization_Responses(combined_information)
 
 					node.broadcast_Synchronization_Result(begin_synchronization_message.id, result)
-					node.synchronization_channels.ResultFromSynchronization <- result
+					node.send_Synchronization_Result(result)
 
 					success_channel <- true
 					return
@@ -140,8 +122,7 @@ func (node *Node) participate_In_Synchronization(p2p_message peer_to_peer.P2P_Me
 	}
 	defer node.mu_voting_resource.Unlock()
 
-	node.synchronization_channels.ProtocolRequestInformation <- true
-	information := <-node.synchronization_channels.RespondToInformationRequest
+	information := node.get_Synchronization_Information()
 
 	response := node.create_Message(Constants.SYNC_RESPONSE, id_discovery, information)
 	node.Broadcast_Response(response, p2p_message)
@@ -152,7 +133,7 @@ func (node *Node) participate_In_Synchronization(p2p_message peer_to_peer.P2P_Me
 		select {
 		case result := <-node.comm:
 			if result.message_type == Constants.SYNC_RESULT && result.id == id_discovery {
-				node.synchronization_channels.ResultFromSynchronization <- result.payload
+				node.send_Synchronization_Result(result.payload)
 				return
 			}
 

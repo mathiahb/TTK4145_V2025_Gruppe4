@@ -41,6 +41,10 @@ import (
 		Participants: Passes the new node list to new_node_channel
 */
 
+func (node *Node) send_Discovery_Result(result []string) {
+	node.shared_state_communication.FromNetwork.Discovery.Updated_Alive_Nodes <- result
+}
+
 func (node *Node) coordinate_Discovery(success_channel chan bool) {
 	node.mu_voting_resource.Lock()
 	defer node.mu_voting_resource.Unlock()
@@ -71,7 +75,7 @@ func (node *Node) coordinate_Discovery(success_channel chan bool) {
 		case <-time_to_complete:
 			node.broadcast_Discovery_Result(message.id, result)
 			node.alive_nodes_manager.Set_Alive_Nodes(result)
-			node.new_alive_nodes <- result
+			node.send_Discovery_Result(result)
 
 			success_channel <- true
 			return
@@ -105,8 +109,8 @@ func (node *Node) participate_In_Discovery(p2p_message peer_to_peer.P2P_Message,
 			if result_message.message_type == Constants.DISCOVERY_COMPLETE && result_message.id == id_discovery {
 				result := strings.Split(result_message.payload, ":")
 				node.alive_nodes_manager.Set_Alive_Nodes(result)
+				node.send_Discovery_Result(result)
 
-				node.new_alive_nodes <- result
 				fmt.Printf("[Debug %s] Received result %s\n", node.name, node.Get_Alive_Nodes())
 				return
 			}
