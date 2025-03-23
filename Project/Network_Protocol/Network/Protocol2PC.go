@@ -49,11 +49,6 @@ import (
 
 */
 
-type Command struct {
-	Field     string
-	New_Value string
-}
-
 func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 	node.mu_voting_resource.Lock()
 	defer node.mu_voting_resource.Unlock()
@@ -105,8 +100,9 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 			// Timed out waiting for all ACKs => ABORT
 			fmt.Printf("[%s] 2PC coordinator timed out waiting for ACKs => ABORT.\n", node.name)
 			node.abort2PC(prepareMsg.id)
+
+			node.protocol_timed_out()
 			success_channel <- false
-			// TOOD: initiate a discovery?
 			return
 		}
 	}
@@ -153,16 +149,13 @@ func (node *Node) participate_2PC(p2p_message peer_to_peer.P2P_Message, prepareM
 			switch msg.message_type {
 			case Constants.COMMIT:
 				node.doLocalCommit(msg)
-				// TODO: send ACK back to coordinator?
 				return
 			case Constants.ABORT_COMMIT:
-				// node.doLocalAbort(msg)
 				return
 			}
 		case <-timeout:
-			// If the coordinator never finalized => local abort
 			fmt.Printf("[%s] 2PC participant timed out waiting => ABORT.\n", node.name)
-			// node.doLocalAbort(prepareMsg)
+			node.protocol_timed_out()
 			return
 		}
 	}
@@ -171,29 +164,18 @@ func (node *Node) participate_2PC(p2p_message peer_to_peer.P2P_Message, prepareM
 func (node *Node) commit2PC(txid TxID, payload string) {
 	commitMsg := node.create_Message(Constants.COMMIT, txid, payload)
 	node.Broadcast(commitMsg)
-
-	//TODO: Somewhere we need to wait for the ACKs from the participants?
-
 	node.doLocalCommit(commitMsg)
 }
 
 func (node *Node) abort2PC(txid TxID) {
 	abortMsg := node.create_Message(Constants.ABORT_COMMIT, txid, "")
 	node.Broadcast(abortMsg)
-
-	// node.doLocalAbort(abortMsg)
-	// Is this necessary? We're not really doing anything with the abort locally
 }
 
 func (node *Node) doLocalCommit(msg Message) {
 
 	// Parse the payload to get the command
-	fmt.Printf("[%s] Doing commit.\n", node.name)
-	// TODO:  Do changes locally based on the command
-	// Send informasjon over kanal til shared state.
+	fmt.Printf("[%s] Doing commit %s.\n", node.name, msg.payload)
 
+	node.shared_state_communication.FromNetwork.TwoPhaseCommit.ProtocolCommited <- msg.payload
 }
-
-// func (node *Node) doLocalAbort(Message) {
-// 	fmt.Printf("[Local %s] Doing abort.\n", node.name)
-// }

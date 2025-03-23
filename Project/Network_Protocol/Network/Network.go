@@ -8,6 +8,42 @@ import (
 	peer_to_peer "elevator_project/Network_Protocol/Network/Peer_to_Peer"
 )
 
+type CommunicationToNetwork struct {
+	Discovery struct {
+		// Nothing
+	}
+
+	Synchronization struct {
+		RespondToInformationRequest chan string
+		RespondWithInterpretation   chan string
+	}
+
+	TwoPhaseCommit struct {
+		RequestCommit chan string
+	}
+}
+
+type CommunicationFromNetwork struct {
+	Discovery struct {
+		Updated_Alive_Nodes chan []string
+	}
+
+	Synchronization struct {
+		ProtocolRequestInformation     chan bool
+		ProtocolRequestsInterpretation chan map[string]string
+		ResultFromSynchronization      chan string
+	}
+
+	TwoPhaseCommit struct {
+		ProtocolCommited chan string
+	}
+}
+
+type NetworkCommunicationChannels struct {
+	ToNetwork   CommunicationToNetwork
+	FromNetwork CommunicationFromNetwork
+}
+
 type Node struct {
 	p2p *peer_to_peer.P2P_Network
 
@@ -24,11 +60,10 @@ type Node struct {
 	close_channel chan bool
 
 	// Shared State connection
-	new_alive_nodes          chan []string
-	synchronization_channels SynchronizationChannels
+	shared_state_communication NetworkCommunicationChannels
 }
 
-func New_Node(name string, new_alive_nodes_channel chan []string, synchronization_channels SynchronizationChannels) *Node {
+func New_Node(name string, communication_channels NetworkCommunicationChannels) *Node {
 
 	node := Node{
 		p2p: peer_to_peer.New_P2P_Network(),
@@ -46,8 +81,7 @@ func New_Node(name string, new_alive_nodes_channel chan []string, synchronizatio
 
 		close_channel: make(chan bool),
 
-		new_alive_nodes:          new_alive_nodes_channel,
-		synchronization_channels: synchronization_channels,
+		shared_state_communication: communication_channels,
 	}
 
 	node.start_reader()
