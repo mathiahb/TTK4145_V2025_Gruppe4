@@ -2,6 +2,7 @@ package shared_states
 
 import (
 	. "elevator_project/constants"
+	"fmt"
 )
 
 // ===================== SHARED STATE ===================== //
@@ -61,20 +62,26 @@ func reactToSharedStateUpdate(sharedState HRAType, aliveNodes []string, localID 
 	HRAResults := getHallRequestAssignments(HRAInputVariable)
 	approvedCabRequests := sharedState.States[localID].CabRequests // må sende cabRequest separat fra resten av states for å sørge for at heisen ikke "tar" en bestilling uten bekreftelse fra nettverket
 
-	toElevator.ApprovedHRAChannel <- HRAResults[localID]
+	if HRAResults != nil {
+		toElevator.ApprovedHRAChannel <- HRAResults[localID]
+	}
 	toElevator.UpdateHallRequestLights <- sharedState.HallRequests
-	toElevator.ApprovedCabRequestsChannel <- approvedCabRequests
+	if approvedCabRequests != nil {
+		toElevator.ApprovedCabRequestsChannel <- approvedCabRequests
+	}
 }
 
 func SharedStateThread(initResult chan Elevator, toElevator ToElevator, fromNetwork FromNetwork, toNetwork ToNetwork, fromElevator FromElevator) {
 	var sharedState HRAType = HRAType{
 		States:       make(map[string]Elevator),
-		HallRequests: make(HallRequestType, 4),
+		HallRequests: make(HallRequestType, N_FLOORS),
 	}
 	var localID string = GetElevatorID()
 	var aliveNodes []string = make([]string, 0)
 
 	var initializing bool = true
+
+	fmt.Printf("SharedStateThread Initialized: %s\n", localID)
 
 	for {
 		select {
@@ -108,14 +115,16 @@ func SharedStateThread(initResult chan Elevator, toElevator ToElevator, fromNetw
 		case commandString := <-fromNetwork.ApprovedBy2PC:
 			command := translateFromNetwork[Command2PC](commandString)
 			sharedState = updateSharedStateByCommand(command, sharedState)
-			reactToSharedStateUpdate(sharedState, aliveNodes, localID, toElevator)
+			go reactToSharedStateUpdate(sharedState, aliveNodes, localID, toElevator)
 
 		// discovery
 		case aliveNodes = <-fromNetwork.New_alive_nodes:
-			reactToSharedStateUpdate(sharedState, aliveNodes, localID, toElevator)
+			fmt.Printf("SharedStateThread: New alive nodes: %v\n", aliveNodes)
+			go reactToSharedStateUpdate(sharedState, aliveNodes, localID, toElevator)
 
 		// synkronisering
 		case <-fromNetwork.ProtocolRequestInformation:
+			fmt.Printf("SharedStateThread: Responding to information request\n")
 			toNetwork.RespondToInformationRequest <- translateToNetwork(sharedState)
 
 		case states := <-fromNetwork.ProtocolRequestsInterpretation:
@@ -138,7 +147,7 @@ func SharedStateThread(initResult chan Elevator, toElevator ToElevator, fromNetw
 				go func() { initResult <- res }()
 			}
 
-			reactToSharedStateUpdate(sharedState, aliveNodes, localID, toElevator)
+			go reactToSharedStateUpdate(sharedState, aliveNodes, localID, toElevator)
 		}
 	}
 }

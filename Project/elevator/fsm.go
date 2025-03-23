@@ -71,7 +71,7 @@ func convertDirnToMotor(d Dirn) elevio.MotorDirection { // føler ikke at denne 
 	}
 }
 
-func setHallLights(localElevator Elevator, hallRequests HallRequestType) {
+func setHallLights(hallRequests HallRequestType) {
 
 	for floor := 0; floor < N_FLOORS; floor++ {
 		// Hall requests fra SharedState
@@ -80,10 +80,10 @@ func setHallLights(localElevator Elevator, hallRequests HallRequestType) {
 	}
 }
 
-func setCabLights(localElevator Elevator, cabRequests []bool) {
+func setCabLights(cabRequests []bool) {
 	for floor := 0; floor < N_FLOORS; floor++ {
 		// Hall requests fra SharedState
-		elevio.SetButtonLamp(floor, elevio.BT_Cab, localElevator.CabRequests[floor])
+		elevio.SetButtonLamp(floor, elevio.BT_Cab, cabRequests[floor])
 	}
 }
 
@@ -98,9 +98,9 @@ func FSMStartMoving(localElevator Elevator, hallRequests HallRequestType, elevat
 			localElevator.Behaviour = EB_Moving
 			elevio.SetMotorDirection(convertDirnToMotor(localElevator.Dirn))
 		}
-	}
 
-	elevatorStateChannel <- localElevator
+		elevatorStateChannel <- localElevator
+	}
 	//setAllLights(localElevator, hallRequests)
 
 	return localElevator
@@ -116,13 +116,13 @@ func FSMButtonPress(btnFloor int, btnType elevio.ButtonType, localElevator Eleva
 
 	} else if btnType == elevio.BT_HallUp {
 
-		var newHallRequest HallRequestType
+		var newHallRequest HallRequestType = make(HallRequestType, N_FLOORS)
 		newHallRequest[btnFloor][elevio.BT_HallUp] = true
 		newHallRequestChannel <- newHallRequest
 
 	} else if btnType == elevio.BT_HallDown {
 
-		var newHallRequest HallRequestType
+		var newHallRequest HallRequestType = make(HallRequestType, N_FLOORS)
 		newHallRequest[btnFloor][elevio.BT_HallDown] = true
 		newHallRequestChannel <- newHallRequest
 
@@ -175,6 +175,8 @@ func FSMCloseDoors(localElevator Elevator, hallRequests HallRequestType, elevato
 	if localElevator.Behaviour == EB_DoorOpen {
 		localElevator.Behaviour = EB_Idle
 		elevio.SetDoorOpenLamp(false)
+
+		elevatorStateChannel <- localElevator
 
 		localElevator = FSMStartMoving(localElevator, hallRequests, elevatorStateChannel) // sjekker om det er noen forespørsel
 	}
