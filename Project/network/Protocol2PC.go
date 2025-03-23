@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	peer_to_peer "elevator_project/Network_Protocol/Network/Peer_to_Peer"
+	peer_to_peer "elevator_project/network/Peer_to_Peer"
 )
 
 // PROTOCOL - 2PC
@@ -64,7 +64,7 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 	neededAcks := len(node.Get_Alive_Nodes())
 	ackCount := 0
 
-	ackCount++ // Coordinator votes for itself
+	node.Broadcast(node.create_Message(Constants.PREPARE_ACK, prepareMsg.id, ""))
 
 	time_to_complete := time.After(time.Millisecond * 100)
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	peer_to_peer "elevator_project/Network_Protocol/Network/Peer_to_Peer"
+	peer_to_peer "elevator_project/network/Peer_to_Peer"
 )
 
 // PROTOCOL - Synchronize
@@ -63,9 +63,10 @@ func (node *Node) coordinate_Synchronization(success_channel chan bool) {
 	begin_synchronization_message := node.create_Vote_Message(Constants.SYNC_AFTER_DISCOVERY, "")
 	node.Broadcast(begin_synchronization_message)
 
-	combined_information := make(map[string]string)
-	combined_information[node.name] = node.get_Synchronization_Information()
+	own_information := node.get_Synchronization_Information()
+	node.Broadcast(node.create_Message(Constants.SYNC_RESPONSE, begin_synchronization_message.id, own_information))
 
+	combined_information := make(map[string]string)
 	amount_of_info_needed := len(node.Get_Alive_Nodes())
 	timeout := time.After(time.Second)
 	for {

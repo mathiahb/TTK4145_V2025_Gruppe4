@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	peer_to_peer "elevator_project/Network_Protocol/Network/Peer_to_Peer"
+	peer_to_peer "elevator_project/network/Peer_to_Peer"
 )
 
-func newNetworkCommunicationChannels() NetworkCommunicationChannels {
+func CreateTestNetworkCommunicationChannels() NetworkCommunicationChannels {
 	return NetworkCommunicationChannels{
 		ToNetwork: CommunicationToNetwork{
 			Discovery: struct{}{},
@@ -66,8 +66,8 @@ func TestDiscovery(t *testing.T) {
 	result1 := []string{name1, name2}
 	result2 := []string{name2, name1}
 
-	Node1 := New_Node(name1, newNetworkCommunicationChannels())
-	Node2 := New_Node(name2, newNetworkCommunicationChannels()) // Node 2
+	Node1 := New_Node(name1, CreateTestNetworkCommunicationChannels())
+	Node2 := New_Node(name2, CreateTestNetworkCommunicationChannels()) // Node 2
 
 	response_channel1 := Node1.shared_state_communication.FromNetwork.Discovery.Updated_Alive_Nodes
 	response_channel2 := Node2.shared_state_communication.FromNetwork.Discovery.Updated_Alive_Nodes
@@ -103,7 +103,7 @@ func TestDiscovery(t *testing.T) {
 func TestDiscoveryMany(t *testing.T) {
 	response_channel := make(chan []string, 12)
 
-	networkCommunication := newNetworkCommunicationChannels()
+	networkCommunication := CreateTestNetworkCommunicationChannels()
 	networkCommunication.FromNetwork.Discovery.Updated_Alive_Nodes = response_channel
 
 	Node1 := New_Node("Node0", networkCommunication)
@@ -111,7 +111,7 @@ func TestDiscoveryMany(t *testing.T) {
 
 	name := "Node"
 	for id := 1; id < 10; id++ {
-		networkCommunication := newNetworkCommunicationChannels()
+		networkCommunication := CreateTestNetworkCommunicationChannels()
 		networkCommunication.FromNetwork.Discovery.Updated_Alive_Nodes = response_channel
 
 		Node := New_Node(name+strconv.Itoa(id), networkCommunication)
@@ -150,8 +150,8 @@ func TestDiscoveryMany(t *testing.T) {
 
 func TestSynchronization(t *testing.T) {
 
-	Node1 := New_Node("Node1", newNetworkCommunicationChannels())
-	Node2 := New_Node("Node2", newNetworkCommunicationChannels())
+	Node1 := New_Node("Node1", CreateTestNetworkCommunicationChannels())
+	Node2 := New_Node("Node2", CreateTestNetworkCommunicationChannels())
 	defer Node1.Close()
 	defer Node2.Close()
 
@@ -223,8 +223,8 @@ func TestSynchronization(t *testing.T) {
 }
 
 func Test2PC(t *testing.T) {
-	Node1 := New_Node("Node1", newNetworkCommunicationChannels())
-	Node2 := New_Node("Node2", newNetworkCommunicationChannels())
+	Node1 := New_Node("Node1", CreateTestNetworkCommunicationChannels())
+	Node2 := New_Node("Node2", CreateTestNetworkCommunicationChannels())
 	defer Node1.Close()
 	defer Node2.Close()
 
@@ -239,7 +239,7 @@ func Test2PC(t *testing.T) {
 
 	Node1.protocol_dispatcher.Do_Command(command)
 
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 100)
 
 	select {
 	case result := <-Node1.shared_state_communication.FromNetwork.TwoPhaseCommit.ProtocolCommited:
@@ -316,7 +316,7 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 
 		close_channel: make(chan bool),
 
-		shared_state_communication: newNetworkCommunicationChannels(),
+		shared_state_communication: CreateTestNetworkCommunicationChannels(),
 	}
 
 	time.Sleep(time.Millisecond * 100)
@@ -417,7 +417,7 @@ func testSynchronizationRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 
 		close_channel: make(chan bool),
 
-		shared_state_communication: newNetworkCommunicationChannels(),
+		shared_state_communication: CreateTestNetworkCommunicationChannels(),
 	}
 }
 
@@ -425,7 +425,7 @@ func TestDispatchRetry(t *testing.T) {
 	name1 := "Node1"
 	name2 := "Node2"
 
-	Node1 := New_Node(name1, newNetworkCommunicationChannels())
+	Node1 := New_Node(name1, CreateTestNetworkCommunicationChannels())
 
 	// Need manual control over node 2, not using NewNode that automatically starts a reader and dispatcher.
 	Node2 := Node{
@@ -444,7 +444,7 @@ func TestDispatchRetry(t *testing.T) {
 
 		close_channel: make(chan bool),
 
-		shared_state_communication: newNetworkCommunicationChannels(),
+		shared_state_communication: CreateTestNetworkCommunicationChannels(),
 	}
 	defer Node1.Close()
 	defer Node2.Close()

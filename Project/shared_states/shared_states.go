@@ -66,11 +66,15 @@ func reactToSharedStateUpdate(sharedState HRAType, aliveNodes []string, localID 
 	toElevator.ApprovedCabRequestsChannel <- approvedCabRequests
 }
 
-func SharedStateThread(toElevator ToElevator, fromNetwork FromNetwork, toNetwork ToNetwork, fromElevator FromElevator) {
-
-	var sharedState HRAType
+func SharedStateThread(initResult chan Elevator, toElevator ToElevator, fromNetwork FromNetwork, toNetwork ToNetwork, fromElevator FromElevator) {
+	var sharedState HRAType = HRAType{
+		States:       make(map[string]Elevator),
+		HallRequests: make(HallRequestType, 4),
+	}
 	var localID string = GetElevatorID()
 	var aliveNodes []string = make([]string, 0)
+
+	var initializing bool = true
 
 	for {
 		select {
@@ -119,6 +123,21 @@ func SharedStateThread(toElevator ToElevator, fromNetwork FromNetwork, toNetwork
 
 		case newSharedState := <-fromNetwork.ResultFromSynchronization:
 			sharedState = translateFromNetwork[HRAType](newSharedState)
+
+			if initializing {
+				initializing = false
+				res, ok := sharedState.States[localID]
+				if !ok {
+					res = Elevator{
+						Behaviour:   EB_Idle,
+						Dirn:        D_Stop,
+						Floor:       -1,
+						CabRequests: make([]bool, N_FLOORS),
+					}
+				}
+				go func() { initResult <- res }()
+			}
+
 			reactToSharedStateUpdate(sharedState, aliveNodes, localID, toElevator)
 		}
 	}

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	peer_to_peer "elevator_project/Network_Protocol/Network/Peer_to_Peer"
+	peer_to_peer "elevator_project/network/Peer_to_Peer"
 )
 
 type CommunicationToNetwork struct {
@@ -90,6 +90,11 @@ func New_Node(name string, communication_channels NetworkCommunicationChannels) 
 	return &node
 }
 
+func (node *Node) Connect() {
+	node.protocol_dispatcher.Do_Discovery()
+	node.protocol_dispatcher.Do_Synchronization()
+}
+
 func (node *Node) Close() {
 	node.p2p.Close()
 	close(node.close_channel)
@@ -122,6 +127,8 @@ func (node *Node) reader() {
 		select {
 		case <-node.close_channel:
 			return
+		case commit := <-node.shared_state_communication.ToNetwork.TwoPhaseCommit.RequestCommit:
+			node.protocol_dispatcher.Do_Command(commit)
 		case p2p_message := <-node.p2p.Read_Channel:
 			message := Message_From_String(p2p_message.Message)
 
