@@ -36,6 +36,11 @@ func ElevatorThread(initElevator Elevator, elevatorChannels ElevatorChannels, to
 	InitFSM() // shared state får vite at en heis eksisterer, kjenner ikke helt til poenget med resten av funksjonen
 
 	// FSMOnInitBetweenFloors og turnOffAllLights må kjøres ved første oppstart
+	turnOffAllLights() // starter med alle lys avslått
+
+	if localElevator.Floor == -1 {
+		localElevator = FSMOnInitBetweenFloors(localElevator, fromElevator.UpdateState)
+	}
 
 	for {
 		select {
