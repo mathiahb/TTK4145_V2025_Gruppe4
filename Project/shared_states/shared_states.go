@@ -92,7 +92,7 @@ func SharedStateThread(initResult chan Elevator, toElevator ToElevator, fromNetw
 				Name:    localID,
 				Data:    translateToNetwork(newHallRequest),
 			}
-			toNetwork.Inform2PC <- translateToNetwork(command)
+			go func() { toNetwork.Inform2PC <- translateToNetwork(command) }()
 
 		case clearHallRequest := <-fromElevator.ClearHallRequestChannel: // får inn en enkelt hallRequest {false, false} {false, false} {true, false} {false, false}
 			command := Command2PC{
@@ -101,7 +101,7 @@ func SharedStateThread(initResult chan Elevator, toElevator ToElevator, fromNetw
 				Data:    translateToNetwork(clearHallRequest),
 			}
 
-			toNetwork.Inform2PC <- translateToNetwork(command)
+			go func() { toNetwork.Inform2PC <- translateToNetwork(command) }()
 
 		case newState := <-fromElevator.UpdateState:
 			command := Command2PC{
@@ -110,7 +110,7 @@ func SharedStateThread(initResult chan Elevator, toElevator ToElevator, fromNetw
 				Data:    translateToNetwork(newState),
 			}
 
-			toNetwork.Inform2PC <- translateToNetwork(command)
+			go func() { toNetwork.Inform2PC <- translateToNetwork(command) }()
 
 		case commandString := <-fromNetwork.ApprovedBy2PC:
 			command := translateFromNetwork[Command2PC](commandString)
@@ -125,10 +125,10 @@ func SharedStateThread(initResult chan Elevator, toElevator ToElevator, fromNetw
 		// synkronisering
 		case <-fromNetwork.ProtocolRequestInformation:
 			fmt.Printf("SharedStateThread: Responding to information request\n")
-			toNetwork.RespondToInformationRequest <- translateToNetwork(sharedState)
+			go func() { toNetwork.RespondToInformationRequest <- translateToNetwork(sharedState) }()
 
 		case states := <-fromNetwork.ProtocolRequestsInterpretation:
-			toNetwork.RespondWithInterpretation <- ResolveSharedStateConflicts(states)
+			go func() { toNetwork.RespondWithInterpretation <- ResolveSharedStateConflicts(states) }()
 
 		case newSharedState := <-fromNetwork.ResultFromSynchronization:
 			sharedState = translateFromNetwork[HRAType](newSharedState)
