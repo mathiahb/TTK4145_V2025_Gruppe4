@@ -1,9 +1,9 @@
 package elevator
 
 import (
-	. "elevator_project/constants"
+	"elevator_project/constants"
 	"elevator_project/elevio"
-	. "elevator_project/shared_states"
+	"elevator_project/shared_states"
 	"fmt"
 	"time"
 )
@@ -25,7 +25,7 @@ func MakeElevatorChannels() ElevatorChannels {
 }
 
 // må legge til alle kanalene
-func ElevatorThread(initElevator Elevator, elevatorChannels ElevatorChannels, fromSharedState ToElevator, toSharedState FromElevator) {
+func ElevatorThread(initElevator constants.Elevator, elevatorChannels ElevatorChannels, fromSharedState shared_states.ToElevator, toSharedState shared_states.FromElevator) {
 	//føler at det er litt initialisering/konfigurering som mangler
 
 	var localElevator = initElevator               // lager et lokalt heisobjekt
@@ -61,11 +61,15 @@ func ElevatorThread(initElevator Elevator, elevatorChannels ElevatorChannels, fr
 
 		case isObstructed = <-elevatorChannels.Obstruction:
 			fmt.Printf("Obstruction switch: %v\n", isObstructed)
-			// Tømme kanalen for å unngå blokkering
-			if localElevator.Behaviour == EB_DoorOpen {
 
+			if localElevator.Behaviour == constants.EB_DoorOpen {
+
+				// Stop timer first to avoid channel blocking.
 				if !threeSecTimer.Stop() {
-					<-threeSecTimer.C
+					select {
+					case <-threeSecTimer.C:
+					default:
+					}
 				}
 
 				if !isObstructed {
@@ -80,11 +84,11 @@ func ElevatorThread(initElevator Elevator, elevatorChannels ElevatorChannels, fr
 			fmt.Printf("Door timer expired, obstruction: %v\n", isObstructed)
 			if !isObstructed {
 				fmt.Printf("Door is not obstructed, closing door\n")
-				localElevator = FSMCloseDoors(localElevator, hallRequests, toSharedState.UpdateState)
+				localElevator = FSMCloseDoors(localElevator, hallRequests, toSharedState.UpdateState, threeSecTimer, toSharedState.ClearHallRequestChannel, toSharedState.UpdateState)
 			}
 
 		case hallRequests = <-fromSharedState.ApprovedHRAChannel: // fordi alle ordre kommer fra shared states
-			localElevator = FSMStartMoving(localElevator, hallRequests, toSharedState.UpdateState)
+			localElevator = FSMStartMoving(localElevator, hallRequests, toSharedState.UpdateState, threeSecTimer, toSharedState.ClearHallRequestChannel, toSharedState.UpdateState)
 
 		case sharedHallRequests := <-fromSharedState.UpdateHallRequestLights:
 			setHallLights(sharedHallRequests)

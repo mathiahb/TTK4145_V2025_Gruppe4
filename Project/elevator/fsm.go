@@ -87,16 +87,56 @@ func setCabLights(cabRequests []bool) {
 	}
 }
 
+func FSMOpenDoor(
+	localElevator Elevator,
+	hallRequests HallRequestType,
+	threeSecTimer *time.Timer,
+	clearHallRequestChannel chan HallRequestType,
+	updateStateChannel chan Elevator,
+) Elevator {
+	elevio.SetMotorDirection(elevio.MD_Stop)
+	elevio.SetDoorOpenLamp(true)
+	localElevator.Behaviour = EB_DoorOpen
+	threeSecTimer.Reset(3 * time.Second)
+	localElevator, _ = requestsClearAtCurrentFloor(localElevator, hallRequests, clearHallRequestChannel, updateStateChannel)
+	return localElevator
+}
+
 // **FSMStartMoving**: Kalles for å sjekke om heisen skal starte bevegelse
-func FSMStartMoving(localElevator Elevator, hallRequests HallRequestType, elevatorStateChannel chan Elevator) Elevator {
+func FSMStartMoving(
+	localElevator Elevator,
+	hallRequests HallRequestType,
+	elevatorStateChannel chan Elevator,
+	threeSecTimer *time.Timer,
+	clearHallRequestChannel chan HallRequestType,
+	updateStateChannel chan Elevator,
+) Elevator {
 
 	// Hvis heisen er idle og har forespørsler, velg retning og start motor
 	if localElevator.Behaviour == EB_Idle && hasRequests(localElevator, hallRequests) {
 		localElevator.Dirn = requestsChooseDirection(localElevator, hallRequests)
 
-		if localElevator.Dirn != D_Stop {
-			localElevator.Behaviour = EB_Moving
-			elevio.SetMotorDirection(convertDirnToMotor(localElevator.Dirn))
+		// Are there any requests at the current floor in the new direction localElevator.Dirn?
+		switch localElevator.Dirn {
+		case D_Up:
+			if hallRequests[localElevator.Floor][B_HallUp] || localElevator.CabRequests[localElevator.Floor] {
+				// Stop the elevator and open the door
+				localElevator = FSMOpenDoor(localElevator, hallRequests, threeSecTimer, clearHallRequestChannel, updateStateChannel)
+			} else {
+				localElevator.Behaviour = EB_Moving
+				elevio.SetMotorDirection(convertDirnToMotor(localElevator.Dirn))
+			}
+		case D_Down:
+			if hallRequests[localElevator.Floor][B_HallDown] || localElevator.CabRequests[localElevator.Floor] {
+				// Stop the elevator and open the door
+				localElevator = FSMOpenDoor(localElevator, hallRequests, threeSecTimer, clearHallRequestChannel, updateStateChannel)
+			} else {
+				localElevator.Behaviour = EB_Moving
+				elevio.SetMotorDirection(convertDirnToMotor(localElevator.Dirn))
+			}
+		case D_Stop:
+			localElevator = FSMOpenDoor(localElevator, hallRequests, threeSecTimer, clearHallRequestChannel, updateStateChannel)
+
 		}
 
 		elevatorStateChannel <- localElevator
@@ -168,7 +208,15 @@ func FSMOnFloorArrival(newFloor int,
 }
 
 // **FSMOnDoorTimeout**: Kalles når dør-timeren utløper
-func FSMCloseDoors(localElevator Elevator, hallRequests HallRequestType, elevatorStateChannel chan Elevator) Elevator {
+func FSMCloseDoors(
+	localElevator Elevator,
+	hallRequests HallRequestType,
+	elevatorStateChannel chan Elevator,
+	threeSecTimer *time.Timer,
+	clearHallRequestChannel chan HallRequestType,
+	updateStateChannel chan Elevator,
+
+) Elevator {
 	fmt.Println("\nFSMOnDoorTimeout()")
 
 	// Hvis døren er åpen, bestem neste handling
@@ -178,7 +226,7 @@ func FSMCloseDoors(localElevator Elevator, hallRequests HallRequestType, elevato
 
 		elevatorStateChannel <- localElevator
 
-		localElevator = FSMStartMoving(localElevator, hallRequests, elevatorStateChannel) // sjekker om det er noen forespørsel
+		localElevator = FSMStartMoving(localElevator, hallRequests, elevatorStateChannel, threeSecTimer, clearHallRequestChannel, updateStateChannel) // sjekker om det er noen forespørsel
 	}
 	return localElevator
 }
