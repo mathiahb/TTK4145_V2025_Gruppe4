@@ -15,6 +15,8 @@ func main() {
 
 	var nameExtension int
 	flag.IntVar(&nameExtension, "name", 0, "Appends the name to the computer name, to be used when running multiple on the same computer. Default: 0")
+
+	flag.Parse()
 	constants.NameExtension = nameExtension
 
 	fromSharedStateToNetwork := newFromSharedStateToNetwork()

@@ -20,7 +20,6 @@ const (
 	DoorOpenDurationS = 3.0
 )
 
-
 const (
 	D_Stop Dirn = "stop"
 	D_Up   Dirn = "up"
@@ -39,10 +38,11 @@ const (
 	B_HallDown
 	B_Cab
 )
+
 // --------------- SHARED STATES -------------------- //
 const (
-	ADD = "ADD"
-	REMOVE = "REMOVE"
+	ADD          = "ADD"
+	REMOVE       = "REMOVE"
 	UPDATE_STATE = "UPDATE_STATE"
 )
 
@@ -89,7 +89,7 @@ const UDP_BROADCAST_IP_PORT string = "239.255.255.255" + UDP_PORT
 // Deadlines
 const UDP_READ_DEADLINE time.Duration = time.Millisecond
 const UDP_WAIT_BEFORE_TRANSMITTING_AGAIN time.Duration = 50 * time.Millisecond // Writing: 20 Hz
-const UDP_WAIT_BEFORE_READING_AGAIN time.Duration = 50 * time.Millisecond      // Reading: 20 Hz
+const UDP_WAIT_BEFORE_READING_AGAIN time.Duration = time.Microsecond           // Reading: 20 Hz
 
 const TCP_READ_DEADLNE time.Duration = time.Millisecond              // 1 Millisecond read deadline.
 const TCP_WAIT_BEFORE_READING_AGAIN time.Duration = time.Millisecond // Checks TCP 500~1000 times a second
