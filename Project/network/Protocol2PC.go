@@ -73,7 +73,7 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 	for {
 		if ackCount == neededAcks {
 			// Everyone acknowledged, so let's COMMIT
-			node.commit2PC(prepareMsg.id, cmd)
+			go node.commit2PC(prepareMsg.id, cmd)
 			success_channel <- true
 			return
 		}
@@ -93,7 +93,7 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 			case Constants.ABORT_COMMIT:
 				// Some participant aborted -> we must abort
 				fmt.Printf("[%s] 2PC coordinator sees ABORT from %s => ABORT.\n", node.name, msg.sender)
-				node.abort2PC(prepareMsg.id)
+				go node.abort2PC(prepareMsg.id)
 				success_channel <- false
 				return
 			}
@@ -101,7 +101,7 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 		case <-time_to_complete:
 			// Timed out waiting for all ACKs => ABORT
 			fmt.Printf("[%s] 2PC coordinator timed out waiting for ACKs => ABORT.\n", node.name)
-			node.abort2PC(prepareMsg.id)
+			go node.abort2PC(prepareMsg.id)
 
 			node.protocol_timed_out()
 			success_channel <- false
@@ -139,7 +139,7 @@ func (node *Node) participate_2PC(p2p_message peer_to_peer.P2P_Message, prepareM
 	} else {
 		// If we can't commit, broadcast ABORT and return
 		fmt.Printf("[%s] 2PC participant can't commit => ABORT.\n", node.name)
-		node.abort2PC(prepareMsg.id)
+		go node.abort2PC(prepareMsg.id)
 		return
 	}
 
@@ -154,7 +154,7 @@ func (node *Node) participate_2PC(p2p_message peer_to_peer.P2P_Message, prepareM
 			}
 			switch msg.message_type {
 			case Constants.COMMIT:
-				node.doLocalCommit(msg)
+				go node.doLocalCommit(msg)
 				return
 			case Constants.ABORT_COMMIT:
 				return
