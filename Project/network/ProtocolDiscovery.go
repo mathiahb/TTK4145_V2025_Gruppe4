@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	peer_to_peer "elevator_project/network/Peer_to_Peer"
 )
 
 // PROTOCOL - Discovery
@@ -41,6 +39,23 @@ import (
 		Participants: Passes the new node list to new_node_channel
 */
 
+func (id TxID) isOlderThan(other TxID) bool {
+	split_self := strings.Split(string(id), ":")
+	split_other := strings.Split(string(other), ":")
+
+	name_self := split_self[0]
+	name_other := split_other[0]
+
+	if name_self != name_other {
+		return false
+	}
+
+	id_number := split_self[1]
+	other_number := split_other[1]
+
+	return id_number < other_number
+}
+
 func (node *Node) send_Discovery_Result(result []string) {
 	node.shared_state_communication.FromNetwork.Discovery.Updated_Alive_Nodes <- result
 }
@@ -59,6 +74,7 @@ func (node *Node) coordinate_Discovery(success_channel chan bool) {
 	for {
 		select {
 		case response := <-node.comm:
+
 			// Hello!
 			fmt.Printf("[Debug %s]: Received forwarding during coordination: %s\n", node.name, response.String())
 
@@ -67,13 +83,13 @@ func (node *Node) coordinate_Discovery(success_channel chan bool) {
 			}
 			// Aborted
 			if response.message_type == Constants.ABORT_COMMIT && response.id == begin_discovery_message.id {
-				go node.abort_Discovery(begin_discovery_message.id)
+				node.abort_Discovery(begin_discovery_message)
 
 				success_channel <- false
 				return
 			}
 		case <-time_to_complete:
-			go node.broadcast_Discovery_Result(begin_discovery_message.id, result)
+			node.broadcast_Discovery_Result(begin_discovery_message, result)
 			node.alive_nodes_manager.Set_Alive_Nodes(result)
 			go node.send_Discovery_Result(result)
 
@@ -83,8 +99,8 @@ func (node *Node) coordinate_Discovery(success_channel chan bool) {
 	}
 }
 
-func (node *Node) participate_In_Discovery(p2p_message peer_to_peer.P2P_Message, id_discovery TxID) {
-	if node.isTxIDFromUs(id_discovery) {
+func (node *Node) participate_In_Discovery(discovery_message Message) {
+	if node.isTxIDFromUs(discovery_message.id) {
 		fmt.Printf("[%s] Detected discovery started by us!\n", node.name)
 		return
 	}
@@ -92,9 +108,9 @@ func (node *Node) participate_In_Discovery(p2p_message peer_to_peer.P2P_Message,
 	node.mu_voting_resource.Lock()
 	defer node.mu_voting_resource.Unlock()
 
-	fmt.Printf("[%s] Participating in discovery %s!\n", node.name, id_discovery)
+	fmt.Printf("[%s] Participating in discovery %s!\n", node.name, discovery_message.id)
 
-	go node.say_Hello_To_Discovery(p2p_message, id_discovery)
+	node.say_Hello_To_Discovery(discovery_message)
 
 	timeout := time.After(time.Second)
 	for {
@@ -102,23 +118,28 @@ func (node *Node) participate_In_Discovery(p2p_message peer_to_peer.P2P_Message,
 		case result_message := <-node.comm:
 			fmt.Printf("[Debug %s] Received forwarding during participation: %s\n", node.name, result_message.String())
 
-			if result_message.message_type == Constants.DISCOVERY_COMPLETE && result_message.id == id_discovery {
+			if discovery_message.id.isOlderThan(result_message.id) {
+				fmt.Printf("[Debug %s] Received newer message %s, giving up on old message %s\n", node.name, result_message.String(), discovery_message.id)
+				return
+			}
+
+			if result_message.message_type == Constants.DISCOVERY_COMPLETE && result_message.id == discovery_message.id {
 				result := strings.Split(result_message.payload, ":")
 				node.alive_nodes_manager.Set_Alive_Nodes(result)
 				go node.send_Discovery_Result(result)
 
 				fmt.Printf("[Debug %s] Received result %s\n", node.name, node.Get_Alive_Nodes())
-				node.participate_In_Synchronization(p2p_message, id_discovery) // Successful discovery -> Synchronization
+				node.participate_In_Synchronization(discovery_message) // Successful discovery -> Synchronization
 				return
 			}
 		case <-timeout:
-			fmt.Printf("[ERROR %s] Discovery %s halted in progress!\n", node.name, id_discovery)
+			fmt.Printf("[ERROR %s] Discovery %s halted in progress!\n", node.name, discovery_message.id)
 			return
 		}
 	}
 }
 
-func (node *Node) broadcast_Discovery_Result(id TxID, result []string) {
+func (node *Node) broadcast_Discovery_Result(discovery_message Message, result []string) {
 	result_string := ""
 
 	for i, name := range result {
@@ -128,16 +149,16 @@ func (node *Node) broadcast_Discovery_Result(id TxID, result []string) {
 		result_string = result_string + name
 	}
 
-	message := node.create_Message(Constants.DISCOVERY_COMPLETE, id, result_string)
-	node.Broadcast(message)
+	message := node.create_Message(Constants.DISCOVERY_COMPLETE, discovery_message.id, result_string)
+	node.Broadcast_Response(message, discovery_message)
 }
 
-func (node *Node) abort_Discovery(id_discovery TxID) {
-	message := node.create_Message(Constants.ABORT_COMMIT, id_discovery, "")
-	node.Broadcast(message)
+func (node *Node) abort_Discovery(discovery_message Message) {
+	message := node.create_Message(Constants.ABORT_DISCOVERY, discovery_message.id, "")
+	node.Broadcast_Response(message, discovery_message)
 }
 
-func (node *Node) say_Hello_To_Discovery(p2p_message peer_to_peer.P2P_Message, id_discovery TxID) {
-	message := node.create_Message(Constants.DISCOVERY_HELLO, id_discovery, node.name)
-	node.Broadcast_Response(message, p2p_message)
+func (node *Node) say_Hello_To_Discovery(discovery_message Message) {
+	message := node.create_Message(Constants.DISCOVERY_HELLO, discovery_message.id, node.name)
+	node.Broadcast_Response(message, discovery_message)
 }

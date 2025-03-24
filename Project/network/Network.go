@@ -55,8 +55,10 @@ type Node struct {
 	alive_nodes_manager AliveNodeManager
 	protocol_dispatcher ProtocolDispatcher
 
-	comm       chan Message
-	twopc_comm map[TxID]chan Message
+	comm chan Message
+
+	mu_twopc_comm sync.Mutex
+	twopc_comm    map[TxID]chan Message
 
 	close_channel chan bool
 
@@ -102,14 +104,12 @@ func (node *Node) Close() {
 }
 
 func (node *Node) Broadcast(message Message) {
-	p2p_message := node.p2p.Create_Message(message.String(), peer_to_peer.MESSAGE)
-	node.p2p.Broadcast(p2p_message)
+	node.p2p.Broadcast(message.p2p_message)
 }
 
-func (node *Node) Broadcast_Response(message Message, responding_to peer_to_peer.P2P_Message) {
-	p2p_message := node.p2p.Create_Message(message.String(), peer_to_peer.MESSAGE)
-	p2p_message.Depend_On(responding_to)
-	node.p2p.Broadcast(p2p_message)
+func (node *Node) Broadcast_Response(message Message, responding_to Message) {
+	message.p2p_message.Depend_On(responding_to.p2p_message)
+	node.p2p.Broadcast(message.p2p_message)
 }
 
 func (node *Node) protocol_timed_out() {
@@ -118,6 +118,16 @@ func (node *Node) protocol_timed_out() {
 
 func (node *Node) start_reader() {
 	go node.reader()
+}
+
+func (node *Node) forward_2PC_To_Network(message Message) {
+	node.mu_twopc_comm.Lock()
+	defer node.mu_twopc_comm.Unlock()
+
+	comm, ok := node.twopc_comm[message.id]
+	if ok {
+		go func() { comm <- message }()
+	}
 }
 
 func (node *Node) reader() {
@@ -130,7 +140,7 @@ func (node *Node) reader() {
 		case commit := <-node.shared_state_communication.ToNetwork.TwoPhaseCommit.RequestCommit:
 			node.protocol_dispatcher.Do_Command(commit)
 		case p2p_message := <-node.p2p.Read_Channel:
-			message := Message_From_String(p2p_message.Message)
+			message := translate_Message(p2p_message)
 
 			fmt.Printf("[%s] Received message: %s, decoded to \"%s: %s %s\"\n",
 				node.name, p2p_message.Message, message.id, message.message_type, message.payload)
@@ -138,7 +148,7 @@ func (node *Node) reader() {
 			switch message.message_type {
 			// DISCOVERY
 			case Constants.DISCOVERY_BEGIN:
-				go node.participate_In_Discovery(p2p_message, message.id)
+				go node.participate_In_Discovery(message)
 
 			case Constants.DISCOVERY_HELLO:
 				go func() { node.comm <- message }()
@@ -147,44 +157,31 @@ func (node *Node) reader() {
 				go func() { node.comm <- message }()
 
 			// SYNCHRONIZATION
-			//case Constants.SYNC_AFTER_DISCOVERY:
-			//	go node.participate_In_Synchronization(p2p_message, message.id)
-
 			case Constants.SYNC_RESPONSE:
 				go func() { node.comm <- message }()
 
 			case Constants.SYNC_RESULT:
 				go func() { node.comm <- message }()
 
+			// Discovery & Synchronization
+			case Constants.ABORT_DISCOVERY:
+				go func() { node.comm <- message }()
+
 				// 2PC
 			case Constants.PREPARE: // Received a synchronization request
-				go node.participate_2PC(p2p_message, message)
+				go node.participate_2PC(message)
 
 			case Constants.PREPARE_ACK: // Received a synchronization acknowledgement
-				comm, ok := node.twopc_comm[message.id]
-				if ok {
-					go func() { comm <- message }()
-				}
+				node.forward_2PC_To_Network(message)
 
 			case Constants.ABORT_COMMIT: // Received an abort commit message
-				comm, ok := node.twopc_comm[message.id]
-				if ok {
-					go func() { comm <- message }()
-				} else {
-					go func() { node.comm <- message }()
-				}
+				node.forward_2PC_To_Network(message)
 
 			case Constants.COMMIT: // Received a commit message
-				comm, ok := node.twopc_comm[message.id]
-				if ok {
-					go func() { comm <- message }()
-				}
+				node.forward_2PC_To_Network(message)
 
 			case Constants.ACK:
-				comm, ok := node.twopc_comm[message.id]
-				if ok {
-					go func() { comm <- message }()
-				}
+				node.forward_2PC_To_Network(message)
 			}
 		}
 	}

@@ -20,3 +20,15 @@ func (manager *AliveNodeManager) Set_Alive_Nodes(new_nodes []string) {
 
 	manager.alive_nodes = new_nodes
 }
+
+func (manager *AliveNodeManager) Is_Node_Alive(node string) bool {
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+
+	for _, alive_node := range manager.alive_nodes {
+		if alive_node == node {
+			return true
+		}
+	}
+	return false
+}

@@ -274,8 +274,8 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 	time.Sleep(time.Millisecond)
 
 	p2p_message := <-Node2.p2p.Read_Channel
-	message := Message_From_String(p2p_message.Message)
-	Node2.abort_Discovery(message.id)
+	message := translate_Message(p2p_message)
+	Node2.abort_Discovery(message)
 
 	go Node2.reader()
 
