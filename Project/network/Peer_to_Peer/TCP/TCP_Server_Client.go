@@ -1,8 +1,10 @@
 package TCP
 
 import (
+	"elevator_project/constants"
 	"fmt"
 	"net"
+	"strconv"
 	"time"
 )
 
@@ -40,7 +42,8 @@ func (connection_manager *TCP_Connection_Manager) tcp_listener(listener *net.Lis
 
 func (connection_manager *TCP_Connection_Manager) create_TCP_Server(addr_channel chan string) {
 	// Create a listener
-	listener, err := net.Listen("tcp", ":0")
+	port := constants.TCP_PORT + constants.NameExtension
+	listener, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
 		panic(err)
 	}

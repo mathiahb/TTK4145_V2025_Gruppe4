@@ -86,6 +86,9 @@ const NETWORK_FIELD_DELIMITER = "\\\n"
 const UDP_PORT string = ":10005"
 const UDP_BROADCAST_IP_PORT string = "239.255.255.255" + UDP_PORT
 
+// Constants for TCP connection
+const TCP_PORT int = 20005
+
 // Deadlines
 const UDP_READ_DEADLINE time.Duration = time.Millisecond
 const UDP_WAIT_BEFORE_TRANSMITTING_AGAIN time.Duration = 50 * time.Millisecond // Writing: 20 Hz
