@@ -43,3 +43,8 @@ NETWORKING
 > [ ] Create Shared State
 > [ ] Test Shared State
 > [ ] Clean up Shared State
+
+Bug
+-----
+
+> [ ] 2PC is currently both committing and aborting in same transaction

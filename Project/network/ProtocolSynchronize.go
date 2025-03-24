@@ -78,21 +78,21 @@ func (node *Node) coordinate_Synchronization(success_channel chan bool, begin_di
 				if len(combined_information) == amount_of_info_needed {
 					result := node.interpret_Synchronization_Responses(combined_information)
 
-					node.broadcast_Synchronization_Result(begin_discovery_message.id, result)
-					node.send_Synchronization_Result(result)
+					go node.broadcast_Synchronization_Result(begin_discovery_message.id, result)
+					go node.send_Synchronization_Result(result)
 
 					success_channel <- true
 					return
 				}
 			}
 			if response.message_type == Constants.ABORT_COMMIT && response.id == begin_discovery_message.id {
-				node.abort_Synchronization(begin_discovery_message.id)
+				go node.abort_Synchronization(begin_discovery_message.id)
 
 				success_channel <- false
 				return
 			}
 		case <-timeout:
-			node.abort_Synchronization(begin_discovery_message.id)
+			go node.abort_Synchronization(begin_discovery_message.id)
 			node.protocol_timed_out()
 
 			success_channel <- false
@@ -134,7 +134,7 @@ func (node *Node) participate_In_Synchronization(p2p_message peer_to_peer.P2P_Me
 		select {
 		case result := <-node.comm:
 			if result.message_type == Constants.SYNC_RESULT && result.id == id_discovery {
-				node.send_Synchronization_Result(result.payload)
+				go node.send_Synchronization_Result(result.payload)
 				return
 			}
 

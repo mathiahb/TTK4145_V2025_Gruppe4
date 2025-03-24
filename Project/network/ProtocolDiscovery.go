@@ -67,15 +67,15 @@ func (node *Node) coordinate_Discovery(success_channel chan bool) {
 			}
 			// Aborted
 			if response.message_type == Constants.ABORT_COMMIT && response.id == begin_discovery_message.id {
-				node.abort_Discovery(begin_discovery_message.id)
+				go node.abort_Discovery(begin_discovery_message.id)
 
 				success_channel <- false
 				return
 			}
 		case <-time_to_complete:
-			node.broadcast_Discovery_Result(begin_discovery_message.id, result)
+			go node.broadcast_Discovery_Result(begin_discovery_message.id, result)
 			node.alive_nodes_manager.Set_Alive_Nodes(result)
-			node.send_Discovery_Result(result)
+			go node.send_Discovery_Result(result)
 
 			node.coordinate_Synchronization(success_channel, begin_discovery_message)
 			return
@@ -94,7 +94,7 @@ func (node *Node) participate_In_Discovery(p2p_message peer_to_peer.P2P_Message,
 
 	fmt.Printf("[%s] Participating in discovery %s!\n", node.name, id_discovery)
 
-	node.say_Hello_To_Discovery(p2p_message, id_discovery)
+	go node.say_Hello_To_Discovery(p2p_message, id_discovery)
 
 	timeout := time.After(time.Second)
 	for {
@@ -105,7 +105,7 @@ func (node *Node) participate_In_Discovery(p2p_message peer_to_peer.P2P_Message,
 			if result_message.message_type == Constants.DISCOVERY_COMPLETE && result_message.id == id_discovery {
 				result := strings.Split(result_message.payload, ":")
 				node.alive_nodes_manager.Set_Alive_Nodes(result)
-				node.send_Discovery_Result(result)
+				go node.send_Discovery_Result(result)
 
 				fmt.Printf("[Debug %s] Received result %s\n", node.name, node.Get_Alive_Nodes())
 				node.participate_In_Synchronization(p2p_message, id_discovery) // Successful discovery -> Synchronization
