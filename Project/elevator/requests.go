@@ -12,9 +12,9 @@ type DirnBehaviourPair struct {
 
 func HallRequestsUninitialized() HallRequestType {
 	var hallRequests HallRequestType
-	hallRequests[N_FLOORS][2] = false
+	hallRequests = make(HallRequestType, N_FLOORS)
 	return hallRequests
-	// TODO: Implementer riktig initialisering av hallRequests
+	//
 }
 
 // requestsShouldStop sjekker om heisen skal stoppe på nåværende etasje
@@ -35,21 +35,11 @@ func requestsShouldStop(localElevator Elevator, hallRequests [][2]bool) bool {
 
 	// 3. Hvis det ikke er flere hall requests i denne retningen, stopp
 	if localElevator.Dirn == D_Up {
-		for floor := localElevator.Floor + 1; floor < N_FLOORS; floor++ {
-			if hallRequests[floor][B_HallUp] || hallRequests[floor][B_HallDown] {
-				return false // Fortsett å bevege seg
-			}
-		}
-		return true // Stopp siden ingen flere hall requests i denne retningen
+		return !requests_above(localElevator, hallRequests)
 	}
 
 	if localElevator.Dirn == D_Down {
-		for floor := 0; floor < localElevator.Floor; floor++ {
-			if hallRequests[floor][B_HallUp] || hallRequests[floor][B_HallDown] {
-				return false // Fortsett å bevege seg
-			}
-		}
-		return true // Stopp siden ingen flere hall requests i denne retningen
+		return !requests_below(localElevator, hallRequests)
 	}
 
 	return false
@@ -64,20 +54,73 @@ func requestsClearAtCurrentFloor(localElevator Elevator, hallRequests HallReques
 
 		localElevator.CabRequests[localElevator.Floor] = false
 		updateStateChannel <- localElevator
-	} else if hallRequests[localElevator.Floor][B_HallUp] == true && localElevator.Dirn == D_Up {
-		//cleare hallrequest locally and update network
+	}
 
-		hallRequests[localElevator.Floor][B_HallUp] = false
-		clearHallRequestChannel <- hallRequests
-
-	} else if hallRequests[localElevator.Floor][B_HallDown] == true && localElevator.Dirn == D_Down {
-
-		hallRequests[localElevator.Floor][B_HallDown] = false
-		clearHallRequestChannel <- hallRequests
-
+	switch localElevator.Dirn {
+	case D_Up:
+		if !requests_above(localElevator, hallRequests) && !hallRequests[localElevator.Floor][B_HallUp] == true {
+			if hallRequests[localElevator.Floor][B_HallDown] == true {
+				//clear hallrequest locally and update network
+				clearHallRequest := make(HallRequestType, N_FLOORS)
+				clearHallRequest[localElevator.Floor][B_HallDown] = true
+				clearHallRequestChannel <- clearHallRequest
+			}
+		}
+		if hallRequests[localElevator.Floor][B_HallUp] == true {
+			//clear hallrequest locally and update network
+			clearHallRequest := make(HallRequestType, N_FLOORS)
+			clearHallRequest[localElevator.Floor][B_HallUp] = true
+			clearHallRequestChannel <- clearHallRequest
+		}
+	case D_Down:
+		if !requests_below(localElevator, hallRequests) && !hallRequests[localElevator.Floor][B_HallDown] == true {
+			if hallRequests[localElevator.Floor][B_HallUp] == true {
+				//clear hallrequest locally and update network
+				clearHallRequest := make(HallRequestType, N_FLOORS)
+				clearHallRequest[localElevator.Floor][B_HallUp] = true
+				clearHallRequestChannel <- clearHallRequest
+			}
+		}
+		if hallRequests[localElevator.Floor][B_HallDown] == true {
+			//clear hallrequest locally and update network
+			clearHallRequest := make(HallRequestType, N_FLOORS)
+			clearHallRequest[localElevator.Floor][B_HallDown] = true
+			clearHallRequestChannel <- clearHallRequest
+		}
+	case D_Stop:
+		if hallRequests[localElevator.Floor][B_HallUp] == true {
+			//clear hallrequest locally and update network
+			clearHallRequest := make(HallRequestType, N_FLOORS)
+			clearHallRequest[localElevator.Floor][B_HallUp] = true
+			clearHallRequestChannel <- clearHallRequest
+		}
+		if hallRequests[localElevator.Floor][B_HallDown] == true {
+			//clear hallrequest locally and update network
+			clearHallRequest := make(HallRequestType, N_FLOORS)
+			clearHallRequest[localElevator.Floor][B_HallDown] = true
+			clearHallRequestChannel <- clearHallRequest
+		}
 	}
 
 	return localElevator, hallRequests
+}
+
+func requests_above(localElevator Elevator, hallRequests HallRequestType) bool {
+	for f := localElevator.Floor + 1; f < N_FLOORS; f++ {
+		if hallRequests[f][B_HallUp] || hallRequests[f][B_HallDown] || localElevator.CabRequests[f] {
+			return true
+		}
+	}
+	return false
+}
+
+func requests_below(localElevator Elevator, hallRequests HallRequestType) bool {
+	for f := 0; f < localElevator.Floor; f++ {
+		if hallRequests[f][B_HallUp] || hallRequests[f][B_HallDown] || localElevator.CabRequests[f] {
+			return true
+		}
+	}
+	return false
 }
 
 func hasRequests(e Elevator, hallRequests [][2]bool) bool {

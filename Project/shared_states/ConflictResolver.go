@@ -50,7 +50,7 @@ func resolveDifferences(state1 HRAType, state2 HRAType, owner_of_state2 string) 
 func ResolveSharedStateConflicts(states map[string]string) string {
 	result := HRAType{
 		States:       make(map[string]Elevator),
-		HallRequests: make(HallRequestType, 0),
+		HallRequests: make(HallRequestType, N_FLOORS),
 	}
 
 	for name, state := range states {

@@ -1,24 +1,25 @@
 package shared_states
 
 import (
+	. "elevator_project/constants"
 	"encoding/json"
 	"fmt"
 	"os/exec"
-	. "elevator_project/constants"
 )
+
 // ===================== REQUEST ASSIGNER ===================== //
 
 func getHallRequestAssignments(HRAInputVariable HRAType) map[string][][2]bool {
 
 	// Convert to JSON
-	jsonBytes, err := json.Marshal(HRAInputVariable) 
+	jsonBytes, err := json.Marshal(HRAInputVariable)
 	if err != nil {
 		fmt.Println("json.Marshal error:", err)
 		return nil
 	}
 
 	// Call `hall_request_assigner`
-	ret, err := exec.Command("../hall_request_assigner/hall_request_assigner", "-i", string(jsonBytes)).CombinedOutput()
+	ret, err := exec.Command("./hall_request_assigner/hall_request_assigner", "-i", string(jsonBytes)).CombinedOutput()
 	if err != nil {
 		fmt.Println("exec.Command error:", err)
 		fmt.Println(string(ret))
@@ -41,7 +42,7 @@ func getHallRequestAssignments(HRAInputVariable HRAType) map[string][][2]bool {
 
 // ===================== TRANSLATION TO NETWORK ===================== //
 
-func translateToNetwork(variable any) string{
+func translateToNetwork(variable any) string {
 
 	translatedVariable, err := json.Marshal(variable)
 
@@ -53,15 +54,14 @@ func translateToNetwork(variable any) string{
 	return string(translatedVariable)
 }
 
-
 // ===================== TRANSLATION FROM NETWORK ===================== //
 
 func translateFromNetwork[T any](variable string) T {
-    var translatedVariable T
-    err := json.Unmarshal([]byte(variable), &translatedVariable)
-    if err != nil {
-        fmt.Println("json.Unmarshal error:", err)
+	var translatedVariable T
+	err := json.Unmarshal([]byte(variable), &translatedVariable)
+	if err != nil {
+		fmt.Println("json.Unmarshal error:", err)
 		//returnere hva?
-    }
-    return translatedVariable
+	}
+	return translatedVariable
 }

@@ -2,6 +2,7 @@ package shared_states
 
 import (
 	. "elevator_project/constants"
+	"fmt"
 )
 
 // ===================== SHARED STATE ===================== //
@@ -61,20 +62,26 @@ func reactToSharedStateUpdate(sharedState HRAType, aliveNodes []string, localID 
 	HRAResults := getHallRequestAssignments(HRAInputVariable)
 	approvedCabRequests := sharedState.States[localID].CabRequests // må sende cabRequest separat fra resten av states for å sørge for at heisen ikke "tar" en bestilling uten bekreftelse fra nettverket
 
-	toElevator.ApprovedHRAChannel <- HRAResults[localID]
+	if HRAResults != nil {
+		toElevator.ApprovedHRAChannel <- HRAResults[localID]
+	}
 	toElevator.UpdateHallRequestLights <- sharedState.HallRequests
-	toElevator.ApprovedCabRequestsChannel <- approvedCabRequests
+	if approvedCabRequests != nil {
+		toElevator.ApprovedCabRequestsChannel <- approvedCabRequests
+	}
 }
 
 func SharedStateThread(initResult chan Elevator, toElevator ToElevator, fromNetwork FromNetwork, toNetwork ToNetwork, fromElevator FromElevator) {
 	var sharedState HRAType = HRAType{
 		States:       make(map[string]Elevator),
-		HallRequests: make(HallRequestType, 4),
+		HallRequests: make(HallRequestType, N_FLOORS),
 	}
 	var localID string = GetElevatorID()
 	var aliveNodes []string = make([]string, 0)
 
 	var initializing bool = true
+
+	fmt.Printf("SharedStateThread Initialized: %s\n", localID)
 
 	for {
 		select {
@@ -85,7 +92,7 @@ func SharedStateThread(initResult chan Elevator, toElevator ToElevator, fromNetw
 				Name:    localID,
 				Data:    translateToNetwork(newHallRequest),
 			}
-			toNetwork.Inform2PC <- translateToNetwork(command)
+			go func() { toNetwork.Inform2PC <- translateToNetwork(command) }()
 
 		case clearHallRequest := <-fromElevator.ClearHallRequestChannel: // får inn en enkelt hallRequest {false, false} {false, false} {true, false} {false, false}
 			command := Command2PC{
@@ -94,7 +101,7 @@ func SharedStateThread(initResult chan Elevator, toElevator ToElevator, fromNetw
 				Data:    translateToNetwork(clearHallRequest),
 			}
 
-			toNetwork.Inform2PC <- translateToNetwork(command)
+			go func() { toNetwork.Inform2PC <- translateToNetwork(command) }()
 
 		case newState := <-fromElevator.UpdateState:
 			command := Command2PC{
@@ -103,23 +110,25 @@ func SharedStateThread(initResult chan Elevator, toElevator ToElevator, fromNetw
 				Data:    translateToNetwork(newState),
 			}
 
-			toNetwork.Inform2PC <- translateToNetwork(command)
+			go func() { toNetwork.Inform2PC <- translateToNetwork(command) }()
 
 		case commandString := <-fromNetwork.ApprovedBy2PC:
 			command := translateFromNetwork[Command2PC](commandString)
 			sharedState = updateSharedStateByCommand(command, sharedState)
-			reactToSharedStateUpdate(sharedState, aliveNodes, localID, toElevator)
+			go reactToSharedStateUpdate(sharedState, aliveNodes, localID, toElevator)
 
 		// discovery
 		case aliveNodes = <-fromNetwork.New_alive_nodes:
-			reactToSharedStateUpdate(sharedState, aliveNodes, localID, toElevator)
+			fmt.Printf("SharedStateThread: New alive nodes: %v\n", aliveNodes)
+			go reactToSharedStateUpdate(sharedState, aliveNodes, localID, toElevator)
 
 		// synkronisering
 		case <-fromNetwork.ProtocolRequestInformation:
-			toNetwork.RespondToInformationRequest <- translateToNetwork(sharedState)
+			fmt.Printf("SharedStateThread: Responding to information request\n")
+			go func() { toNetwork.RespondToInformationRequest <- translateToNetwork(sharedState) }()
 
 		case states := <-fromNetwork.ProtocolRequestsInterpretation:
-			toNetwork.RespondWithInterpretation <- ResolveSharedStateConflicts(states)
+			go func() { toNetwork.RespondWithInterpretation <- ResolveSharedStateConflicts(states) }()
 
 		case newSharedState := <-fromNetwork.ResultFromSynchronization:
 			sharedState = translateFromNetwork[HRAType](newSharedState)
@@ -138,7 +147,7 @@ func SharedStateThread(initResult chan Elevator, toElevator ToElevator, fromNetw
 				go func() { initResult <- res }()
 			}
 
-			reactToSharedStateUpdate(sharedState, aliveNodes, localID, toElevator)
+			go reactToSharedStateUpdate(sharedState, aliveNodes, localID, toElevator)
 		}
 	}
 }
