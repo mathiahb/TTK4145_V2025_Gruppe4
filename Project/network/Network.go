@@ -141,20 +141,20 @@ func (node *Node) reader() {
 				go node.participate_In_Discovery(p2p_message, message.id)
 
 			case Constants.DISCOVERY_HELLO:
-				node.comm <- message
+				go func() { node.comm <- message }()
 
 			case Constants.DISCOVERY_COMPLETE:
-				node.comm <- message
+				go func() { node.comm <- message }()
 
 			// SYNCHRONIZATION
 			//case Constants.SYNC_AFTER_DISCOVERY:
 			//	go node.participate_In_Synchronization(p2p_message, message.id)
 
 			case Constants.SYNC_RESPONSE:
-				node.comm <- message
+				go func() { node.comm <- message }()
 
 			case Constants.SYNC_RESULT:
-				node.comm <- message
+				go func() { node.comm <- message }()
 
 				// 2PC
 			case Constants.PREPARE: // Received a synchronization request
@@ -163,27 +163,27 @@ func (node *Node) reader() {
 			case Constants.PREPARE_ACK: // Received a synchronization acknowledgement
 				comm, ok := node.twopc_comm[message.id]
 				if ok {
-					comm <- message
+					go func() { comm <- message }()
 				}
 
 			case Constants.ABORT_COMMIT: // Received an abort commit message
 				comm, ok := node.twopc_comm[message.id]
 				if ok {
-					comm <- message
+					go func() { comm <- message }()
 				} else {
-					node.comm <- message
+					go func() { node.comm <- message }()
 				}
 
 			case Constants.COMMIT: // Received a commit message
 				comm, ok := node.twopc_comm[message.id]
 				if ok {
-					comm <- message
+					go func() { comm <- message }()
 				}
 
 			case Constants.ACK:
 				comm, ok := node.twopc_comm[message.id]
 				if ok {
-					comm <- message
+					go func() { comm <- message }()
 				}
 			}
 		}
