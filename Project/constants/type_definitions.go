@@ -3,6 +3,7 @@ package constants
 import (
 	"fmt"
 	"os"
+	"strconv"
 )
 
 // --------------- ELEVATOR -------------------- //
@@ -30,11 +31,13 @@ type HRAType struct { // Hall request assignment type
 }
 
 // getElevatorID returns a unique identifier for this elevator instance.
+var NameExtension int = 0 // Set by main
+
 func GetElevatorID() string {
 	hostname, err := os.Hostname()
 	if err != nil {
 		fmt.Println("Error getting hostname:", err)
-		return "unknown_elevator"
+		return "unknown_elevator" + strconv.Itoa(NameExtension)
 	}
-	return hostname
+	return hostname + strconv.Itoa(NameExtension)
 }

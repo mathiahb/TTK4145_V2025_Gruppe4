@@ -13,6 +13,10 @@ func main() {
 	var portElevio int
 	flag.IntVar(&portElevio, "elevatorPort", 15657, "Connect the elevio to a custom elevator port. Default: 15657")
 
+	var nameExtension int
+	flag.IntVar(&nameExtension, "name", 0, "Appends the name to the computer name, to be used when running multiple on the same computer. Default: 0")
+	constants.NameExtension = nameExtension
+
 	fromSharedStateToNetwork := newFromSharedStateToNetwork()
 	fromSharedStateToElevator := newFromSharedStateToElevator()
 	toSharedStateFromNetwork := newToSharedStateFromNetwork()
