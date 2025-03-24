@@ -5,15 +5,17 @@ import (
 	"elevator_project/elevio"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 )
 
 // FSM (Finite State Machine) styrer heisens tilstand og oppførsel basert på knappetrykk, etasjeanløp og dørlukkingshendelser.
 // Den håndterer tilstander som Idle, DoorOpen og Moving, og bestemmer heisens retning og handlinger.
 
-func InitFSM() {
+func InitFSM(portElevio int) {
+	port := strconv.Itoa(portElevio)
 
-	elevio.Init("localhost:15657", N_FLOORS)
+	elevio.Init("localhost:"+port, N_FLOORS)
 	fmt.Println("FSM initialized for elevator:", getElevatorID())
 
 }

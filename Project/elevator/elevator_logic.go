@@ -25,7 +25,7 @@ func MakeElevatorChannels() ElevatorChannels {
 }
 
 // må legge til alle kanalene
-func ElevatorThread(initElevator constants.Elevator, elevatorChannels ElevatorChannels, fromSharedState shared_states.ToElevator, toSharedState shared_states.FromElevator) {
+func ElevatorThread(portElevio int, initElevator constants.Elevator, elevatorChannels ElevatorChannels, fromSharedState shared_states.ToElevator, toSharedState shared_states.FromElevator) {
 	//føler at det er litt initialisering/konfigurering som mangler
 
 	var localElevator = initElevator               // lager et lokalt heisobjekt
@@ -34,7 +34,7 @@ func ElevatorThread(initElevator constants.Elevator, elevatorChannels ElevatorCh
 	threeSecTimer := time.NewTimer(time.Second * 3) // lager en timer som går i 3 sekunder
 	threeSecTimer.Stop()                            // Så den ikke utløses før vi selv resetter den
 
-	InitFSM() // shared state får vite at en heis eksisterer, kjenner ikke helt til poenget med resten av funksjonen
+	InitFSM(portElevio) // shared state får vite at en heis eksisterer, kjenner ikke helt til poenget med resten av funksjonen
 
 	// FSMOnInitBetweenFloors og turnOffAllLights må kjøres ved første oppstart
 	turnOffAllLights() // starter med alle lys avslått

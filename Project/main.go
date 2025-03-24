@@ -6,9 +6,13 @@ import (
 	"elevator_project/elevio"
 	"elevator_project/network"
 	"elevator_project/shared_states"
+	"flag"
 )
 
 func main() {
+	var portElevio int
+	flag.IntVar(&portElevio, "elevatorPort", 15657, "Connect the elevio to a custom elevator port. Default: 15657")
+
 	fromSharedStateToNetwork := newFromSharedStateToNetwork()
 	fromSharedStateToElevator := newFromSharedStateToElevator()
 	toSharedStateFromNetwork := newToSharedStateFromNetwork()
@@ -35,7 +39,7 @@ func main() {
 	go elevio.PollButtons(elevatorChannels.Button)
 	go elevio.PollFloorSensor(elevatorChannels.Floor)
 	go elevio.PollObstructionSwitch(elevatorChannels.Obstruction)
-	go elevator.ElevatorThread(initialElevator, elevatorChannels, fromSharedStateToElevator, toSharedStateFromElevator)
+	go elevator.ElevatorThread(portElevio, initialElevator, elevatorChannels, fromSharedStateToElevator, toSharedStateFromElevator)
 	//go network.NetworkThread(synchronizationChannels) // twoPhaseCommitChannels, skal også sendes til nettverket
 
 	select {}
