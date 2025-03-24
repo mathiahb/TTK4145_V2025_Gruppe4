@@ -29,7 +29,6 @@ func main() {
 	network_channels := transferSharedStateChannelsToNetworkChannels(fromSharedStateToNetwork, toSharedStateFromNetwork)
 
 	Node := network.New_Node(constants.GetElevatorID(), network_channels)
-	Node.Connect() // Will start the initializing part.
 	defer Node.Close()
 
 	go shared_states.SharedStateThread(

@@ -47,20 +47,20 @@ import (
 
 */
 
-func (node *Node) create_2PC_comm(prepare_message Message) chan Message {
-	node.mu_twopc_comm.Lock()
-	defer node.mu_twopc_comm.Unlock()
+func (node *Node) create_communication_channel(prepare_message Message) chan Message {
+	node.mu_communication_channels.Lock()
+	defer node.mu_communication_channels.Unlock()
 
 	comm := make(chan Message, 32)
-	node.twopc_comm[prepare_message.id] = comm
+	node.communication_channels[prepare_message.id] = comm
 	return comm
 }
 
-func (node *Node) delete_2PC_comm(prepare_message Message) {
-	node.mu_twopc_comm.Lock()
-	defer node.mu_twopc_comm.Unlock()
+func (node *Node) delete_communication_channel(prepare_message Message) {
+	node.mu_communication_channels.Lock()
+	defer node.mu_communication_channels.Unlock()
 
-	delete(node.twopc_comm, prepare_message.id)
+	delete(node.communication_channels, prepare_message.id)
 }
 
 func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
@@ -70,23 +70,22 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 	// Build a message with type = PREPARE, and payload = "Field=New_Value"
 	prepareMsg := node.create_Vote_Message(Constants.PREPARE, cmd)
 
-	comm := node.create_2PC_comm(prepareMsg)
-	defer node.delete_2PC_comm(prepareMsg)
+	comm := node.create_communication_channel(prepareMsg)
+	defer node.delete_communication_channel(prepareMsg)
 
 	// Broadcast the PREPARE to all nodes
 	node.Broadcast(prepareMsg)
 	fmt.Printf("[%s] 2PC coordinator: broadcast PREPARE %s\n", node.name, prepareMsg.String())
 
 	// Wait for PREPARE_ACK from all alive nodes to proceed
-	neededAcks := len(node.Get_Alive_Nodes())
 	ackCount := 0
 
 	node.Broadcast(node.create_Message(Constants.PREPARE_ACK, prepareMsg.id, ""))
 
-	time_to_complete := time.After(time.Millisecond * 800)
+	time_to_complete := time.After(time.Millisecond * 1000)
 
 	for {
-		if ackCount == neededAcks {
+		if ackCount == len(node.Get_Alive_Nodes()) {
 			// Everyone acknowledged, so let's COMMIT
 			go node.commit2PC(prepareMsg, cmd)
 			success_channel <- true
@@ -123,6 +122,13 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 			}
 
 		case <-time_to_complete:
+			if ackCount == len(node.Get_Alive_Nodes()) {
+				// Everyone acknowledged, so let's COMMIT
+				go node.commit2PC(prepareMsg, cmd)
+				success_channel <- true
+				return
+			}
+
 			// Timed out waiting for all ACKs => ABORT
 			fmt.Printf("[%s] 2PC coordinator timed out waiting for ACKs => ABORT.\n", node.name)
 			go node.abort2PC(prepareMsg)
@@ -151,8 +157,8 @@ func (node *Node) participate_2PC(prepareMsg Message) {
 	// Parse the payload to get the command
 	// Decide if we can do this command
 
-	comm := node.create_2PC_comm(prepareMsg)
-	defer node.delete_2PC_comm(prepareMsg)
+	comm := node.create_communication_channel(prepareMsg)
+	defer node.delete_communication_channel(prepareMsg)
 
 	canCommit := true
 	if canCommit {
@@ -169,7 +175,7 @@ func (node *Node) participate_2PC(prepareMsg Message) {
 
 	// After acknowledging the prepare, we must wait for COMMIT or ABORT from the coordinator
 	// This while keeping the lock so no other protocols run concurrently
-	timeout := time.After(1 * time.Second) // TODO: How long?
+	timeout := time.After(2 * time.Second) // TODO: How long?
 	for {
 		select {
 		case msg := <-comm:
