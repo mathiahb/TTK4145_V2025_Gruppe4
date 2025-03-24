@@ -56,15 +56,15 @@ func (node *Node) send_Synchronization_Result(result string) {
 	node.shared_state_communication.FromNetwork.Synchronization.ResultFromSynchronization <- result
 }
 
-func (node *Node) coordinate_Synchronization(success_channel chan bool) {
-	node.mu_voting_resource.Lock()
-	defer node.mu_voting_resource.Unlock()
+func (node *Node) coordinate_Synchronization(success_channel chan bool, begin_discovery_message Message) {
+	//.mu_voting_resource.Lock()
+	//defer node.mu_voting_resource.Unlock()
 
-	begin_synchronization_message := node.create_Vote_Message(Constants.SYNC_AFTER_DISCOVERY, "")
-	node.Broadcast(begin_synchronization_message)
+	//begin_synchronization_message := node.create_Message(Constants.SYNC_AFTER_DISCOVERY, begin_discovery_message.id, "")
+	//node.Broadcast(begin_synchronization_message)
 
 	own_information := node.get_Synchronization_Information()
-	node.Broadcast(node.create_Message(Constants.SYNC_RESPONSE, begin_synchronization_message.id, own_information))
+	node.Broadcast(node.create_Message(Constants.SYNC_RESPONSE, begin_discovery_message.id, own_information))
 
 	combined_information := make(map[string]string)
 	amount_of_info_needed := len(node.Get_Alive_Nodes())
@@ -72,27 +72,27 @@ func (node *Node) coordinate_Synchronization(success_channel chan bool) {
 	for {
 		select {
 		case response := <-node.comm:
-			if response.message_type == Constants.SYNC_RESPONSE && response.id == begin_synchronization_message.id {
+			if response.message_type == Constants.SYNC_RESPONSE && response.id == begin_discovery_message.id {
 				combined_information[response.sender] = response.payload
 
 				if len(combined_information) == amount_of_info_needed {
 					result := node.interpret_Synchronization_Responses(combined_information)
 
-					node.broadcast_Synchronization_Result(begin_synchronization_message.id, result)
+					node.broadcast_Synchronization_Result(begin_discovery_message.id, result)
 					node.send_Synchronization_Result(result)
 
 					success_channel <- true
 					return
 				}
 			}
-			if response.message_type == Constants.ABORT_COMMIT && response.id == begin_synchronization_message.id {
-				node.abort_Synchronization(begin_synchronization_message.id)
+			if response.message_type == Constants.ABORT_COMMIT && response.id == begin_discovery_message.id {
+				node.abort_Synchronization(begin_discovery_message.id)
 
 				success_channel <- false
 				return
 			}
 		case <-timeout:
-			node.abort_Synchronization(begin_synchronization_message.id)
+			node.abort_Synchronization(begin_discovery_message.id)
 			node.protocol_timed_out()
 
 			success_channel <- false
@@ -116,12 +116,12 @@ func (node *Node) participate_In_Synchronization(p2p_message peer_to_peer.P2P_Me
 		return
 	}
 
-	ok := node.mu_voting_resource.TryLock()
-	if !ok {
-		node.abort_Discovery(id_discovery)
-		return
-	}
-	defer node.mu_voting_resource.Unlock()
+	//ok := node.mu_voting_resource.TryLock()
+	//if !ok {
+	//	node.abort_Discovery(id_discovery)
+	//	return
+	//}
+	//defer node.mu_voting_resource.Unlock()
 
 	information := node.get_Synchronization_Information()
 

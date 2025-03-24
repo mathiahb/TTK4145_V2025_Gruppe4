@@ -55,7 +55,8 @@ type Node struct {
 	alive_nodes_manager AliveNodeManager
 	protocol_dispatcher ProtocolDispatcher
 
-	comm chan Message // Kanal for å motta 3PC-meldinger
+	comm       chan Message
+	twopc_comm map[TxID]chan Message
 
 	close_channel chan bool
 
@@ -77,7 +78,8 @@ func New_Node(name string, communication_channels NetworkCommunicationChannels) 
 		},
 		protocol_dispatcher: *New_Protocol_Dispatcher(),
 
-		comm: make(chan Message, 32), // Velg en passende bufferstørrelse
+		comm:       make(chan Message, 32), // Velg en passende bufferstørrelse
+		twopc_comm: make(map[TxID]chan Message),
 
 		close_channel: make(chan bool),
 
@@ -92,7 +94,6 @@ func New_Node(name string, communication_channels NetworkCommunicationChannels) 
 
 func (node *Node) Connect() {
 	node.protocol_dispatcher.Do_Discovery()
-	node.protocol_dispatcher.Do_Synchronization()
 }
 
 func (node *Node) Close() {
@@ -112,8 +113,7 @@ func (node *Node) Broadcast_Response(message Message, responding_to peer_to_peer
 }
 
 func (node *Node) protocol_timed_out() {
-	node.protocol_dispatcher.should_do_discovery <- true
-	node.protocol_dispatcher.should_do_synchronize <- true
+	node.Connect() // Reconnect to the others
 }
 
 func (node *Node) start_reader() {
@@ -147,8 +147,8 @@ func (node *Node) reader() {
 				node.comm <- message
 
 			// SYNCHRONIZATION
-			case Constants.SYNC_AFTER_DISCOVERY:
-				go node.participate_In_Synchronization(p2p_message, message.id)
+			//case Constants.SYNC_AFTER_DISCOVERY:
+			//	go node.participate_In_Synchronization(p2p_message, message.id)
 
 			case Constants.SYNC_RESPONSE:
 				node.comm <- message
@@ -161,19 +161,30 @@ func (node *Node) reader() {
 				go node.participate_2PC(p2p_message, message)
 
 			case Constants.PREPARE_ACK: // Received a synchronization acknowledgement
-				node.comm <- message
+				comm, ok := node.twopc_comm[message.id]
+				if ok {
+					comm <- message
+				}
 
 			case Constants.ABORT_COMMIT: // Received an abort commit message
-				node.comm <- message
-				// TODO: abort current synchronization
-				continue
+				comm, ok := node.twopc_comm[message.id]
+				if ok {
+					comm <- message
+				} else {
+					node.comm <- message
+				}
 
 			case Constants.COMMIT: // Received a commit message
-				node.comm <- message
-				//node.ACK()
+				comm, ok := node.twopc_comm[message.id]
+				if ok {
+					comm <- message
+				}
 
 			case Constants.ACK:
-				node.comm <- message
+				comm, ok := node.twopc_comm[message.id]
+				if ok {
+					comm <- message
+				}
 			}
 		}
 	}

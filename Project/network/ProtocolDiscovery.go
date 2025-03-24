@@ -49,8 +49,8 @@ func (node *Node) coordinate_Discovery(success_channel chan bool) {
 	node.mu_voting_resource.Lock()
 	defer node.mu_voting_resource.Unlock()
 
-	message := node.create_Vote_Message(Constants.DISCOVERY_BEGIN, "")
-	node.Broadcast(message)
+	begin_discovery_message := node.create_Vote_Message(Constants.DISCOVERY_BEGIN, "")
+	node.Broadcast(begin_discovery_message)
 
 	time_to_complete := time.After(time.Millisecond * 100)
 	result := make([]string, 1, 10)
@@ -62,22 +62,22 @@ func (node *Node) coordinate_Discovery(success_channel chan bool) {
 			// Hello!
 			fmt.Printf("[Debug %s]: Received forwarding during coordination: %s\n", node.name, response.String())
 
-			if response.message_type == Constants.DISCOVERY_HELLO && response.id == message.id {
+			if response.message_type == Constants.DISCOVERY_HELLO && response.id == begin_discovery_message.id {
 				result = append(result, response.payload)
 			}
 			// Aborted
-			if response.message_type == Constants.ABORT_COMMIT && response.id == message.id {
-				node.abort_Discovery(message.id)
+			if response.message_type == Constants.ABORT_COMMIT && response.id == begin_discovery_message.id {
+				node.abort_Discovery(begin_discovery_message.id)
 
 				success_channel <- false
 				return
 			}
 		case <-time_to_complete:
-			node.broadcast_Discovery_Result(message.id, result)
+			node.broadcast_Discovery_Result(begin_discovery_message.id, result)
 			node.alive_nodes_manager.Set_Alive_Nodes(result)
 			node.send_Discovery_Result(result)
 
-			success_channel <- true
+			node.coordinate_Synchronization(success_channel, begin_discovery_message)
 			return
 		}
 	}
@@ -89,11 +89,7 @@ func (node *Node) participate_In_Discovery(p2p_message peer_to_peer.P2P_Message,
 		return
 	}
 
-	ok := node.mu_voting_resource.TryLock()
-	if !ok {
-		node.abort_Discovery(id_discovery)
-		return
-	}
+	node.mu_voting_resource.Lock()
 	defer node.mu_voting_resource.Unlock()
 
 	fmt.Printf("[%s] Participating in discovery %s!\n", node.name, id_discovery)
@@ -112,6 +108,7 @@ func (node *Node) participate_In_Discovery(p2p_message peer_to_peer.P2P_Message,
 				node.send_Discovery_Result(result)
 
 				fmt.Printf("[Debug %s] Received result %s\n", node.name, node.Get_Alive_Nodes())
+				node.participate_In_Synchronization(p2p_message, id_discovery) // Successful discovery -> Synchronization
 				return
 			}
 		case <-timeout:

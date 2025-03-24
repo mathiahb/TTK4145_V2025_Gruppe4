@@ -55,6 +55,8 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 
 	// Build a message with type = PREPARE, and payload = "Field=New_Value"
 	prepareMsg := node.create_Vote_Message(Constants.PREPARE, cmd)
+	node.twopc_comm[prepareMsg.id] = make(chan Message, 32)
+	defer delete(node.twopc_comm, prepareMsg.id)
 
 	// Broadcast the PREPARE to all nodes
 	node.Broadcast(prepareMsg)
@@ -77,7 +79,7 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 		}
 
 		select {
-		case msg := <-node.comm:
+		case msg := <-node.twopc_comm[prepareMsg.id]:
 			// We only care about messages with our TxID
 			if msg.id != prepareMsg.id {
 				continue
@@ -115,15 +117,19 @@ func (node *Node) participate_2PC(p2p_message peer_to_peer.P2P_Message, prepareM
 	}
 
 	// Attempt to lock so no other protocols run concurrently
-	ok := node.mu_voting_resource.TryLock()
-	if !ok {
-		node.abort2PC(prepareMsg.id)
-		return
-	}
-	defer node.mu_voting_resource.Unlock()
+	//ok := node.mu_voting_resource.TryLock()
+	//if !ok {
+	//	node.abort2PC(prepareMsg.id)
+	//	return
+	//}
+	//defer node.mu_voting_resource.Unlock()
 
 	// Parse the payload to get the command
 	// Decide if we can do this command
+
+	node.twopc_comm[prepareMsg.id] = make(chan Message)
+	defer delete(node.twopc_comm, prepareMsg.id)
+
 	canCommit := true
 	if canCommit {
 		// Send PREPARE_ACK back to coordinator
@@ -142,7 +148,7 @@ func (node *Node) participate_2PC(p2p_message peer_to_peer.P2P_Message, prepareM
 	timeout := time.After(1 * time.Second) // TODO: How long?
 	for {
 		select {
-		case msg := <-node.comm:
+		case msg := <-node.twopc_comm[prepareMsg.id]:
 			if msg.id != prepareMsg.id {
 				continue
 			}

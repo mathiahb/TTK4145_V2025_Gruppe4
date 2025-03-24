@@ -161,12 +161,8 @@ func TestSynchronization(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 150)
 
-	Node1.protocol_dispatcher.Do_Synchronization()
-
 	info1 := "Node1 Hi"
 	info2 := "Node2 Hello"
-
-	time.Sleep(time.Millisecond * 10)
 
 	select {
 	case <-Node1.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestInformation:
@@ -233,6 +229,12 @@ func Test2PC(t *testing.T) {
 	Node1.protocol_dispatcher.Do_Discovery()
 
 	time.Sleep(time.Millisecond * 150)
+	<-Node1.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestInformation
+	Node1.shared_state_communication.ToNetwork.Synchronization.RespondToInformationRequest <- ""
+	<-Node2.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestInformation
+	Node2.shared_state_communication.ToNetwork.Synchronization.RespondToInformationRequest <- ""
+	<-Node1.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestsInterpretation
+	Node1.shared_state_communication.ToNetwork.Synchronization.RespondWithInterpretation <- ""
 
 	// Do Test Here.
 	command := "some command"
@@ -269,6 +271,7 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 
 	// Testing retry of Discovery
 	Node1.protocol_dispatcher.Do_Discovery()
+	time.Sleep(time.Millisecond)
 
 	p2p_message := <-Node2.p2p.Read_Channel
 	message := Message_From_String(p2p_message.Message)
@@ -298,53 +301,12 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 		t.Fatalf("Received no response from Node 2.\n")
 	}
 
-	Node2.Close()
+	t.Logf("Success Discovery redispatch")
 
-	*Node2 = Node{
-		p2p: peer_to_peer.New_P2P_Network(),
-
-		name: name2,
-
-		next_TxID_number: 0,
-
-		alive_nodes_manager: AliveNodeManager{
-			alive_nodes: make([]string, 0),
-		},
-		protocol_dispatcher: *New_Protocol_Dispatcher(),
-
-		comm: make(chan Message, 32),
-
-		close_channel: make(chan bool),
-
-		shared_state_communication: CreateTestNetworkCommunicationChannels(),
-	}
-
-	time.Sleep(time.Millisecond * 100)
-}
-
-func testSynchronizationRetry(Node1 *Node, Node2 *Node, t *testing.T) {
-	Node1.protocol_dispatcher.Do_Synchronization()
+	time.Sleep(time.Millisecond * 150)
 
 	info1 := "Node1 Hi"
 	info2 := "Node2 Hello"
-
-	time.Sleep(time.Millisecond * 10)
-
-	select {
-	case <-Node1.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestInformation:
-		Node1.shared_state_communication.ToNetwork.Synchronization.RespondToInformationRequest <- info1
-	default:
-		t.Fatalf("Node 1 did not request Information!")
-	}
-
-	p2p_message := <-Node2.p2p.Read_Channel
-	message := Message_From_String(p2p_message.Message)
-	Node2.abort_Synchronization(message.id)
-
-	go Node2.reader()
-
-	// Should now redispatch a discovery and reattempt.
-	time.Sleep(time.Millisecond * 100)
 
 	select {
 	case <-Node1.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestInformation:
@@ -398,27 +360,6 @@ func testSynchronizationRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 	default:
 		t.Errorf("Did not receive result from Node 2!")
 	}
-
-	Node2.Close()
-
-	*Node2 = Node{
-		p2p: peer_to_peer.New_P2P_Network(),
-
-		name: Node2.name,
-
-		next_TxID_number: 0,
-
-		alive_nodes_manager: AliveNodeManager{
-			alive_nodes: make([]string, 0),
-		},
-		protocol_dispatcher: *New_Protocol_Dispatcher(),
-
-		comm: make(chan Message, 32),
-
-		close_channel: make(chan bool),
-
-		shared_state_communication: CreateTestNetworkCommunicationChannels(),
-	}
 }
 
 func TestDispatchRetry(t *testing.T) {
@@ -452,8 +393,4 @@ func TestDispatchRetry(t *testing.T) {
 	time.Sleep(time.Millisecond * 100)
 
 	testDiscoveryDispatchRetry(Node1, &Node2, t)
-
-	// Synchronization
-
-	testSynchronizationRetry(Node1, &Node2, t)
 }
