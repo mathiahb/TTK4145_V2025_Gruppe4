@@ -16,12 +16,12 @@ func InitFSM(localElevator Elevator, elevatorChannels ElevatorChannels, toShared
 
 	elevio.Init("localhost:15657", N_FLOORS)
 	fmt.Println("FSM initialized for elevator:", getElevatorID())
-	
+
 	turnOffAllLights() // starter med alle lys avslått
 
 	if localElevator.Floor == -1 {
 		localElevator = FSMOnInitBetweenFloors(localElevator, toSharedState.UpdateState, isStuckTimer)
-	}else{
+	} else {
 		elevatorChannels.Floor <- localElevator.Floor
 	}
 	return localElevator
@@ -117,10 +117,10 @@ func FSMOpenDoor(
 func FSMStartMoving(
 	localElevator Elevator,
 	hallRequests HallRequestType,
-	elevatorStateChannel chan Elevator,
-	threeSecTimer *time.Timer,
+	updateState chan Elevator,
 	clearHallRequestChannel chan HallRequestType,
-	updateStateChannel chan Elevator,
+	threeSecTimer *time.Timer,
+	isStuckTimer *time.Timer,
 ) Elevator {
 
 	// Hvis heisen er idle og har forespørsler, velg retning og start motor
@@ -140,7 +140,7 @@ func FSMStartMoving(
 		case D_Up:
 			if hallRequests[localElevator.Floor][B_HallUp] || localElevator.CabRequests[localElevator.Floor] {
 				// Stop the elevator and open the door
-				localElevator = FSMOpenDoor(localElevator, hallRequests, threeSecTimer, clearHallRequestChannel, updateStateChannel)
+				localElevator = FSMOpenDoor(localElevator, hallRequests, threeSecTimer, clearHallRequestChannel, updateState)
 			} else {
 				localElevator.Behaviour = EB_Moving
 				elevio.SetMotorDirection(convertDirnToMotor(localElevator.Dirn))
@@ -148,17 +148,17 @@ func FSMStartMoving(
 		case D_Down:
 			if hallRequests[localElevator.Floor][B_HallDown] || localElevator.CabRequests[localElevator.Floor] {
 				// Stop the elevator and open the door
-				localElevator = FSMOpenDoor(localElevator, hallRequests, threeSecTimer, clearHallRequestChannel, updateStateChannel)
+				localElevator = FSMOpenDoor(localElevator, hallRequests, threeSecTimer, clearHallRequestChannel, updateState)
 			} else {
 				localElevator.Behaviour = EB_Moving
 				elevio.SetMotorDirection(convertDirnToMotor(localElevator.Dirn))
 			}
 		case D_Stop:
-			localElevator = FSMOpenDoor(localElevator, hallRequests, threeSecTimer, clearHallRequestChannel, updateStateChannel)
+			localElevator = FSMOpenDoor(localElevator, hallRequests, threeSecTimer, clearHallRequestChannel, updateState)
 
 		}
 
-		elevatorStateChannel <- localElevator
+		updateState <- localElevator
 	}
 
 	return localElevator
@@ -207,18 +207,17 @@ func FSMOnFloorArrival(newFloor int,
 	}
 	isStuckTimer.Reset(time.Second * 5)
 
-	if(localElevator.Behaviour == EB_Stuck_Moving){
+	if localElevator.Behaviour == EB_Stuck_Moving {
 		localElevator.Behaviour = EB_Moving
 	}
 
 	// 1. lagre ny etasje i lokal state
 	localElevator.Floor = newFloor
 	elevio.SetFloorIndicator(localElevator.Floor)
-	
 
 	// 2. Sjekk om heisen skal stoppe
-	if localElevator.Behaviour == EB_Moving { 
-		if requestsShouldStop(localElevator, hallRequests) { 
+	if localElevator.Behaviour == EB_Moving {
+		if requestsShouldStop(localElevator, hallRequests) {
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevio.SetDoorOpenLamp(true)
 			localElevator.Behaviour = EB_DoorOpen
@@ -241,10 +240,10 @@ func FSMOnFloorArrival(newFloor int,
 func FSMCloseDoors(
 	localElevator Elevator,
 	hallRequests HallRequestType,
-	elevatorStateChannel chan Elevator,
-	threeSecTimer *time.Timer,
+	updateState chan Elevator,
 	clearHallRequestChannel chan HallRequestType,
-	updateStateChannel chan Elevator,
+	threeSecTimer *time.Timer,
+	isStuckTimer *time.Timer,
 
 ) Elevator {
 	fmt.Println("\nFSMOnDoorTimeout()")
@@ -255,9 +254,9 @@ func FSMCloseDoors(
 
 		elevio.SetDoorOpenLamp(false)
 
-		elevatorStateChannel <- localElevator
+		updateState <- localElevator
 
-		localElevator = FSMStartMoving(localElevator, hallRequests, elevatorStateChannel, isStuckTimer, threeSecTimer, clearHallRequestChannel, updateStateChannel) // sjekker om det er noen forespørsel
+		localElevator = FSMStartMoving(localElevator, hallRequests, updateState, clearHallRequestChannel, isStuckTimer, threeSecTimer) // sjekker om det er noen forespørsel
 	}
 	return localElevator
 }
