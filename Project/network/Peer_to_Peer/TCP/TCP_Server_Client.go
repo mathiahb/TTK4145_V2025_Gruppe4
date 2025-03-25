@@ -59,7 +59,7 @@ func (connection_manager *TCP_Connection_Manager) create_TCP_Server(addr_channel
 }
 
 func (connection_manager *TCP_Connection_Manager) create_TCP_Client(address string) {
-	timeout := time.Second
+	timeout := 5 * time.Second
 
 	for {
 		connection, err := net.DialTimeout("tcp", address, timeout)
