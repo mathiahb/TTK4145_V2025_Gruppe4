@@ -4,8 +4,6 @@ import (
 	Constants "elevator_project/constants"
 	"fmt"
 	"time"
-
-	peer_to_peer "elevator_project/network/Peer_to_Peer"
 )
 
 // PROTOCOL - 2PC
@@ -49,41 +47,66 @@ import (
 
 */
 
+func (node *Node) create_communication_channel(prepare_message Message) chan Message {
+	node.mu_communication_channels.Lock()
+	defer node.mu_communication_channels.Unlock()
+
+	comm := make(chan Message, 32)
+	node.communication_channels[prepare_message.id] = comm
+	return comm
+}
+
+func (node *Node) delete_communication_channel(prepare_message Message) {
+	node.mu_communication_channels.Lock()
+	defer node.mu_communication_channels.Unlock()
+
+	delete(node.communication_channels, prepare_message.id)
+}
+
 func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 	node.mu_voting_resource.Lock()
 	defer node.mu_voting_resource.Unlock()
 
 	// Build a message with type = PREPARE, and payload = "Field=New_Value"
 	prepareMsg := node.create_Vote_Message(Constants.PREPARE, cmd)
-	node.twopc_comm[prepareMsg.id] = make(chan Message, 32)
-	defer delete(node.twopc_comm, prepareMsg.id)
+
+	comm := node.create_communication_channel(prepareMsg)
+	defer node.delete_communication_channel(prepareMsg)
 
 	// Broadcast the PREPARE to all nodes
 	node.Broadcast(prepareMsg)
 	fmt.Printf("[%s] 2PC coordinator: broadcast PREPARE %s\n", node.name, prepareMsg.String())
 
 	// Wait for PREPARE_ACK from all alive nodes to proceed
-	neededAcks := len(node.Get_Alive_Nodes())
 	ackCount := 0
 
 	node.Broadcast(node.create_Message(Constants.PREPARE_ACK, prepareMsg.id, ""))
 
-	time_to_complete := time.After(time.Millisecond * 100)
+	time_to_complete := time.After(time.Millisecond * 1000)
 
 	for {
-		if ackCount == neededAcks {
+		if ackCount == len(node.Get_Alive_Nodes()) {
 			// Everyone acknowledged, so let's COMMIT
-			go node.commit2PC(prepareMsg.id, cmd)
+			go node.commit2PC(prepareMsg, cmd)
 			success_channel <- true
 			return
 		}
 
 		select {
-		case msg := <-node.twopc_comm[prepareMsg.id]:
+		case msg := <-comm:
 			// We only care about messages with our TxID
 			if msg.id != prepareMsg.id {
 				continue
 			}
+
+			if !node.alive_nodes_manager.Is_Node_Alive(msg.sender) {
+				node.abort2PC(prepareMsg)
+
+				node.Connect()
+				success_channel <- false
+				continue
+			}
+
 			switch msg.message_type {
 			case Constants.PREPARE_ACK:
 				// Successfully received an PREPARE_ACK
@@ -93,15 +116,22 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 			case Constants.ABORT_COMMIT:
 				// Some participant aborted -> we must abort
 				fmt.Printf("[%s] 2PC coordinator sees ABORT from %s => ABORT.\n", node.name, msg.sender)
-				go node.abort2PC(prepareMsg.id)
+				node.abort2PC(prepareMsg)
 				success_channel <- false
 				return
 			}
 
 		case <-time_to_complete:
+			if ackCount == len(node.Get_Alive_Nodes()) {
+				// Everyone acknowledged, so let's COMMIT
+				go node.commit2PC(prepareMsg, cmd)
+				success_channel <- true
+				return
+			}
+
 			// Timed out waiting for all ACKs => ABORT
 			fmt.Printf("[%s] 2PC coordinator timed out waiting for ACKs => ABORT.\n", node.name)
-			go node.abort2PC(prepareMsg.id)
+			go node.abort2PC(prepareMsg)
 
 			node.protocol_timed_out()
 			success_channel <- false
@@ -110,7 +140,7 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 	}
 }
 
-func (node *Node) participate_2PC(p2p_message peer_to_peer.P2P_Message, prepareMsg Message) {
+func (node *Node) participate_2PC(prepareMsg Message) {
 	if node.isTxIDFromUs(prepareMsg.id) {
 		// We don't want to vote for ourselves
 		return
@@ -127,28 +157,28 @@ func (node *Node) participate_2PC(p2p_message peer_to_peer.P2P_Message, prepareM
 	// Parse the payload to get the command
 	// Decide if we can do this command
 
-	node.twopc_comm[prepareMsg.id] = make(chan Message)
-	defer delete(node.twopc_comm, prepareMsg.id)
+	comm := node.create_communication_channel(prepareMsg)
+	defer node.delete_communication_channel(prepareMsg)
 
 	canCommit := true
 	if canCommit {
 		// Send PREPARE_ACK back to coordinator
 		ackMsg := node.create_Message(Constants.PREPARE_ACK, prepareMsg.id, "")
-		node.Broadcast_Response(ackMsg, p2p_message)
+		node.Broadcast_Response(ackMsg, prepareMsg)
 		fmt.Printf("[%s] 2PC participant => PREPARE_ACK. Waiting for COMMIT/ABORT.\n", node.name)
 	} else {
 		// If we can't commit, broadcast ABORT and return
 		fmt.Printf("[%s] 2PC participant can't commit => ABORT.\n", node.name)
-		go node.abort2PC(prepareMsg.id)
+		node.abort2PC(prepareMsg)
 		return
 	}
 
 	// After acknowledging the prepare, we must wait for COMMIT or ABORT from the coordinator
 	// This while keeping the lock so no other protocols run concurrently
-	timeout := time.After(1 * time.Second) // TODO: How long?
+	timeout := time.After(2 * time.Second) // TODO: How long?
 	for {
 		select {
-		case msg := <-node.twopc_comm[prepareMsg.id]:
+		case msg := <-comm:
 			if msg.id != prepareMsg.id {
 				continue
 			}
@@ -167,15 +197,15 @@ func (node *Node) participate_2PC(p2p_message peer_to_peer.P2P_Message, prepareM
 	}
 }
 
-func (node *Node) commit2PC(txid TxID, payload string) {
-	commitMsg := node.create_Message(Constants.COMMIT, txid, payload)
-	node.Broadcast(commitMsg)
+func (node *Node) commit2PC(prepare_message Message, payload string) {
+	commitMsg := node.create_Message(Constants.COMMIT, prepare_message.id, payload)
+	node.Broadcast_Response(commitMsg, prepare_message)
 	node.doLocalCommit(commitMsg)
 }
 
-func (node *Node) abort2PC(txid TxID) {
-	abortMsg := node.create_Message(Constants.ABORT_COMMIT, txid, "")
-	node.Broadcast(abortMsg)
+func (node *Node) abort2PC(prepare_message Message) {
+	abortMsg := node.create_Message(Constants.ABORT_COMMIT, prepare_message.id, "")
+	node.Broadcast_Response(abortMsg, prepare_message)
 }
 
 func (node *Node) doLocalCommit(msg Message) {

@@ -75,7 +75,7 @@ func TestDiscovery(t *testing.T) {
 	defer Node1.Close()
 	defer Node2.Close()
 
-	Node1.protocol_dispatcher.Do_Discovery()
+	Node1.protocol_dispatcher.Do_Synchronization()
 
 	time.Sleep(time.Millisecond * 150)
 
@@ -118,7 +118,7 @@ func TestDiscoveryMany(t *testing.T) {
 		defer Node.Close()
 	}
 
-	Node1.protocol_dispatcher.Do_Discovery()
+	Node1.protocol_dispatcher.Do_Synchronization()
 
 	time.Sleep(time.Millisecond * 150)
 
@@ -157,7 +157,7 @@ func TestSynchronization(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 100)
 
-	Node1.protocol_dispatcher.Do_Discovery()
+	Node1.protocol_dispatcher.Do_Synchronization()
 
 	time.Sleep(time.Millisecond * 150)
 
@@ -226,7 +226,7 @@ func Test2PC(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 100)
 
-	Node1.protocol_dispatcher.Do_Discovery()
+	Node1.protocol_dispatcher.Do_Synchronization()
 
 	time.Sleep(time.Millisecond * 150)
 	<-Node1.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestInformation
@@ -270,12 +270,12 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 	result2 := []string{name2, name1}
 
 	// Testing retry of Discovery
-	Node1.protocol_dispatcher.Do_Discovery()
+	Node1.protocol_dispatcher.Do_Synchronization()
 	time.Sleep(time.Millisecond)
 
 	p2p_message := <-Node2.p2p.Read_Channel
-	message := Message_From_String(p2p_message.Message)
-	Node2.abort_Discovery(message.id)
+	message := translate_Message(p2p_message)
+	Node2.abort_Synchronization(message)
 
 	go Node2.reader()
 

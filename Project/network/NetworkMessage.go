@@ -2,6 +2,7 @@ package network
 
 import (
 	Constants "elevator_project/constants"
+	peer_to_peer "elevator_project/network/Peer_to_Peer"
 	"fmt"
 	"strconv"
 	"strings"
@@ -15,6 +16,8 @@ type Message struct {
 	id           TxID
 	sender       string
 	payload      string
+
+	p2p_message peer_to_peer.P2P_Message
 }
 
 // Global actions to interact with messages
@@ -29,12 +32,15 @@ func (message Message) String() string {
 	)
 }
 
-func Message_From_String(message string) Message {
+func translate_Message(p2p_message peer_to_peer.P2P_Message) Message {
 	result := Message{}
+	result.p2p_message = p2p_message
+
+	message := p2p_message.Message
 
 	split := strings.SplitN(message, "=", 4) // Returns [garbage, txid + space + s, sender + space + r, payload]
 	if len(split) != 4 {
-		fmt.Printf("ERROR: Badly formatted message! %s\n", message)
+		fmt.Printf("ERROR: Badly formatted message! %s\n", p2p_message.To_String())
 		return result
 	}
 
@@ -62,12 +68,16 @@ func (node *Node) isTxIDFromUs(id TxID) bool {
 }
 
 func (node *Node) create_Message(message_type string, id TxID, message string) Message {
-	return Message{
+	result := Message{
 		message_type: message_type,
 		id:           id,
 		sender:       node.name,
 		payload:      message,
 	}
+
+	result.p2p_message = node.p2p.Create_Message(result.String())
+
+	return result
 }
 
 func (node *Node) create_Vote_Message(message_type string, message string) Message {

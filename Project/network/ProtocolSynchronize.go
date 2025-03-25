@@ -4,8 +4,6 @@ import (
 	Constants "elevator_project/constants"
 	"fmt"
 	"time"
-
-	peer_to_peer "elevator_project/network/Peer_to_Peer"
 )
 
 // PROTOCOL - Synchronize
@@ -56,43 +54,55 @@ func (node *Node) send_Synchronization_Result(result string) {
 	node.shared_state_communication.FromNetwork.Synchronization.ResultFromSynchronization <- result
 }
 
-func (node *Node) coordinate_Synchronization(success_channel chan bool, begin_discovery_message Message) {
-	//.mu_voting_resource.Lock()
-	//defer node.mu_voting_resource.Unlock()
+func (node *Node) coordinate_Synchronization(success_channel chan bool) {
+	node.mu_voting_resource.Lock()
+	defer node.mu_voting_resource.Unlock()
 
 	//begin_synchronization_message := node.create_Message(Constants.SYNC_AFTER_DISCOVERY, begin_discovery_message.id, "")
 	//node.Broadcast(begin_synchronization_message)
 
-	own_information := node.get_Synchronization_Information()
-	node.Broadcast(node.create_Message(Constants.SYNC_RESPONSE, begin_discovery_message.id, own_information))
+	begin_synchronization_message := node.create_Vote_Message(Constants.SYNC_REQUEST, "")
+
+	comm := node.create_communication_channel(begin_synchronization_message)
+	defer node.delete_communication_channel(begin_synchronization_message)
+
+	node.Broadcast(begin_synchronization_message)
+	node.send_Own_Information_For_Synchronization(begin_synchronization_message)
 
 	combined_information := make(map[string]string)
-	amount_of_info_needed := len(node.Get_Alive_Nodes())
 	timeout := time.After(time.Second)
 	for {
 		select {
-		case response := <-node.comm:
-			if response.message_type == Constants.SYNC_RESPONSE && response.id == begin_discovery_message.id {
+		case response := <-comm:
+			if !node.alive_nodes_manager.Is_Node_Alive(response.sender) {
+				node.abort_Synchronization(begin_synchronization_message)
+
+				node.Connect()
+				success_channel <- false
+				continue
+			}
+
+			if response.message_type == Constants.SYNC_RESPONSE && response.id == begin_synchronization_message.id {
 				combined_information[response.sender] = response.payload
 
-				if len(combined_information) == amount_of_info_needed {
+				if len(combined_information) == len(node.alive_nodes_manager.Get_Alive_Nodes()) {
 					result := node.interpret_Synchronization_Responses(combined_information)
 
-					go node.broadcast_Synchronization_Result(begin_discovery_message.id, result)
+					go node.broadcast_Synchronization_Result(begin_synchronization_message, result)
 					go node.send_Synchronization_Result(result)
 
 					success_channel <- true
 					return
 				}
 			}
-			if response.message_type == Constants.ABORT_COMMIT && response.id == begin_discovery_message.id {
-				go node.abort_Synchronization(begin_discovery_message.id)
+			if response.message_type == Constants.ABORT_COMMIT && response.id == begin_synchronization_message.id {
+				node.abort_Synchronization(begin_synchronization_message)
 
 				success_channel <- false
 				return
 			}
 		case <-timeout:
-			go node.abort_Synchronization(begin_discovery_message.id)
+			node.abort_Synchronization(begin_synchronization_message)
 			node.protocol_timed_out()
 
 			success_channel <- false
@@ -101,48 +111,57 @@ func (node *Node) coordinate_Synchronization(success_channel chan bool, begin_di
 	}
 }
 
-func (node *Node) broadcast_Synchronization_Result(id TxID, result string) {
-	message := node.create_Message(Constants.SYNC_RESULT, id, result)
-	node.Broadcast(message)
+func (node *Node) broadcast_Synchronization_Result(begin_synchronization_message Message, result string) {
+	message := node.create_Message(Constants.SYNC_RESULT, begin_synchronization_message.id, result)
+	node.Broadcast_Response(message, begin_synchronization_message)
 }
 
-func (node *Node) abort_Synchronization(id_discovery TxID) {
-	message := node.create_Message(Constants.ABORT_COMMIT, id_discovery, "")
-	node.Broadcast(message)
+func (node *Node) abort_Synchronization(begin_synchronization_message Message) {
+	message := node.create_Message(Constants.ABORT_SYNCHRONIZATION, begin_synchronization_message.id, "")
+	node.Broadcast_Response(message, begin_synchronization_message)
 }
 
-func (node *Node) participate_In_Synchronization(p2p_message peer_to_peer.P2P_Message, id_discovery TxID) {
-	if node.isTxIDFromUs(id_discovery) {
+func (node *Node) send_Own_Information_For_Synchronization(synchronization_message Message) {
+	information := node.get_Synchronization_Information()
+
+	response := node.create_Message(Constants.SYNC_RESPONSE, synchronization_message.id, information)
+	node.Broadcast(response)
+}
+
+func (node *Node) participate_In_Synchronization(begin_message Message) {
+	if node.isTxIDFromUs(begin_message.id) {
 		return
 	}
 
-	//ok := node.mu_voting_resource.TryLock()
-	//if !ok {
-	//	node.abort_Discovery(id_discovery)
-	//	return
-	//}
+	//node.mu_voting_resource.Lock()
 	//defer node.mu_voting_resource.Unlock()
 
-	information := node.get_Synchronization_Information()
+	if !node.alive_nodes_manager.Is_Node_Alive(node.name) {
+		// Node is dead, so we should reconnect
+		node.Connect()
+		return
+	}
 
-	response := node.create_Message(Constants.SYNC_RESPONSE, id_discovery, information)
-	node.Broadcast_Response(response, p2p_message)
+	comm := node.create_communication_channel(begin_message)
+	defer node.delete_communication_channel(begin_message)
+
+	node.send_Own_Information_For_Synchronization(begin_message)
 
 	timeout := time.After(time.Second)
 
 	for {
 		select {
-		case result := <-node.comm:
-			if result.message_type == Constants.SYNC_RESULT && result.id == id_discovery {
-				go node.send_Synchronization_Result(result.payload)
+		case result := <-comm:
+			if result.message_type == Constants.SYNC_RESULT && result.id == begin_message.id {
+				node.send_Synchronization_Result(result.payload)
 				return
 			}
 
-			if result.message_type == Constants.ABORT_COMMIT && result.id == id_discovery {
+			if result.message_type == Constants.ABORT_COMMIT && result.id == begin_message.id {
 				return
 			}
 		case <-timeout:
-			fmt.Printf("[ERROR %s]: Synchronization %s halted in progress!\n", node.name, id_discovery)
+			fmt.Printf("[ERROR %s]: Synchronization %s halted in progress!\n", node.name, begin_message.id)
 			return
 		}
 	}

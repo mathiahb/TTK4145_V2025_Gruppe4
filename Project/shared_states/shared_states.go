@@ -62,7 +62,7 @@ func reactToSharedStateUpdate(sharedState HRAType, aliveNodes []string, localID 
 	HRAResults := getHallRequestAssignments(HRAInputVariable)
 	approvedCabRequests := sharedState.States[localID].CabRequests // må sende cabRequest separat fra resten av states for å sørge for at heisen ikke "tar" en bestilling uten bekreftelse fra nettverket
 
-	if HRAResults != nil {
+	if HRAResults != nil && HRAResults[localID] != nil {
 		toElevator.ApprovedHRAChannel <- HRAResults[localID]
 	}
 	toElevator.UpdateHallRequestLights <- sharedState.HallRequests

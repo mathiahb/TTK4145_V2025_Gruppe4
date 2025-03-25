@@ -77,12 +77,20 @@ func (network *P2P_Network) Send(message P2P_Message, recipient string) {
 	network.TCP.Send(message.To_String(), recipient)
 }
 
-func (network *P2P_Network) Create_Message(message string, message_type P2P_Message_Type) P2P_Message {
+func (network *P2P_Network) Create_Message(message string) P2P_Message {
+	return network.create_Message(message, MESSAGE)
+}
+
+func (network *P2P_Network) request_Dependency(dependency Dependency) {
+	message := network.create_Message(dependency.To_String(), REQUEST_MISSING_DEPENDENCY)
+	network.Send(message, dependency.Dependency_Owner)
+}
+
+func (network *P2P_Network) create_Message(message string, message_type P2P_Message_Type) P2P_Message {
 	network.clock.Event()
 
 	return New_P2P_Message(network.tcp_server_address, message_type, network.clock, message)
 }
-
 func (network *P2P_Network) reader() {
 	for {
 		select {
@@ -131,16 +139,11 @@ func (network *P2P_Network) publisher(message P2P_Message) {
 		}
 
 		// Request the missing dependency.
-		network.request_dependency(message.dependency)
+		network.request_Dependency(message.dependency)
 
 		// Wait until more data is processed
 		time.Sleep(20 * time.Millisecond)
 	}
-}
-
-func (network *P2P_Network) request_dependency(dependency Dependency) {
-	message := network.Create_Message(dependency.To_String(), REQUEST_MISSING_DEPENDENCY)
-	network.Send(message, dependency.Dependency_Owner)
 }
 
 func (network *P2P_Network) peer_detection() {

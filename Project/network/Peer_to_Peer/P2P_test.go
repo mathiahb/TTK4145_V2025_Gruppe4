@@ -193,7 +193,7 @@ func Test_Network(t *testing.T) {
 
 	time.Sleep(time.Second)
 
-	p2p_message := network_1.Create_Message("Hello!", MESSAGE)
+	p2p_message := network_1.Create_Message("Hello!")
 
 	network_1.Broadcast(p2p_message)
 
@@ -218,7 +218,7 @@ func Test_Dependency_Resend(t *testing.T) {
 
 	time.Sleep(time.Second) // Let the networks connect to each other. Takes about 1.2x UDP SERVER LIFETIME (~300ms)
 
-	p2p_message := network_1.Create_Message("Hello!", MESSAGE)
+	p2p_message := network_1.Create_Message("Hello!")
 
 	network_1.Broadcast(p2p_message)
 
@@ -234,7 +234,7 @@ func Test_Dependency_Resend(t *testing.T) {
 				p2p_message.To_String(), received_message.To_String())
 		}
 
-		p2p_depended_message := network_2.Create_Message("Hello 2!", MESSAGE)
+		p2p_depended_message := network_2.Create_Message("Hello 2!")
 		p2p_depended_message.Depend_On(received_message)
 
 		network_2.Broadcast(p2p_depended_message)
@@ -275,7 +275,7 @@ func Test_Double_Send(t *testing.T) {
 
 	time.Sleep(time.Second)
 
-	p2p_message := network_1.Create_Message("Hello!", MESSAGE)
+	p2p_message := network_1.Create_Message("Hello!")
 
 	network_1.Broadcast(p2p_message)
 	network_1.Broadcast(p2p_message)

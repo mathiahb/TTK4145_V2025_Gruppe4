@@ -6,6 +6,9 @@ require golang.org/x/net v0.37.0
 
 require golang.org/x/sys v0.31.0 // indirect
 
+require Network-go v0.0.0
+replace Network-go => ./Network-go
+
 go 1.23.0
 
 toolchain go1.24.1

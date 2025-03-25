@@ -6,31 +6,31 @@ import (
 )
 
 type ProtocolDispatcher struct {
-	command_queue       chan string
-	repeat_command      chan string
-	should_do_discovery chan bool
+	command_queue             chan string
+	repeat_command            chan string
+	should_do_synchronization chan bool
 }
 
 func New_Protocol_Dispatcher() *ProtocolDispatcher {
 	return &ProtocolDispatcher{
-		command_queue:       make(chan string, 32),
-		repeat_command:      make(chan string, 1),
-		should_do_discovery: make(chan bool, 32),
+		command_queue:             make(chan string, 32),
+		repeat_command:            make(chan string, 1),
+		should_do_synchronization: make(chan bool, 32),
 	}
 }
 
-func (dispatcher ProtocolDispatcher) Do_Discovery() {
-	dispatcher.should_do_discovery <- true
+func (dispatcher ProtocolDispatcher) Do_Synchronization() {
+	dispatcher.should_do_synchronization <- true
 }
 
 func (dispatcher ProtocolDispatcher) Do_Command(command string) {
 	dispatcher.command_queue <- command
 }
 
-func (dispatcher ProtocolDispatcher) Flush_Discovery_Channel() {
+func (dispatcher ProtocolDispatcher) Flush_Synchronization_Channel() {
 	for {
 		select {
-		case <-dispatcher.should_do_discovery:
+		case <-dispatcher.should_do_synchronization:
 		default:
 			return
 		}
@@ -39,11 +39,11 @@ func (dispatcher ProtocolDispatcher) Flush_Discovery_Channel() {
 
 // Waits a random amount of time between no waiting and a millisecond. This is to manage multi-master conflict.
 func Random_Wait() {
-	time.Sleep(time.Duration(rand.Intn(int(time.Millisecond))))
+	time.Sleep(time.Duration(rand.Intn(int(100 * time.Millisecond))))
 }
 
 func Wait_After_Protocol() {
-	time.Sleep(time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 }
 
 func (node *Node) start_dispatcher() {
@@ -58,12 +58,13 @@ func (node *Node) dispatcher() {
 	for {
 		// First check if we should do Discovery -> Synchronize
 		select {
-		case <-node.protocol_dispatcher.should_do_discovery:
-			node.protocol_dispatcher.Flush_Discovery_Channel()
-			go node.coordinate_Discovery(success_channel)
+		case <-node.protocol_dispatcher.should_do_synchronization:
+			node.protocol_dispatcher.Flush_Synchronization_Channel()
+			go node.coordinate_Synchronization(success_channel)
+
 			success := <-success_channel
 			if !success {
-				go node.protocol_dispatcher.Do_Discovery()
+				go node.protocol_dispatcher.Do_Synchronization()
 				Random_Wait()
 			}
 			continue
@@ -85,12 +86,12 @@ func (node *Node) dispatcher() {
 
 		// Then wait for new commands/discovery
 		select {
-		case <-node.protocol_dispatcher.should_do_discovery:
-			node.protocol_dispatcher.Flush_Discovery_Channel()
-			go node.coordinate_Discovery(success_channel)
+		case <-node.protocol_dispatcher.should_do_synchronization:
+			node.protocol_dispatcher.Flush_Synchronization_Channel()
+			go node.coordinate_Synchronization(success_channel)
 			success := <-success_channel
 			if !success {
-				go node.protocol_dispatcher.Do_Discovery()
+				go node.protocol_dispatcher.Do_Synchronization()
 				Random_Wait()
 			}
 
