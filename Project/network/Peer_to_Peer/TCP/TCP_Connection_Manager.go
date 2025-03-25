@@ -29,7 +29,7 @@ func (manager *TCP_Connection_Manager) Add_Connection(connection TCP_Connection)
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
 
-	if manager.Does_Connection_Exist(connection.connection_name) {
+	if manager.does_connection_exist_unsafe(connection.connection_name) {
 		connection.Close()
 		return
 	}
@@ -46,9 +46,16 @@ func (manager *TCP_Connection_Manager) Remove_Connection(connection TCP_Connecti
 	fmt.Printf("Connection %s removed!\n", connection.connection_name)
 }
 
-func (manager *TCP_Connection_Manager) Does_Connection_Exist(connection_name string) bool {
+func (manager *TCP_Connection_Manager) does_connection_exist_unsafe(connection_name string) bool {
 	_, ok := manager.Connections[connection_name]
 	return ok
+}
+
+func (manager *TCP_Connection_Manager) Does_Connection_Exist(connection_name string) bool {
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+
+	return manager.does_connection_exist_unsafe(connection_name)
 }
 
 func (manager *TCP_Connection_Manager) Close_All() {
@@ -84,7 +91,10 @@ func (manager *TCP_Connection_Manager) Broadcast(message string) {
 }
 
 func (manager *TCP_Connection_Manager) Send(message string, recipient string) {
-	if !manager.Does_Connection_Exist(recipient) {
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+
+	if !manager.does_connection_exist_unsafe(recipient) {
 		fmt.Printf("Error, connection %s did not exist! Failed sending %s\n", recipient, message)
 		manager.Connect_Client(recipient)
 		return
