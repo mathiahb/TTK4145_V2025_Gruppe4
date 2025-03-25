@@ -11,8 +11,7 @@ type DirnBehaviourPair struct {
 }
 
 func HallRequestsUninitialized() HallRequestType {
-	var hallRequests HallRequestType
-	hallRequests = make(HallRequestType, N_FLOORS)
+	hallRequests := make(HallRequestType, N_FLOORS)
 	return hallRequests
 	//
 }
@@ -158,6 +157,6 @@ func requestsChooseDirection(e Elevator, hallRequests HallRequestType) Dirn {
 			return D_Down
 		}
 	}
-	// Ingen forespørsler, stopp
+	// Ingen forespørsler under eller over, stopp
 	return D_Stop
 }

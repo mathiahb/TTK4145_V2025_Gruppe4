@@ -1,9 +1,9 @@
 package elevator
 
 import (
-	. "elevator_project/constants"
+	"elevator_project/constants"
 	"elevator_project/elevio"
-	. "elevator_project/shared_states"
+	"elevator_project/shared_states"
 	"fmt"
 	"time"
 )
@@ -25,7 +25,8 @@ func MakeElevatorChannels() ElevatorChannels {
 }
 
 // må legge til alle kanalene
-func ElevatorThread(initElevator Elevator, elevatorChannels ElevatorChannels, fromSharedState ToElevator, toSharedState FromElevator) {
+func ElevatorThread(initElevator constants.Elevator, elevatorChannels ElevatorChannels, fromSharedState shared_states.ToElevator, toSharedState shared_states.FromElevator) {
+	//føler at det er litt initialisering/konfigurering som mangler
 
 	var hallRequests = HallRequestsUninitialized() // lager et tomt request-objekt
 	var isObstructed = false
@@ -58,8 +59,12 @@ func ElevatorThread(initElevator Elevator, elevatorChannels ElevatorChannels, fr
 			if localElevator.Behaviour == EB_DoorOpen || localElevator.Behaviour == EB_Stuck_DoorOpen {
 
 
+				// Stop timer first to avoid channel blocking.
 				if !threeSecTimer.Stop() {
-					<-threeSecTimer.C
+					select {
+					case <-threeSecTimer.C:
+					default:
+					}
 				}
 
 				if !isObstructed {
@@ -95,7 +100,7 @@ func ElevatorThread(initElevator Elevator, elevatorChannels ElevatorChannels, fr
 			
 			
 		case hallRequests = <-fromSharedState.ApprovedHRAChannel: // fordi alle ordre kommer fra shared states
-			localElevator = FSMStartMoving(localElevator, hallRequests, toSharedState.UpdateState, isStuckTimer)
+			localElevator = FSMStartMoving(localElevator, hallRequests, toSharedState.UpdateState, threeSecTimer, toSharedState.ClearHallRequestChannel, toSharedState.UpdateState, isStuckTimer)
 
 		case sharedHallRequests := <-fromSharedState.UpdateHallRequestLights:
 			setHallLights(sharedHallRequests)
