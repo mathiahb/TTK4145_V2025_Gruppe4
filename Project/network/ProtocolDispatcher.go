@@ -53,16 +53,13 @@ func (node *Node) start_dispatcher() {
 // Dispatcher awaits calls to perform a protocol on the network, then queues the protocol for dispatch.
 // Priority: Discovery > Synchronize > Commands
 func (node *Node) dispatcher() {
-	success_channel := make(chan bool)
-
 	for {
 		// First check if we should do Discovery -> Synchronize
 		select {
 		case <-node.protocol_dispatcher.should_do_synchronization:
 			node.protocol_dispatcher.Flush_Synchronization_Channel()
-			go node.coordinate_Synchronization(success_channel)
+			success := node.coordinate_Synchronization()
 
-			success := <-success_channel
 			if !success {
 				go node.protocol_dispatcher.Do_Synchronization()
 				Random_Wait()
@@ -74,8 +71,8 @@ func (node *Node) dispatcher() {
 		// Then check if we aborted a command
 		select {
 		case command := <-node.protocol_dispatcher.repeat_command:
-			go node.coordinate_2PC(command, success_channel)
-			success := <-success_channel
+			success := node.coordinate_2PC(command)
+
 			if !success {
 				go func() { node.protocol_dispatcher.repeat_command <- command }()
 				Random_Wait()
@@ -88,16 +85,24 @@ func (node *Node) dispatcher() {
 		select {
 		case <-node.protocol_dispatcher.should_do_synchronization:
 			node.protocol_dispatcher.Flush_Synchronization_Channel()
-			go node.coordinate_Synchronization(success_channel)
-			success := <-success_channel
+			success := node.coordinate_Synchronization()
+
 			if !success {
 				go node.protocol_dispatcher.Do_Synchronization()
 				Random_Wait()
 			}
 
+		case command := <-node.protocol_dispatcher.repeat_command:
+			success := node.coordinate_2PC(command)
+
+			if !success {
+				go func() { node.protocol_dispatcher.repeat_command <- command }()
+				Random_Wait()
+			}
+
 		case command := <-node.protocol_dispatcher.command_queue:
-			go node.coordinate_2PC(command, success_channel)
-			success := <-success_channel
+			success := node.coordinate_2PC(command)
+
 			if !success {
 				go func() { node.protocol_dispatcher.repeat_command <- command }()
 				Random_Wait()

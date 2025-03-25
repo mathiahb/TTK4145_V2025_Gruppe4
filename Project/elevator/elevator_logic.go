@@ -31,8 +31,9 @@ func ElevatorThread(portElevio int, initElevator constants.Elevator, elevatorCha
 	var localElevator = initElevator               // lager et lokalt heisobjekt
 	var hallRequests = HallRequestsUninitialized() // lager et tomt request-objekt
 	var isObstructed = false
-	threeSecTimer := time.NewTimer(time.Second * 3) // lager en timer som går i 3 sekunder
-	threeSecTimer.Stop()                            // Så den ikke utløses før vi selv resetter den
+	var threeSecTimer = time.NewTimer(time.Second * 3) // lager en timer som går i 3 sekunder
+	//threeSecTimer.Stop()                               // Så den ikke utløses før vi selv resetter den
+	var isStuckTimer = time.NewTimer(time.Second * 5)
 
 	InitFSM(portElevio) // shared state får vite at en heis eksisterer, kjenner ikke helt til poenget med resten av funksjonen
 
@@ -41,6 +42,16 @@ func ElevatorThread(portElevio int, initElevator constants.Elevator, elevatorCha
 
 	if localElevator.Floor == -1 {
 		localElevator = FSMOnInitBetweenFloors(localElevator, toSharedState.UpdateState)
+	} else {
+		localElevator, hallRequests = FSMOnFloorArrival(
+			localElevator.Floor,
+			localElevator,
+			hallRequests,
+			toSharedState.ClearHallRequestChannel,
+			toSharedState.UpdateState,
+			threeSecTimer,
+			isStuckTimer,
+		)
 	}
 
 	for {
@@ -57,12 +68,20 @@ func ElevatorThread(portElevio int, initElevator constants.Elevator, elevatorCha
 				toSharedState.ClearHallRequestChannel,
 				toSharedState.UpdateState,
 				threeSecTimer,
+				isStuckTimer,
 			)
+			localElevator = FSMStartMoving(localElevator,
+				hallRequests,
+				toSharedState.UpdateState,
+				threeSecTimer,
+				isStuckTimer,
+				toSharedState.ClearHallRequestChannel,
+				toSharedState.UpdateState)
 
 		case isObstructed = <-elevatorChannels.Obstruction:
 			fmt.Printf("Obstruction switch: %v\n", isObstructed)
 
-			if localElevator.Behaviour == constants.EB_DoorOpen {
+			if localElevator.Behaviour == constants.EB_DoorOpen || localElevator.Behaviour == constants.EB_Stuck_DoorOpen {
 
 				// Stop timer first to avoid channel blocking.
 				if !threeSecTimer.Stop() {
@@ -75,6 +94,9 @@ func ElevatorThread(portElevio int, initElevator constants.Elevator, elevatorCha
 				if !isObstructed {
 					fmt.Printf("Door is not obstructed, closing door\n")
 					threeSecTimer.Reset(3 * time.Second)
+				} else if localElevator.Behaviour == constants.EB_DoorOpen { // Check to not flood the 2PC channel.
+					localElevator.Behaviour = constants.EB_Stuck_DoorOpen
+					toSharedState.UpdateState <- localElevator
 				}
 			}
 
@@ -84,11 +106,23 @@ func ElevatorThread(portElevio int, initElevator constants.Elevator, elevatorCha
 			fmt.Printf("Door timer expired, obstruction: %v\n", isObstructed)
 			if !isObstructed {
 				fmt.Printf("Door is not obstructed, closing door\n")
-				localElevator = FSMCloseDoors(localElevator, hallRequests, toSharedState.UpdateState, threeSecTimer, toSharedState.ClearHallRequestChannel, toSharedState.UpdateState)
+
+				if localElevator.Behaviour == constants.EB_Stuck_DoorOpen {
+					localElevator.Behaviour = constants.EB_DoorOpen
+				}
+
+				localElevator = FSMCloseDoors(localElevator, hallRequests, toSharedState.UpdateState, threeSecTimer, isStuckTimer, toSharedState.ClearHallRequestChannel, toSharedState.UpdateState)
+			}
+
+		case <-isStuckTimer.C:
+			if localElevator.Behaviour == constants.EB_Moving {
+				fmt.Printf("\n\n[%s] ELEVATOR IS STUCK\n\n", constants.GetElevatorID())
+				localElevator.Behaviour = constants.EB_Stuck_Moving
+				toSharedState.UpdateState <- localElevator
 			}
 
 		case hallRequests = <-fromSharedState.ApprovedHRAChannel: // fordi alle ordre kommer fra shared states
-			localElevator = FSMStartMoving(localElevator, hallRequests, toSharedState.UpdateState, threeSecTimer, toSharedState.ClearHallRequestChannel, toSharedState.UpdateState)
+			localElevator = FSMStartMoving(localElevator, hallRequests, toSharedState.UpdateState, threeSecTimer, isStuckTimer, toSharedState.ClearHallRequestChannel, toSharedState.UpdateState)
 
 		case sharedHallRequests := <-fromSharedState.UpdateHallRequestLights:
 			setHallLights(sharedHallRequests)

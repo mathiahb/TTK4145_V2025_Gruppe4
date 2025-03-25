@@ -54,7 +54,7 @@ func (node *Node) send_Synchronization_Result(result string) {
 	node.shared_state_communication.FromNetwork.Synchronization.ResultFromSynchronization <- result
 }
 
-func (node *Node) coordinate_Synchronization(success_channel chan bool) {
+func (node *Node) coordinate_Synchronization() bool {
 	node.mu_voting_resource.Lock()
 	defer node.mu_voting_resource.Unlock()
 
@@ -78,8 +78,7 @@ func (node *Node) coordinate_Synchronization(success_channel chan bool) {
 				node.abort_Synchronization(begin_synchronization_message)
 
 				node.Connect()
-				success_channel <- false
-				continue
+				return false
 			}
 
 			if response.message_type == Constants.SYNC_RESPONSE && response.id == begin_synchronization_message.id {
@@ -91,22 +90,19 @@ func (node *Node) coordinate_Synchronization(success_channel chan bool) {
 					go node.broadcast_Synchronization_Result(begin_synchronization_message, result)
 					go node.send_Synchronization_Result(result)
 
-					success_channel <- true
-					return
+					return true
 				}
 			}
 			if response.message_type == Constants.ABORT_COMMIT && response.id == begin_synchronization_message.id {
 				node.abort_Synchronization(begin_synchronization_message)
 
-				success_channel <- false
-				return
+				return false
 			}
 		case <-timeout:
 			node.abort_Synchronization(begin_synchronization_message)
 			node.protocol_timed_out()
 
-			success_channel <- false
-			return
+			return false
 		}
 	}
 }

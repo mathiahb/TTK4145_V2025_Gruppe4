@@ -150,6 +150,7 @@ func (node *Node) reader() {
 		case <-node.close_channel:
 			return
 		case commit := <-node.shared_state_communication.ToNetwork.TwoPhaseCommit.RequestCommit:
+			fmt.Printf("[%s] Got command: %+v\n\n", node.name, commit)
 			node.protocol_dispatcher.Do_Command(commit)
 		case peerUpdate := <-node.peerUpdateCh:
 			node.alive_nodes_manager.Set_Alive_Nodes(peerUpdate.Peers)

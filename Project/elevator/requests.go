@@ -49,7 +49,7 @@ func requestsShouldStop(localElevator Elevator, hallRequests [][2]bool) bool {
 func requestsClearAtCurrentFloor(localElevator Elevator, hallRequests HallRequestType, clearHallRequestChannel chan HallRequestType, updateStateChannel chan Elevator) (Elevator, HallRequestType) {
 
 	// Clear cab request at this floor
-	if localElevator.CabRequests[localElevator.Floor] == true {
+	if localElevator.CabRequests[localElevator.Floor] {
 
 		localElevator.CabRequests[localElevator.Floor] = false
 		updateStateChannel <- localElevator
@@ -57,43 +57,43 @@ func requestsClearAtCurrentFloor(localElevator Elevator, hallRequests HallReques
 
 	switch localElevator.Dirn {
 	case D_Up:
-		if !requests_above(localElevator, hallRequests) && !hallRequests[localElevator.Floor][B_HallUp] == true {
-			if hallRequests[localElevator.Floor][B_HallDown] == true {
+		if !requests_above(localElevator, hallRequests) && !hallRequests[localElevator.Floor][B_HallUp] {
+			if hallRequests[localElevator.Floor][B_HallDown] {
 				//clear hallrequest locally and update network
 				clearHallRequest := make(HallRequestType, N_FLOORS)
 				clearHallRequest[localElevator.Floor][B_HallDown] = true
 				clearHallRequestChannel <- clearHallRequest
 			}
 		}
-		if hallRequests[localElevator.Floor][B_HallUp] == true {
+		if hallRequests[localElevator.Floor][B_HallUp] {
 			//clear hallrequest locally and update network
 			clearHallRequest := make(HallRequestType, N_FLOORS)
 			clearHallRequest[localElevator.Floor][B_HallUp] = true
 			clearHallRequestChannel <- clearHallRequest
 		}
 	case D_Down:
-		if !requests_below(localElevator, hallRequests) && !hallRequests[localElevator.Floor][B_HallDown] == true {
-			if hallRequests[localElevator.Floor][B_HallUp] == true {
+		if !requests_below(localElevator, hallRequests) && !hallRequests[localElevator.Floor][B_HallDown] {
+			if hallRequests[localElevator.Floor][B_HallUp] {
 				//clear hallrequest locally and update network
 				clearHallRequest := make(HallRequestType, N_FLOORS)
 				clearHallRequest[localElevator.Floor][B_HallUp] = true
 				clearHallRequestChannel <- clearHallRequest
 			}
 		}
-		if hallRequests[localElevator.Floor][B_HallDown] == true {
+		if hallRequests[localElevator.Floor][B_HallDown] {
 			//clear hallrequest locally and update network
 			clearHallRequest := make(HallRequestType, N_FLOORS)
 			clearHallRequest[localElevator.Floor][B_HallDown] = true
 			clearHallRequestChannel <- clearHallRequest
 		}
 	case D_Stop:
-		if hallRequests[localElevator.Floor][B_HallUp] == true {
+		if hallRequests[localElevator.Floor][B_HallUp] {
 			//clear hallrequest locally and update network
 			clearHallRequest := make(HallRequestType, N_FLOORS)
 			clearHallRequest[localElevator.Floor][B_HallUp] = true
 			clearHallRequestChannel <- clearHallRequest
 		}
-		if hallRequests[localElevator.Floor][B_HallDown] == true {
+		if hallRequests[localElevator.Floor][B_HallDown] {
 			//clear hallrequest locally and update network
 			clearHallRequest := make(HallRequestType, N_FLOORS)
 			clearHallRequest[localElevator.Floor][B_HallDown] = true

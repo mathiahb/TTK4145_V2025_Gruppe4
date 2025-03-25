@@ -63,7 +63,7 @@ func (node *Node) delete_communication_channel(prepare_message Message) {
 	delete(node.communication_channels, prepare_message.id)
 }
 
-func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
+func (node *Node) coordinate_2PC(cmd string) bool {
 	node.mu_voting_resource.Lock()
 	defer node.mu_voting_resource.Unlock()
 
@@ -88,8 +88,7 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 		if ackCount == len(node.Get_Alive_Nodes()) {
 			// Everyone acknowledged, so let's COMMIT
 			go node.commit2PC(prepareMsg, cmd)
-			success_channel <- true
-			return
+			return true
 		}
 
 		select {
@@ -103,8 +102,7 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 				node.abort2PC(prepareMsg)
 
 				node.Connect()
-				success_channel <- false
-				continue
+				return false
 			}
 
 			switch msg.message_type {
@@ -117,16 +115,14 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 				// Some participant aborted -> we must abort
 				fmt.Printf("[%s] 2PC coordinator sees ABORT from %s => ABORT.\n", node.name, msg.sender)
 				node.abort2PC(prepareMsg)
-				success_channel <- false
-				return
+				return false
 			}
 
 		case <-time_to_complete:
 			if ackCount == len(node.Get_Alive_Nodes()) {
 				// Everyone acknowledged, so let's COMMIT
 				go node.commit2PC(prepareMsg, cmd)
-				success_channel <- true
-				return
+				return true
 			}
 
 			// Timed out waiting for all ACKs => ABORT
@@ -134,8 +130,7 @@ func (node *Node) coordinate_2PC(cmd string, success_channel chan bool) {
 			go node.abort2PC(prepareMsg)
 
 			node.protocol_timed_out()
-			success_channel <- false
-			return
+			return false
 		}
 	}
 }

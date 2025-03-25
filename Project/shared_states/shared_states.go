@@ -15,7 +15,11 @@ func makeHRAInputVariable(sharedState HRAType, aliveNodes []string) HRAType {
 	}
 
 	for _, nodeID := range aliveNodes {
-		result.States[nodeID] = sharedState.States[nodeID]
+		if state, ok := sharedState.States[nodeID]; ok {
+			if !state.Behaviour.IsStuck() {
+				result.States[nodeID] = sharedState.States[nodeID]
+			}
+		}
 	}
 
 	return result
@@ -87,6 +91,7 @@ func SharedStateThread(initResult chan Elevator, toElevator ToElevator, fromNetw
 		select {
 		// 2PC
 		case newHallRequest := <-fromElevator.NewHallRequestChannel: // får inn en enkelt hallRequest {false, false} {false, false} {true, false} {false, false}
+			fmt.Printf("[%s] Got new HR Request: %+v\n\n", localID, newHallRequest)
 			command := Command2PC{
 				Command: ADD,
 				Name:    localID,
@@ -95,6 +100,7 @@ func SharedStateThread(initResult chan Elevator, toElevator ToElevator, fromNetw
 			go func() { toNetwork.Inform2PC <- translateToNetwork(command) }()
 
 		case clearHallRequest := <-fromElevator.ClearHallRequestChannel: // får inn en enkelt hallRequest {false, false} {false, false} {true, false} {false, false}
+			fmt.Printf("[%s] Got clear HR Request: %+v\n\n", localID, clearHallRequest)
 			command := Command2PC{
 				Command: REMOVE,
 				Name:    localID,
@@ -104,6 +110,7 @@ func SharedStateThread(initResult chan Elevator, toElevator ToElevator, fromNetw
 			go func() { toNetwork.Inform2PC <- translateToNetwork(command) }()
 
 		case newState := <-fromElevator.UpdateState:
+			fmt.Printf("[%s] Got new State Request: %+v\n\n", localID, newState)
 			command := Command2PC{
 				Command: UPDATE_STATE,
 				Name:    localID,
