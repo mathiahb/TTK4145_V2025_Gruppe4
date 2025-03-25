@@ -28,9 +28,11 @@ const (
 )
 
 const (
-	EB_Idle     ElevatorBehaviour = "idle"
-	EB_DoorOpen ElevatorBehaviour = "doorOpen"
-	EB_Moving   ElevatorBehaviour = "moving"
+	EB_Idle     		ElevatorBehaviour = "idle"
+	EB_DoorOpen 		ElevatorBehaviour = "doorOpen"
+	EB_Moving   		ElevatorBehaviour = "moving"
+	EB_Stuck_Moving 	ElevatorBehaviour = "stuckMoving"
+	EB_Stuck_DoorOpen 	ElevatorBehaviour = "stuckDoorOpen"
 )
 
 // Button types (Hall Up, Hall Down, Cab)

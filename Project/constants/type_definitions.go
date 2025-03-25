@@ -10,6 +10,10 @@ import (
 // Elevator behavior states
 type ElevatorBehaviour string
 
+func (behaviour ElevatorBehaviour) IsStuck() bool{
+	return behaviour == EB_Stuck_DoorOpen || behaviour == EB_Stuck_Moving
+}
+
 // Elevator direction
 type Dirn string
 
