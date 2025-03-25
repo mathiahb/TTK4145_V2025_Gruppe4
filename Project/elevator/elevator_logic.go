@@ -28,20 +28,13 @@ func MakeElevatorChannels() ElevatorChannels {
 func ElevatorThread(portElevio int, initElevator constants.Elevator, elevatorChannels ElevatorChannels, fromSharedState shared_states.ToElevator, toSharedState shared_states.FromElevator) {
 	//føler at det er litt initialisering/konfigurering som mangler
 
-	var localElevator = initElevator               // lager et lokalt heisobjekt
 	var hallRequests = HallRequestsUninitialized() // lager et tomt request-objekt
 	var isObstructed = false
 	threeSecTimer := time.NewTimer(time.Second * 3) // lager en timer som går i 3 sekunder
-	threeSecTimer.Stop()                            // Så den ikke utløses før vi selv resetter den
 
-	InitFSM(portElevio) // shared state får vite at en heis eksisterer, kjenner ikke helt til poenget med resten av funksjonen
-
-	// FSMOnInitBetweenFloors og turnOffAllLights må kjøres ved første oppstart
-	turnOffAllLights() // starter med alle lys avslått
-
-	if localElevator.Floor == -1 {
-		localElevator = FSMOnInitBetweenFloors(localElevator, toSharedState.UpdateState)
-	}
+	threeSecTimer.Stop()
+	isStuckTimer := time.NewTimer(time.Second * 5) // Så den ikke utløses før vi selv resetter den
+	localElevator := InitFSM(portElevio, initElevator, elevatorChannels, toSharedState, isStuckTimer)
 
 	for {
 		select {
@@ -57,12 +50,14 @@ func ElevatorThread(portElevio int, initElevator constants.Elevator, elevatorCha
 				toSharedState.ClearHallRequestChannel,
 				toSharedState.UpdateState,
 				threeSecTimer,
+				isStuckTimer,
 			)
 
 		case isObstructed = <-elevatorChannels.Obstruction:
 			fmt.Printf("Obstruction switch: %v\n", isObstructed)
 
-			if localElevator.Behaviour == constants.EB_DoorOpen {
+			// Tømme kanalen for å unngå blokkering
+			if localElevator.Behaviour == constants.EB_DoorOpen || localElevator.Behaviour == constants.EB_Stuck_DoorOpen {
 
 				// Stop timer first to avoid channel blocking.
 				if !threeSecTimer.Stop() {
@@ -75,6 +70,10 @@ func ElevatorThread(portElevio int, initElevator constants.Elevator, elevatorCha
 				if !isObstructed {
 					fmt.Printf("Door is not obstructed, closing door\n")
 					threeSecTimer.Reset(3 * time.Second)
+
+				} else if isObstructed {
+					localElevator.Behaviour = constants.EB_Stuck_DoorOpen
+					toSharedState.UpdateState <- localElevator
 				}
 			}
 
@@ -84,11 +83,23 @@ func ElevatorThread(portElevio int, initElevator constants.Elevator, elevatorCha
 			fmt.Printf("Door timer expired, obstruction: %v\n", isObstructed)
 			if !isObstructed {
 				fmt.Printf("Door is not obstructed, closing door\n")
-				localElevator = FSMCloseDoors(localElevator, hallRequests, toSharedState.UpdateState, threeSecTimer, toSharedState.ClearHallRequestChannel, toSharedState.UpdateState)
+
+				if localElevator.Behaviour == constants.EB_Stuck_DoorOpen {
+					localElevator.Behaviour = constants.EB_DoorOpen
+				}
+
+				localElevator = FSMCloseDoors(localElevator, hallRequests, toSharedState.UpdateState, toSharedState.ClearHallRequestChannel, threeSecTimer, isStuckTimer)
+			}
+
+		case <-isStuckTimer.C: // dersom heisen har vært kontinuerlig i bevegelse i mer enn 5 sek uten å
+
+			if localElevator.Behaviour == constants.EB_Moving { // ekstra sjekk
+				localElevator.Behaviour = constants.EB_Stuck_Moving
+				toSharedState.UpdateState <- localElevator
 			}
 
 		case hallRequests = <-fromSharedState.ApprovedHRAChannel: // fordi alle ordre kommer fra shared states
-			localElevator = FSMStartMoving(localElevator, hallRequests, toSharedState.UpdateState, threeSecTimer, toSharedState.ClearHallRequestChannel, toSharedState.UpdateState)
+			localElevator = FSMStartMoving(localElevator, hallRequests, toSharedState.UpdateState, toSharedState.ClearHallRequestChannel, threeSecTimer, isStuckTimer)
 
 		case sharedHallRequests := <-fromSharedState.UpdateHallRequestLights:
 			setHallLights(sharedHallRequests)

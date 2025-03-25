@@ -2,13 +2,16 @@ GENERAL
 ---------------------
 > [x] Make a TODO list
 
-> [ ] Create functioning Elevator
+> [x] Create functioning Elevator
 > [ ] Create functioning Heartbeat
 > [ ] Create functioning Networking
 
 
 ELEVATOR
 ---------------------
+[ ] Test: single elevator dicsonnected from the network 
+
+[ ] Dersom en heis er obstructed, skal en annen heis ta ordren?: “No failure” includes the door obstruction: At least one elevator will be able to close its doors
 
 HEARTBEAT
 ---------------------
@@ -32,16 +35,15 @@ NETWORKING
 > [x] Test Causality Broadcasting
 > [ ] Clean up Causality Broadcasting for readability and code quality
 
-> [ ] Create 3-Phase Commit
-> [ ] Test 3-Phase Commit
+> [x] Create 2-Phase Commit
+> [x] Test 2-Phase Commit
 > [ ] Clean up 3-Phase Commit for readability and code quality
 
-> [ ] Create JSON module / Use existing JSON module if it exists
-> [ ] Test JSON module
-> [ ] Clean up JSON module
 
-> [ ] Create Shared State
-> [ ] Test Shared State
+SHARED STATES
+---------------------
+> [x] Create Shared State
+> [x] Test Shared State
 > [ ] Clean up Shared State
 
 Bug

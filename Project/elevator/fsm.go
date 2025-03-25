@@ -3,6 +3,7 @@ package elevator
 import (
 	. "elevator_project/constants"
 	"elevator_project/elevio"
+	"elevator_project/shared_states"
 	"fmt"
 	"os"
 	"strconv"
@@ -12,20 +13,31 @@ import (
 // FSM (Finite State Machine) styrer heisens tilstand og oppførsel basert på knappetrykk, etasjeanløp og dørlukkingshendelser.
 // Den håndterer tilstander som Idle, DoorOpen og Moving, og bestemmer heisens retning og handlinger.
 
-func InitFSM(portElevio int) {
+func InitFSM(portElevio int, localElevator Elevator, elevatorChannels ElevatorChannels, toSharedState shared_states.FromElevator, isStuckTimer *time.Timer) Elevator {
 	port := strconv.Itoa(portElevio)
 
 	elevio.Init("localhost:"+port, N_FLOORS)
 	fmt.Println("FSM initialized for elevator:", getElevatorID())
 
+	turnOffAllLights() // starter med alle lys avslått
+
+	if localElevator.Floor == -1 {
+		localElevator = FSMOnInitBetweenFloors(localElevator, toSharedState.UpdateState, isStuckTimer)
+	} else {
+		elevatorChannels.Floor <- localElevator.Floor
+	}
+  
+	return localElevator
 }
 
 // **FSMOnInitBetweenFloors**: Kalles hvis heisen starter mellom etasjer
-func FSMOnInitBetweenFloors(localElevator Elevator, UpdateState chan Elevator) Elevator {
+func FSMOnInitBetweenFloors(localElevator Elevator, UpdateState chan Elevator, isStuckTimer *time.Timer) Elevator {
 
 	elevio.SetMotorDirection(elevio.MD_Down)
 	localElevator.Dirn = D_Down
 	localElevator.Behaviour = EB_Moving
+
+	isStuckTimer.Reset(time.Second * 5)
 
 	UpdateState <- localElevator
 
@@ -108,22 +120,30 @@ func FSMOpenDoor(
 func FSMStartMoving(
 	localElevator Elevator,
 	hallRequests HallRequestType,
-	elevatorStateChannel chan Elevator,
-	threeSecTimer *time.Timer,
+	updateState chan Elevator,
 	clearHallRequestChannel chan HallRequestType,
-	updateStateChannel chan Elevator,
+	threeSecTimer *time.Timer,
+	isStuckTimer *time.Timer,
 ) Elevator {
 
 	// Hvis heisen er idle og har forespørsler, velg retning og start motor
 	if localElevator.Behaviour == EB_Idle && hasRequests(localElevator, hallRequests) {
 		localElevator.Dirn = requestsChooseDirection(localElevator, hallRequests)
 
+		if !isStuckTimer.Stop() {
+			select {
+			case <-isStuckTimer.C: // Tøm kanalen hvis den ikke er tom
+			default: // Fortsett hvis kanalen allerede er tom
+			}
+		}
+		isStuckTimer.Reset(time.Second * 5)
+
 		// Are there any requests at the current floor in the new direction localElevator.Dirn?
 		switch localElevator.Dirn {
 		case D_Up:
 			if hallRequests[localElevator.Floor][B_HallUp] || localElevator.CabRequests[localElevator.Floor] {
 				// Stop the elevator and open the door
-				localElevator = FSMOpenDoor(localElevator, hallRequests, threeSecTimer, clearHallRequestChannel, updateStateChannel)
+				localElevator = FSMOpenDoor(localElevator, hallRequests, threeSecTimer, clearHallRequestChannel, updateState)
 			} else {
 				localElevator.Behaviour = EB_Moving
 				elevio.SetMotorDirection(convertDirnToMotor(localElevator.Dirn))
@@ -131,19 +151,18 @@ func FSMStartMoving(
 		case D_Down:
 			if hallRequests[localElevator.Floor][B_HallDown] || localElevator.CabRequests[localElevator.Floor] {
 				// Stop the elevator and open the door
-				localElevator = FSMOpenDoor(localElevator, hallRequests, threeSecTimer, clearHallRequestChannel, updateStateChannel)
+				localElevator = FSMOpenDoor(localElevator, hallRequests, threeSecTimer, clearHallRequestChannel, updateState)
 			} else {
 				localElevator.Behaviour = EB_Moving
 				elevio.SetMotorDirection(convertDirnToMotor(localElevator.Dirn))
 			}
 		case D_Stop:
-			localElevator = FSMOpenDoor(localElevator, hallRequests, threeSecTimer, clearHallRequestChannel, updateStateChannel)
+			localElevator = FSMOpenDoor(localElevator, hallRequests, threeSecTimer, clearHallRequestChannel, updateState)
 
 		}
 
-		elevatorStateChannel <- localElevator
+		updateState <- localElevator
 	}
-	//setAllLights(localElevator, hallRequests)
 
 	return localElevator
 }
@@ -178,9 +197,22 @@ func FSMOnFloorArrival(newFloor int,
 	hallRequests HallRequestType,
 	clearHallRequestChannel chan HallRequestType,
 	updateStateChannel chan Elevator,
-	threeSecTimer *time.Timer) (Elevator, HallRequestType) {
+	threeSecTimer *time.Timer,
+	isStuckTimer *time.Timer) (Elevator, HallRequestType) {
 
 	fmt.Printf("\nFSMOnFloorArrival(%d)\n", newFloor)
+
+	if !isStuckTimer.Stop() {
+		select {
+		case <-isStuckTimer.C: // Tøm kanalen hvis den ikke er tom
+		default: // Fortsett hvis kanalen allerede er tom
+		}
+	}
+	isStuckTimer.Reset(time.Second * 5)
+
+	if localElevator.Behaviour == EB_Stuck_Moving {
+		localElevator.Behaviour = EB_Moving
+	}
 
 	// 1. lagre ny etasje i lokal state
 	localElevator.Floor = newFloor
@@ -188,7 +220,7 @@ func FSMOnFloorArrival(newFloor int,
 
 	// 2. Sjekk om heisen skal stoppe
 	if localElevator.Behaviour == EB_Moving {
-		if requestsShouldStop(localElevator, hallRequests) { // sharedState....
+		if requestsShouldStop(localElevator, hallRequests) {
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevio.SetDoorOpenLamp(true)
 			localElevator.Behaviour = EB_DoorOpen
@@ -201,10 +233,8 @@ func FSMOnFloorArrival(newFloor int,
 
 		}
 	}
-	updateStateChannel <- localElevator
 
-	// setAllLights(localElevator, hallRequests)
-	// // setLight(floor, btn type, value) // må lage en egen funksjon for å oppdatere lysene
+	updateStateChannel <- localElevator
 
 	return localElevator, hallRequests
 }
@@ -213,10 +243,10 @@ func FSMOnFloorArrival(newFloor int,
 func FSMCloseDoors(
 	localElevator Elevator,
 	hallRequests HallRequestType,
-	elevatorStateChannel chan Elevator,
-	threeSecTimer *time.Timer,
+	updateState chan Elevator,
 	clearHallRequestChannel chan HallRequestType,
-	updateStateChannel chan Elevator,
+	threeSecTimer *time.Timer,
+	isStuckTimer *time.Timer,
 
 ) Elevator {
 	fmt.Println("\nFSMOnDoorTimeout()")
@@ -224,11 +254,12 @@ func FSMCloseDoors(
 	// Hvis døren er åpen, bestem neste handling
 	if localElevator.Behaviour == EB_DoorOpen {
 		localElevator.Behaviour = EB_Idle
+
 		elevio.SetDoorOpenLamp(false)
 
-		elevatorStateChannel <- localElevator
+		updateState <- localElevator
 
-		localElevator = FSMStartMoving(localElevator, hallRequests, elevatorStateChannel, threeSecTimer, clearHallRequestChannel, updateStateChannel) // sjekker om det er noen forespørsel
+		localElevator = FSMStartMoving(localElevator, hallRequests, updateState, clearHallRequestChannel, isStuckTimer, threeSecTimer) // sjekker om det er noen forespørsel
 	}
 	return localElevator
 }
