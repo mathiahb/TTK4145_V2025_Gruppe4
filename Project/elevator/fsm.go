@@ -10,7 +10,13 @@ import (
 )
 
 // FSM (Finite State Machine) styrer heisens tilstand og oppførsel basert på knappetrykk, etasjeanløp og dørlukkingshendelser.
-func InitFSM(portElevio int, localElevator constants.Elevator, toSharedState shared_states.FromElevator, elevatorChannels ElevatorChannels) Elevator {
+
+func InitFSM(
+	portElevio int, 
+	localElevator constants.Elevator, 
+	toSharedState shared_states.FromElevator, 
+	elevatorChannels ElevatorChannels,
+) constants.Elevator {
 
 	port := strconv.Itoa(portElevio)
 	elevio.Init("localhost:"+port, constants.N_FLOORS)
@@ -31,6 +37,7 @@ func FSMOnInitBetweenFloors(
 	localElevator constants.Elevator, 
 	UpdateState chan constants.Elevator,
 ) constants.Elevator {
+
 	elevio.SetMotorDirection(elevio.MD_Down)
 	localElevator.Dirn = constants.D_Down
 	localElevator.Behaviour = constants.EB_Moving
@@ -109,7 +116,7 @@ func FSMStartMoving(
 				localElevator = FSMOpenDoor(localElevator, hallRequests, doorTimer, ClearHallRequest, updateStateChannel)
 			} else {
 				localElevator.Behaviour = constants.EB_Moving
-				elevio.SetMotorDirection(convertDirnToMotor(localElevator.Dirn))
+				elevio.SetMotorDirection(elevio.MD_Up)
 			}
 		case constants.D_Down:
 			if hallRequests[localElevator.Floor][constants.B_HallDown] || localElevator.CabRequests[localElevator.Floor] {
@@ -117,7 +124,7 @@ func FSMStartMoving(
 				localElevator = FSMOpenDoor(localElevator, hallRequests, doorTimer, ClearHallRequest, updateStateChannel)
 			} else {
 				localElevator.Behaviour = constants.EB_Moving
-				elevio.SetMotorDirection(convertDirnToMotor(localElevator.Dirn))
+				elevio.SetMotorDirection(elevio.MD_Down)
 			}
 		case constants.D_Stop:
 			localElevator = FSMOpenDoor(localElevator, hallRequests, doorTimer, ClearHallRequest, updateStateChannel)
@@ -229,15 +236,4 @@ func FSMCloseDoors(
 		localElevator = FSMStartMoving(localElevator, hallRequests, elevatorStateChannel, ClearHallRequest, updateStateChannel, doorTimer, isStuckTimer) // sjekker om det er noen forespørsel
 	}
 	return localElevator
-}
-
-func convertDirnToMotor(d constants.Dirn) elevio.MotorDirection { // føler ikke at denne funksjonen hører hjemme her, tror kanskje den kan sløyfes
-	switch d {
-	case "up":
-		return elevio.MD_Up
-	case "down":
-		return elevio.MD_Down
-	default:
-		return elevio.MD_Stop
-	}
 }
