@@ -1,50 +1,20 @@
-GENERAL
----------------------
-> [x] Make a TODO list
-
-> [ ] Create functioning Elevator
-> [ ] Create functioning Heartbeat
-> [ ] Create functioning Networking
-
-
-ELEVATOR
+TO DO
 ---------------------
 
-HEARTBEAT
----------------------
+[ ] sjekke at vi tilfredstiller alle krav
+[ ] navngivning: sørge for at funksjons/variablenavn er tydelige og konsekvente
+[ ] alt skal være camelCase
+[ ] sørge for at kommentarer er på engelsk, og ikke overflødige
+[ ] Atle: gå gjennom Nettverksmodulen - finne ut om funksjoner som burde flyttes eller lages -> Mathias vurderer 
+[ ] skrive .md fil til hver modul, i tillegg til docstrings til funksjoner som måtte trenge det.
+[ ] Åsne: se på elevator og shared states
+[ ] constants må endre
+[ ] rename "newFromSharedState" etc. og fjern funksjoner/typer som ikke brukes
 
-NETWORKING
----------------------
 
-> [x] Rigorously test UDP
-> [ ] Clean up UDP Protocol for readability and code quality
 
-> [x] Rigorously test TCP
-> [ ] Clean up TCP Protocol for readability and code quality
-
-> [ ] Create TCP Heartbeat that closes unresponsive connections
-
-> [x] Create Peer Detection
-> [x] Test Peer Detection
-> [ ] Clean up Peer Detection for readability and code quality
-
-> [x] Create Causality Broadcasting
-> [x] Test Causality Broadcasting
-> [ ] Clean up Causality Broadcasting for readability and code quality
-
-> [ ] Create 3-Phase Commit
-> [ ] Test 3-Phase Commit
-> [ ] Clean up 3-Phase Commit for readability and code quality
-
-> [ ] Create JSON module / Use existing JSON module if it exists
-> [ ] Test JSON module
-> [ ] Clean up JSON module
-
-> [ ] Create Shared State
-> [ ] Test Shared State
-> [ ] Clean up Shared State
-
-Bug
+Åsne
 -----
+spm: skal shared_state har en egen communicationn fil?
 
-> [ ] 2PC is currently both committing and aborting in same transaction
+
