@@ -39,13 +39,12 @@ func main() {
 
 	initialElevator := <-initResponseChannel
 
-	elevatorChannels := elevator.MakeElevatorChannels() // channels for communication within the different parts of the elevator
+	elevatorChannels := elevator.MakeElevatorChannels()
 
 	go elevio.PollButtons(elevatorChannels.Button)
 	go elevio.PollFloorSensor(elevatorChannels.Floor)
 	go elevio.PollObstructionSwitch(elevatorChannels.Obstruction)
-	go elevator.ElevatorThread(portElevio, initialElevator, elevatorChannels, fromSharedStateToElevator, toSharedStateFromElevator)
-	//go network.NetworkThread(synchronizationChannels) // twoPhaseCommitChannels, skal også sendes til nettverket
+	go elevator.ElevatorRoutine(portElevio, initialElevator, elevatorChannels, fromSharedStateToElevator, toSharedStateFromElevator)
 
 	select {}
 }
