@@ -67,11 +67,11 @@ func reactToSharedStateUpdate(sharedState HRAType, aliveNodes []string, localID 
 	approvedCabRequests := sharedState.States[localID].CabRequests // må sende cabRequest separat fra resten av states for å sørge for at heisen ikke "tar" en bestilling uten bekreftelse fra nettverket
 
 	if HRAResults != nil && HRAResults[localID] != nil {
-		toElevator.ApprovedHRAChannel <- HRAResults[localID]
+		toElevator.ApprovedHRA <- HRAResults[localID]
 	}
 	toElevator.UpdateHallRequestLights <- sharedState.HallRequests
 	if approvedCabRequests != nil {
-		toElevator.ApprovedCabRequestsChannel <- approvedCabRequests
+		toElevator.ApprovedCabRequests <- approvedCabRequests
 	}
 }
 
@@ -90,7 +90,7 @@ func SharedStateThread(initResult chan Elevator, toElevator ToElevator, fromNetw
 	for {
 		select {
 		// 2PC
-		case newHallRequest := <-fromElevator.NewHallRequestChannel: // får inn en enkelt hallRequest {false, false} {false, false} {true, false} {false, false}
+		case newHallRequest := <-fromElevator.NewHallRequest: // får inn en enkelt hallRequest {false, false} {false, false} {true, false} {false, false}
 			fmt.Printf("[%s] Got new HR Request: %+v\n\n", localID, newHallRequest)
 			command := Command2PC{
 				Command: ADD,
@@ -99,7 +99,7 @@ func SharedStateThread(initResult chan Elevator, toElevator ToElevator, fromNetw
 			}
 			go func() { toNetwork.Inform2PC <- translateToNetwork(command) }()
 
-		case clearHallRequest := <-fromElevator.ClearHallRequestChannel: // får inn en enkelt hallRequest {false, false} {false, false} {true, false} {false, false}
+		case clearHallRequest := <-fromElevator.ClearHallRequest: // får inn en enkelt hallRequest {false, false} {false, false} {true, false} {false, false}
 			fmt.Printf("[%s] Got clear HR Request: %+v\n\n", localID, clearHallRequest)
 			command := Command2PC{
 				Command: REMOVE,

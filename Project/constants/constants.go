@@ -18,6 +18,7 @@ const (
 	N_FLOORS          = 4
 	N_BUTTONS         = 3
 	DoorOpenDurationS = 3.0
+	IsStuckDurationS  = 5.0
 )
 
 const (

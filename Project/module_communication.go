@@ -29,17 +29,17 @@ func newToSharedStateFromNetwork() shared_states.FromNetwork {
 
 func newFromSharedStateToElevator() shared_states.ToElevator {
 	return shared_states.ToElevator{
-		UpdateHallRequestLights:    make(chan constants.HallRequestType),
-		ApprovedCabRequestsChannel: make(chan []bool),
-		ApprovedHRAChannel:         make(chan constants.HallRequestType),
+		UpdateHallRequestLights: make(chan constants.HallRequestType),
+		ApprovedCabRequests:     make(chan []bool),
+		ApprovedHRA:             make(chan constants.HallRequestType),
 	}
 }
 
 func newToSharedStateFromElevator() shared_states.FromElevator {
 	return shared_states.FromElevator{
-		NewHallRequestChannel:   make(chan constants.HallRequestType),
-		ClearHallRequestChannel: make(chan constants.HallRequestType),
-		UpdateState:             make(chan constants.Elevator),
+		NewHallRequest:   make(chan constants.HallRequestType),
+		ClearHallRequest: make(chan constants.HallRequestType),
+		UpdateState:      make(chan constants.Elevator),
 	}
 }
 

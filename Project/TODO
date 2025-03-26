@@ -15,6 +15,6 @@ TO DO
 
 Åsne
 -----
-spm: skal shared_state har en egen communicationn fil?
+spm: skal shared_state har en egen communication fil? Hva med kanalene som ligger i elevator?
 
-
+teste hva som skjer dersom vi starter heisen med obstruksjon

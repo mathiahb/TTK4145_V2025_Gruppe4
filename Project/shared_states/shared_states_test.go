@@ -69,8 +69,8 @@ func (elevator fakeElevator) run() {
 			elevator.information_global_hr <- global_hr
 			elevator.information_global_cr <- global_cr
 
-		case global_cr = <-elevator.fromSharedState.ApprovedCabRequestsChannel:
-		case local_hr = <-elevator.fromSharedState.ApprovedHRAChannel:
+		case global_cr = <-elevator.fromSharedState.ApprovedCabRequests:
+		case local_hr = <-elevator.fromSharedState.ApprovedHRA:
 		case global_hr = <-elevator.fromSharedState.UpdateHallRequestLights:
 		}
 	}
@@ -97,15 +97,15 @@ func TestSharedStateUpdate(t *testing.T) {
 	}
 
 	toElevator := ToElevator{
-		UpdateHallRequestLights:    make(chan constants.HallRequestType, 1),
-		ApprovedCabRequestsChannel: make(chan []bool, 1),
-		ApprovedHRAChannel:         make(chan constants.HallRequestType, 1),
+		UpdateHallRequestLights: make(chan constants.HallRequestType, 1),
+		ApprovedCabRequests:     make(chan []bool, 1),
+		ApprovedHRA:             make(chan constants.HallRequestType, 1),
 	}
 
 	fromElevator := FromElevator{
-		NewHallRequestChannel:   make(chan constants.HallRequestType, 1),
-		ClearHallRequestChannel: make(chan constants.HallRequestType, 1),
-		UpdateState:             make(chan constants.Elevator, 1),
+		NewHallRequest:   make(chan constants.HallRequestType, 1),
+		ClearHallRequest: make(chan constants.HallRequestType, 1),
+		UpdateState:      make(chan constants.Elevator, 1),
 	}
 
 	fakeElevator := fakeElevator{
@@ -146,10 +146,10 @@ func TestSharedStateUpdate(t *testing.T) {
 	//floor4up := constants.HallRequestType{{false, false}, {false, false}, {false, false}, {true, false}}
 	//floor4dn := constants.HallRequestType{{false, false}, {false, false}, {false, false}, {false, true}}
 
-	fakeElevator.toSharedState.NewHallRequestChannel <- floor1up
-	fakeElevator.toSharedState.NewHallRequestChannel <- floor1dn
-	fakeElevator.toSharedState.NewHallRequestChannel <- floor2up
-	fakeElevator.toSharedState.ClearHallRequestChannel <- floor1dn
+	fakeElevator.toSharedState.NewHallRequest <- floor1up
+	fakeElevator.toSharedState.NewHallRequest <- floor1dn
+	fakeElevator.toSharedState.NewHallRequest <- floor2up
+	fakeElevator.toSharedState.ClearHallRequest <- floor1dn
 
 	time.Sleep(time.Millisecond * 150)
 
