@@ -163,11 +163,13 @@ func (node *Node) reader() {
 			}
 
 			if !weAreConnected {
+				// We're not connected to network, tell other modules we exist, but no one else
 				peerUpdate.Peers = append(peerUpdate.Peers, node.name)
+			} else {
+				node.protocol_dispatcher.Do_Synchronization()
 			}
 
 			node.alive_nodes_manager.Set_Alive_Nodes(peerUpdate.Peers)
-			node.protocol_dispatcher.Do_Synchronization()
 			node.shared_state_communication.FromNetwork.Discovery.Updated_Alive_Nodes <- node.alive_nodes_manager.Get_Alive_Nodes()
 
 		case p2p_message := <-node.p2p.Read_Channel:

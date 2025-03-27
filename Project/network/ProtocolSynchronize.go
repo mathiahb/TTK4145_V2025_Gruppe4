@@ -1,9 +1,9 @@
 package network
 
 import (
+	"elevator_project/common"
 	"fmt"
 	"time"
-	"elevator_project/common"
 )
 
 // PROTOCOL - Synchronize
@@ -93,7 +93,7 @@ func (node *Node) coordinate_Synchronization() bool {
 					return true
 				}
 			}
-			if response.message_type == common.ABORT_COMMIT && response.id == begin_synchronization_message.id {
+			if response.message_type == common.ABORT_SYNCHRONIZATION && response.id == begin_synchronization_message.id {
 				node.abort_Synchronization(begin_synchronization_message)
 
 				return false
@@ -129,8 +129,8 @@ func (node *Node) participate_In_Synchronization(begin_message Message) {
 		return
 	}
 
-	//node.mu_voting_resource.Lock()
-	//defer node.mu_voting_resource.Unlock()
+	node.mu_voting_resource.Lock()
+	defer node.mu_voting_resource.Unlock()
 
 	if !node.alive_nodes_manager.Is_Node_Alive(node.name) {
 		// Node is dead, so we should reconnect
@@ -153,7 +153,7 @@ func (node *Node) participate_In_Synchronization(begin_message Message) {
 				return
 			}
 
-			if result.message_type == common.ABORT_COMMIT && result.id == begin_message.id {
+			if result.message_type == common.ABORT_SYNCHRONIZATION && result.id == begin_message.id {
 				return
 			}
 		case <-timeout:
