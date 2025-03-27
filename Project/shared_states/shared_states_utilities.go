@@ -1,21 +1,26 @@
 package shared_states
 
 import (
+	"elevator_project/common"
 	"encoding/json"
 	"fmt"
 	"os/exec"
-	"elevator_project/common"
 )
 
+// Command2PC represents a two-phase commit command structure with
+// a command type, a name identifier, and associated data.
 type Command2PC struct {
 	Command string
 	Name    string
 	Data    string
 }
 
-func makeHRAInputVariable(sharedState common.HRAType, aliveNodes []string) common.HRAType {
-	result := common.HRAType{
-		States:       make(map[string]common.Elevator),
+// makeHRAInputVariable creates a new HRAType input variable by filtering out
+// stuck elevators from the shared state and including only alive nodes' states
+// and hall requests.
+func makeHRAInputVariable(sharedState constants.HRAType, aliveNodes []string) constants.HRAType {
+	result := constants.HRAType{
+		States:       make(map[string]constants.Elevator),
 		HallRequests: sharedState.HallRequests,
 	}
 
@@ -30,7 +35,9 @@ func makeHRAInputVariable(sharedState common.HRAType, aliveNodes []string) commo
 	return result
 }
 
-func updateSharedStateByCommand(command Command2PC, sharedState common.HRAType) common.HRAType {
+// updateSharedStateByCommand updates the shared state based on a given two-phase commit command.
+// It handles adding and removing hall requests, and updating elevator states.
+func updateSharedStateByCommand(command Command2PC, sharedState constants.HRAType) constants.HRAType {
 
 	switch command.Command {
 
@@ -59,6 +66,11 @@ func updateSharedStateByCommand(command Command2PC, sharedState common.HRAType) 
 
 }
 
+// reactToSharedStateUpdate
+// 1) processes updates to the shared state,
+// 2) computes hall request assignments
+// and 3) sends the results to the elevator system.
+// It also updates hall request lights and approved cab requests for the local elevator.
 func reactToSharedStateUpdate(sharedState common.HRAType, aliveNodes []string, localID string, toElevator ToElevator) {
 
 	HRAInputVariable := makeHRAInputVariable(sharedState, aliveNodes)
@@ -74,6 +86,9 @@ func reactToSharedStateUpdate(sharedState common.HRAType, aliveNodes []string, l
 	}
 }
 
+// getHallRequestAssignments calls an external executable to compute hall
+// request assignments based on the provided HRAType input variable. It
+// returns the assignments as a map of elevator IDs to hall request arrays.
 func getHallRequestAssignments(HRAInputVariable common.HRAType) map[string][][2]bool {
 
 	// Convert to JSON
@@ -106,7 +121,8 @@ func getHallRequestAssignments(HRAInputVariable common.HRAType) map[string][][2]
 }
 
 // ===================== TRANSLATION TO/FROM NETWORK ===================== //
-
+// translateToNetwork serializes a given variable into a JSON string for
+// network transmission.
 func translateToNetwork(variable any) string {
 
 	translatedVariable, err := json.Marshal(variable)
@@ -119,6 +135,8 @@ func translateToNetwork(variable any) string {
 	return string(translatedVariable)
 }
 
+// translateFromNetwork deserializes a JSON string into a specified type,
+// converting it back to its original structure.
 func translateFromNetwork[T any](variable string) T {
 	var translatedVariable T
 	err := json.Unmarshal([]byte(variable), &translatedVariable)
