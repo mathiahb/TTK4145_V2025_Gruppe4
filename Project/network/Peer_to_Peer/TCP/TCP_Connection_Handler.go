@@ -1,10 +1,10 @@
 package TCP
 
 import (
+	"elevator_project/common"
 	"fmt"
 	"io"
 	"time"
-	"elevator_project/common"
 )
 
 // Protected functions
@@ -47,6 +47,13 @@ func (TCP_Connection *TCP_Connection) write(message string) {
 
 	if err != nil {
 		fmt.Println("Write didn't succeed, error: ", err)
+		TCP_Connection.failed_writes++
+	} else {
+		TCP_Connection.failed_writes = 0
+	}
+
+	if TCP_Connection.failed_writes >= common.TCP_MAX_FAIL_WRITES {
+		TCP_Connection.Close()
 	}
 }
 

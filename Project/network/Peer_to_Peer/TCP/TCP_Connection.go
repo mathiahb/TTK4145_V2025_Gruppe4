@@ -1,9 +1,9 @@
 package TCP
 
 import (
+	"elevator_project/common"
 	"fmt"
 	"net"
-	"elevator_project/common"
 )
 
 // Package TCP
@@ -42,6 +42,7 @@ type TCP_Connection struct {
 	connection_name string
 	connection      net.Conn
 	split_handler   TCP_Split_Handler
+	failed_writes   int
 }
 
 // Creates a new TCP conneciton bound to a shared read channel.
@@ -58,6 +59,7 @@ func New_TCP_Connection(name string, read_channel chan string, connection net.Co
 		connection:      connection,
 
 		split_handler: New_TCP_Split_Handler(), // New connection, no split read message yet.
+		failed_writes: 0,
 	}
 }
 

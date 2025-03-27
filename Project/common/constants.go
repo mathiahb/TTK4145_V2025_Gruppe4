@@ -100,6 +100,7 @@ const UDP_BROADCAST_IP_PORT string = "239.255.255.255:10005"
 
 // Constants for TCP connection
 const TCP_PORT int = 20005
+const TCP_MAX_FAIL_WRITES int = 10
 
 // Deadlines
 const UDP_READ_DEADLINE time.Duration = time.Millisecond

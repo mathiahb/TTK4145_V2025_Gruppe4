@@ -149,10 +149,23 @@ func (node *Node) reader() {
 		select {
 		case <-node.close_channel:
 			return
+
 		case commit := <-node.shared_state_communication.ToNetwork.TwoPhaseCommit.RequestCommit:
 			fmt.Printf("[%s] Got command: %+v\n\n", node.name, commit)
 			node.protocol_dispatcher.Do_Command(commit)
+
 		case peerUpdate := <-node.peerUpdateCh:
+			weAreConnected := false
+			for _, peer := range peerUpdate.Peers {
+				if peer == node.name {
+					weAreConnected = true
+				}
+			}
+
+			if !weAreConnected {
+				peerUpdate.Peers = append(peerUpdate.Peers, node.name)
+			}
+
 			node.alive_nodes_manager.Set_Alive_Nodes(peerUpdate.Peers)
 			node.protocol_dispatcher.Do_Synchronization()
 			node.shared_state_communication.FromNetwork.Discovery.Updated_Alive_Nodes <- node.alive_nodes_manager.Get_Alive_Nodes()
