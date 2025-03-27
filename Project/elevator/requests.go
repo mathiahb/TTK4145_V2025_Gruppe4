@@ -4,24 +4,23 @@ import (
 	"elevator_project/common"
 )
 
+// HallRequestsUninitialized returns an empty hall request object.
 func HallRequestsUninitialized() common.HallRequestType {
 	hallRequests := make(common.HallRequestType, common.N_FLOORS)
 	return hallRequests
 }
 
-// requestsShouldStop checks if the elevator should stop at the current floor
+// RequestsShouldStop checks if the elevator should stop at the current floor
 // by checking if there are any requests for the current floor.
 func requestsShouldStop(
 	localElevator common.Elevator,
 	hallRequests common.HallRequestType,
 ) bool {
 
-	// 1. Always stop if there is a cab request at this floor
 	if localElevator.CabRequests[localElevator.Floor] {
 		return true
 	}
 
-	// 2. Stop if a hall request is assigned to this elevator at this floor
 	if localElevator.Dirn == common.D_Up && hallRequests[localElevator.Floor][common.B_HallUp] {
 		return true
 	}
@@ -29,19 +28,18 @@ func requestsShouldStop(
 		return true
 	}
 
-	// 3. If there are no more hall requests in this direction, stop
 	if localElevator.Dirn == common.D_Up {
-		return !requests_above(localElevator, hallRequests)
+		return !requestsAbove(localElevator, hallRequests)
 	}
 
 	if localElevator.Dirn == common.D_Down {
-		return !requests_below(localElevator, hallRequests)
+		return !requestsBelow(localElevator, hallRequests)
 	}
 
 	return false
 }
 
-// requestsClearAtCurrentFloor clears hall- and cab requests at the current floor
+// RequestsClearAtCurrentFloor clears hall- and cab requests at the current floor locally and updates the network
 func requestsClearAtCurrentFloor(
 	localElevator common.Elevator,
 	hallRequests common.HallRequestType,
@@ -49,7 +47,6 @@ func requestsClearAtCurrentFloor(
 	UpdateState chan common.Elevator,
 ) (common.Elevator, common.HallRequestType) {
 
-	// Clear cab request at this floor
 	if localElevator.CabRequests[localElevator.Floor] {
 
 		localElevator.CabRequests[localElevator.Floor] = false
@@ -58,44 +55,39 @@ func requestsClearAtCurrentFloor(
 
 	switch localElevator.Dirn {
 	case common.D_Up:
-		if !requests_above(localElevator, hallRequests) && !hallRequests[localElevator.Floor][common.B_HallUp] {
+		if !requestsAbove(localElevator, hallRequests) && !hallRequests[localElevator.Floor][common.B_HallUp] {
 			if hallRequests[localElevator.Floor][common.B_HallDown] {
-				//clear hallrequest locally and update network
 				clearHallRequest := make(common.HallRequestType, common.N_FLOORS)
 				clearHallRequest[localElevator.Floor][common.B_HallDown] = true
 				ClearHallRequest <- clearHallRequest
 			}
 		}
 		if hallRequests[localElevator.Floor][common.B_HallUp] {
-			//clear hallrequest locally and update network
 			clearHallRequest := make(common.HallRequestType, common.N_FLOORS)
 			clearHallRequest[localElevator.Floor][common.B_HallUp] = true
 			ClearHallRequest <- clearHallRequest
 		}
 	case common.D_Down:
-		if !requests_below(localElevator, hallRequests) && !hallRequests[localElevator.Floor][common.B_HallDown] {
+		if !requestsBelow(localElevator, hallRequests) && !hallRequests[localElevator.Floor][common.B_HallDown] {
 			if hallRequests[localElevator.Floor][common.B_HallUp] {
-				//clear hallrequest locally and update network
+
 				clearHallRequest := make(common.HallRequestType, common.N_FLOORS)
 				clearHallRequest[localElevator.Floor][common.B_HallUp] = true
 				ClearHallRequest <- clearHallRequest
 			}
 		}
 		if hallRequests[localElevator.Floor][common.B_HallDown] {
-			//clear hallrequest locally and update network
 			clearHallRequest := make(common.HallRequestType, common.N_FLOORS)
 			clearHallRequest[localElevator.Floor][common.B_HallDown] = true
 			ClearHallRequest <- clearHallRequest
 		}
 	case common.D_Stop:
 		if hallRequests[localElevator.Floor][common.B_HallUp] {
-			//clear hallrequest locally and update network
 			clearHallRequest := make(common.HallRequestType, common.N_FLOORS)
 			clearHallRequest[localElevator.Floor][common.B_HallUp] = true
 			ClearHallRequest <- clearHallRequest
 		}
 		if hallRequests[localElevator.Floor][common.B_HallDown] {
-			//clear hallrequest locally and update network
 			clearHallRequest := make(common.HallRequestType, common.N_FLOORS)
 			clearHallRequest[localElevator.Floor][common.B_HallDown] = true
 			ClearHallRequest <- clearHallRequest
@@ -105,8 +97,8 @@ func requestsClearAtCurrentFloor(
 	return localElevator, hallRequests
 }
 
-// requests_above checks if there are any requests above the current floor
-func requests_above(
+// RequestsAbove checks if there are any requests above the current floor
+func requestsAbove(
 	localElevator common.Elevator,
 	hallRequests common.HallRequestType,
 ) bool {
@@ -118,8 +110,8 @@ func requests_above(
 	return false
 }
 
-// requests_below checks if there are any requests below the current floor
-func requests_below(
+// RequestsBelow checks if there are any requests below the current floor
+func requestsBelow(
 	localElevator common.Elevator,
 	hallRequests common.HallRequestType,
 ) bool {
@@ -131,7 +123,7 @@ func requests_below(
 	return false
 }
 
-// hasRequests checks if the elevator has any requests
+// HasRequests checks if the elevator has any requests
 func hasRequests(
 	localElevator common.Elevator,
 	hallRequests [][2]bool,
@@ -154,26 +146,21 @@ func hasRequests(
 	return false
 }
 
-// requestsChooseDirection chooses the direction the elevator should move
-// based on the current floor and the requests in the system
+// RequestsChooseDirection chooses the direction the elevator should move
+// based on the current floor and the requests in the system.
+// If there are no requests, the elevator should stop.
 func requestsChooseDirection(
 	localElevator common.Elevator,
 	hallRequests common.HallRequestType,
 ) common.Dirn {
 
-	// Checks if there are any requests above the elevator -> move up
-	for f := localElevator.Floor + 1; f < common.N_FLOORS; f++ {
-		if hallRequests[f][common.B_HallUp] || hallRequests[f][common.B_HallDown] || localElevator.CabRequests[f] {
+	if(requestsAbove(localElevator, hallRequests)){
 			return common.D_Up
-		}
 	}
-
-	// Checks if there are any requests below the elevator -> move down
-	for f := 0; f < localElevator.Floor; f++ {
-		if hallRequests[f][common.B_HallUp] || hallRequests[f][common.B_HallDown] || localElevator.CabRequests[f] {
+	
+	if(requestsBelow(localElevator, hallRequests)){
 			return common.D_Down
 		}
-	}
-	// If there are no requests, the elevator should stop
-	return common.D_Stop
+	
+	return common.D_Stop 
 }
