@@ -1,8 +1,8 @@
 package elevator
 
 import (
-	"elevator_project/shared_states"
 	"elevator_project/common"
+	"elevator_project/shared_states"
 	"fmt"
 	"time"
 )
@@ -35,12 +35,14 @@ func ElevatorRoutine(
 	fromSharedState shared_states.ToElevator,
 	toSharedState shared_states.FromElevator,
 ) {
+	var hallRequests = hallRequestsUninitialized()
 
-	var localElevator = InitFSM(portElevio, initElevator, toSharedState, elevatorChannels)
-	var hallRequests = HallRequestsUninitialized()
 	var isObstructed = false
+
 	var doorTimer = time.NewTimer(time.Second * common.DoorOpenDurationS)
 	var isStuckTimer = time.NewTimer(time.Second * common.IsStuckDurationS)
+
+	var localElevator = InitFSM(portElevio, initElevator, hallRequests, toSharedState, elevatorChannels, doorTimer, isStuckTimer)
 
 	for {
 		select {
@@ -53,15 +55,6 @@ func ElevatorRoutine(
 				newFloor,
 				localElevator,
 				hallRequests,
-				toSharedState.ClearHallRequest,
-				toSharedState.UpdateState,
-				doorTimer,
-				isStuckTimer,
-			)
-			localElevator = FSMStartMoving(
-				localElevator,
-				hallRequests,
-				toSharedState.UpdateState,
 				toSharedState.ClearHallRequest,
 				toSharedState.UpdateState,
 				doorTimer,
@@ -85,7 +78,7 @@ func ElevatorRoutine(
 					doorTimer.Reset(time.Second * common.DoorOpenDurationS)
 				} else if localElevator.Behaviour == common.EB_DoorOpen { // Check to not flood the 2PC channel.
 					localElevator.Behaviour = common.EB_Stuck_DoorOpen // An obstruction will update the elevators behaviour to being stuck.
-					toSharedState.UpdateState <- localElevator // The shared state module will then call upon the HRA without the obstructed (stuck) elevator 
+					toSharedState.UpdateState <- localElevator         // The shared state module will then call upon the HRA without the obstructed (stuck) elevator
 				}
 			}
 
@@ -101,9 +94,9 @@ func ElevatorRoutine(
 				localElevator = FSMCloseDoors(localElevator, hallRequests, toSharedState.UpdateState, doorTimer, isStuckTimer, toSharedState.ClearHallRequest, toSharedState.UpdateState)
 			}
 
-		case <-isStuckTimer.C: // Is triggered when the elevator has behaviour moving, but has not been detected crossing a floor before the isStuckTimer is up. 
-							   // This case is for instance activated when the elevator is connected to the network, but the motor is disconnected.
-		if localElevator.Behaviour == common.EB_Moving { 
+		case <-isStuckTimer.C: // Is triggered when the elevator has behaviour moving, but has not been detected crossing a floor before the isStuckTimer is up.
+			// This case is for instance activated when the elevator is connected to the network, but the motor is disconnected.
+			if localElevator.Behaviour == common.EB_Moving {
 				fmt.Printf("\n\n[%s] ELEVATOR IS STUCK\n\n", common.GetElevatorID())
 				localElevator.Behaviour = common.EB_Stuck_Moving
 				toSharedState.UpdateState <- localElevator
@@ -120,7 +113,3 @@ func ElevatorRoutine(
 		}
 	}
 }
-
-
-
-

@@ -4,8 +4,8 @@ import (
 	"elevator_project/common"
 )
 
-// HallRequestsUninitialized returns an empty hall request object.
-func HallRequestsUninitialized() common.HallRequestType {
+// hallRequestsUninitialized returns an empty hall request object.
+func hallRequestsUninitialized() common.HallRequestType {
 	hallRequests := make(common.HallRequestType, common.N_FLOORS)
 	return hallRequests
 }
@@ -154,13 +154,13 @@ func requestsChooseDirection(
 	hallRequests common.HallRequestType,
 ) common.Dirn {
 
-	if(requestsAbove(localElevator, hallRequests)){
-			return common.D_Up
+	if requestsAbove(localElevator, hallRequests) {
+		return common.D_Up
 	}
-	
-	if(requestsBelow(localElevator, hallRequests)){
-			return common.D_Down
-		}
-	
-	return common.D_Stop 
+
+	if requestsBelow(localElevator, hallRequests) {
+		return common.D_Down
+	}
+
+	return common.D_Stop
 }
