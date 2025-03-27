@@ -1,7 +1,7 @@
 package shared_states
 
 import (
-	. "elevator_project/constants"
+	"elevator_project/constants"
 	"encoding/json"
 	"fmt"
 )
@@ -10,10 +10,10 @@ import (
 // No requests are lost
 // An elevator has control over it's own states.
 func resolveDifferences(
-	state1 HRAType, 
-	state2 HRAType, 
+	state1 constants.HRAType, 
+	state2 constants.HRAType, 
 	owner_of_state2 string,
-) HRAType {
+) constants.HRAType {
 	elevatorState, ok := state2.States[owner_of_state2]
 
 	// State2 is authorative over it's own state
@@ -52,13 +52,13 @@ func resolveDifferences(
 }
 
 func ResolveSharedStateConflicts(states map[string]string) string {
-	result := HRAType{
-		States:       make(map[string]Elevator),
-		HallRequests: make(HallRequestType, N_FLOORS),
+	result := constants.HRAType{
+		States:       make(map[string]constants.Elevator),
+		HallRequests: make(constants.HallRequestType, constants.N_FLOORS),
 	}
 
 	for name, state := range states {
-		new_state := HRAType{}
+		new_state := constants.HRAType{}
 		err := json.Unmarshal([]byte(state), &new_state)
 
 		if err == nil {
