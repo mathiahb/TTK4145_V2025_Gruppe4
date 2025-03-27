@@ -59,7 +59,10 @@ func (node *Node) coordinate_Synchronization() bool {
 		return true // We're not connected, no need to do anything.
 	}
 
-	node.mu_voting_resource.Lock()
+	ok := node.mu_voting_resource.TryLock()
+	if !ok {
+		return false
+	}
 	defer node.mu_voting_resource.Unlock()
 
 	//begin_synchronization_message := node.create_Message(common.SYNC_AFTER_DISCOVERY, begin_discovery_message.id, "")
@@ -133,7 +136,11 @@ func (node *Node) participate_In_Synchronization(begin_message Message) {
 		return
 	}
 
-	node.mu_voting_resource.Lock()
+	ok := node.mu_voting_resource.TryLock()
+	if !ok {
+		node.abort_Synchronization(begin_message)
+		return
+	}
 	defer node.mu_voting_resource.Unlock()
 
 	if !node.alive_nodes_manager.Is_Node_Alive(node.name) {
