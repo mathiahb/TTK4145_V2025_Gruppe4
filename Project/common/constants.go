@@ -18,7 +18,7 @@ const (
 	N_FLOORS          = 4
 	N_BUTTONS         = 3
 	DoorOpenDurationS = 3.0
-	IsStuckDurationS  = 5.0
+	IsStuckDurationS  = 4.0
 )
 
 // Motor direction (stop, up, down)
@@ -71,25 +71,20 @@ const P2P_TIME_UNTIL_EXPECTED_ALL_CONNECTED time.Duration = time.Millisecond * 1
 const LAMPORT_CLOCK_WRAPAROUND_LOWER_EDGE int = -1e10
 const LAMPORT_CLOCK_WRAPAROUND_UPPER_EDGE int = 1e10
 
-// 3-phase commit messages - 4 bytes long
+// 2-phase commit messages - 4 bytes long
 const SIZE_TYPE_FIELD int = 4               // 4 Bytes per message type
 const PREPARE string = "PREP"               // SYNchronize
 const PREPARE_ACK string = "PREA"           // SYNchronize ACKnowledge
 const COMMIT string = "COMT"                // COMmiT
 const ABORT_COMMIT string = "ERRC"          // Error commit
 const ABORT_SYNCHRONIZATION string = "ABRT" // ABORT DiSCovery
-// TODO: Skill mellom to typer ABORT, den som brukes i sync/discovery og den som brukes i 3PC
 
 const ACK string = "ACKS" // ACKnowledgeS
 
-// Discovery messages [4 bytes long]
-const DISCOVERY_BEGIN string = "NDSC"    // Node DiSCovery
-const DISCOVERY_HELLO string = "HELO"    // discovery HELlO
-const DISCOVERY_COMPLETE string = "DSCC" // DiSCovery Complete
-const SYNC_REQUEST string = "SYNC"       // SYNChronize
-const SYNC_RESPONSE string = "SRSP"      // Synchronize ReSPonse
-const SYNC_RESULT string = "SRST"        // Synchronize ReSulT
-const NOT_CONNECTED string = "NCON"      // Not CONnected
+// Synchronization messages [4 bytes long]
+const SYNC_REQUEST string = "SYNC"  // SYNChronize
+const SYNC_RESPONSE string = "SRSP" // Synchronize ReSPonse
+const SYNC_RESULT string = "SRST"   // Synchronize ReSulT
 
 const NETWORK_FIELD_DELIMITER = "\\\n"
 
@@ -101,6 +96,7 @@ const UDP_BROADCAST_IP_PORT string = "239.255.255.255:10005"
 // Constants for TCP connection
 const TCP_PORT int = 20005
 const TCP_MAX_FAIL_WRITES int = 10
+const TCP_HEARTBEAT = "H"
 
 // Deadlines
 const UDP_READ_DEADLINE time.Duration = time.Millisecond
@@ -109,3 +105,5 @@ const UDP_WAIT_BEFORE_READING_AGAIN time.Duration = time.Microsecond      // Rea
 
 const TCP_READ_DEADLNE time.Duration = time.Millisecond              // 1 Millisecond read deadline.
 const TCP_WAIT_BEFORE_READING_AGAIN time.Duration = time.Millisecond // Checks TCP 500~1000 times a second
+const TCP_HEARTBEAT_TIME time.Duration = time.Second
+const TCP_RESEND_HEARTBEAT time.Duration = time.Millisecond * 10

@@ -4,6 +4,7 @@ import (
 	"elevator_project/common"
 	"fmt"
 	"net"
+	"time"
 )
 
 // Package TCP
@@ -41,8 +42,12 @@ type TCP_Connection struct {
 	close_channel   chan bool
 	connection_name string
 	connection      net.Conn
-	split_handler   TCP_Split_Handler
-	failed_writes   int
+
+	split_handler TCP_Split_Handler
+
+	failed_writes    int
+	watchdog_timer   *time.Timer
+	heartbeat_ticker *time.Ticker
 }
 
 // Creates a new TCP conneciton bound to a shared read channel.
@@ -59,7 +64,10 @@ func New_TCP_Connection(name string, read_channel chan string, connection net.Co
 		connection:      connection,
 
 		split_handler: New_TCP_Split_Handler(), // New connection, no split read message yet.
-		failed_writes: 0,
+
+		failed_writes:    0,
+		watchdog_timer:   time.NewTimer(common.TCP_HEARTBEAT_TIME),
+		heartbeat_ticker: time.NewTicker(common.TCP_RESEND_HEARTBEAT),
 	}
 }
 

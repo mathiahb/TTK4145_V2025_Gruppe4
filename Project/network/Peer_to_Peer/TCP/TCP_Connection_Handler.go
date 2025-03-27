@@ -30,7 +30,11 @@ func (TCP_Connection *TCP_Connection) read() {
 		split_messages := TCP_Connection.split_handler.Split_Null_Terminated_Tcp_Message(message)
 
 		for _, split_message := range split_messages {
-			TCP_Connection.Read_Channel <- split_message
+			if split_message == common.TCP_HEARTBEAT {
+				TCP_Connection.watchdog_timer.Reset(common.TCP_HEARTBEAT_TIME)
+			} else {
+				TCP_Connection.Read_Channel <- split_message
+			}
 		}
 	}
 }
@@ -74,6 +78,12 @@ func (connection *TCP_Connection) handle_TCP_Connection(connection_manager *TCP_
 
 		case message := <-connection.Write_Channel:
 			connection.write(message)
+
+		case <-connection.heartbeat_ticker.C:
+			connection.write(common.TCP_HEARTBEAT)
+
+		case <-connection.watchdog_timer.C:
+			return // No heartbeats heard within watchdog time, disconnect...
 
 		case <-connection.close_channel:
 			return
