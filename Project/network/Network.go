@@ -1,14 +1,13 @@
 package network
 
 import (
+	"elevator_project/common"
 	"fmt"
 	"sync"
-	"elevator_project/common"
 
 	peer_to_peer "elevator_project/network/Peer_to_Peer"
 
 	peers "Network-go/network/peers"
-	
 )
 
 type CommunicationToNetwork struct {
@@ -98,8 +97,8 @@ func New_Node(name string, communication_channels NetworkCommunicationChannels) 
 		shared_state_communication: communication_channels,
 	}
 
-	go peers.Receiver(15647, node.peerUpdateCh)
-	go peers.Transmitter(15647, name, node.txEnable)
+	go peers.Receiver(common.PEERS_PORT, node.peerUpdateCh)
+	go peers.Transmitter(common.PEERS_PORT, name, node.txEnable)
 
 	node.start_reader()
 	node.start_dispatcher()

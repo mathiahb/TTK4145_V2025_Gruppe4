@@ -29,14 +29,14 @@ const (
 )
 
 // Elevator behaviour:
-// (idle, door open, moving, 
-// stuck moving i.e. stuck when the elevator is suppeosed to be moving, 
+// (idle, door open, moving,
+// stuck moving i.e. stuck when the elevator is suppeosed to be moving,
 // stuck door open i.e. stuck when door is open because of obstruction)
 const (
-	EB_Idle     ElevatorBehaviour = "idle"
-	EB_DoorOpen ElevatorBehaviour = "doorOpen"
-	EB_Moving   ElevatorBehaviour = "moving"
-	EB_Stuck_Moving ElevatorBehaviour = "stuckMoving"
+	EB_Idle           ElevatorBehaviour = "idle"
+	EB_DoorOpen       ElevatorBehaviour = "doorOpen"
+	EB_Moving         ElevatorBehaviour = "moving"
+	EB_Stuck_Moving   ElevatorBehaviour = "stuckMoving"
 	EB_Stuck_DoorOpen ElevatorBehaviour = "stuckDoorOpen"
 )
 
@@ -95,6 +95,7 @@ const NETWORK_FIELD_DELIMITER = "\\\n"
 
 // Constants for UDP connection
 const UDP_PORT int = 10005
+const PEERS_PORT int = 10006
 const UDP_BROADCAST_IP_PORT string = "239.255.255.255:10005"
 
 // Constants for TCP connection
