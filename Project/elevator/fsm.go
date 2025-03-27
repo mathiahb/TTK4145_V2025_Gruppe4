@@ -79,9 +79,9 @@ func FSMOpenDoor(
 ) constants.Elevator {
 
 	elevio.SetMotorDirection(elevio.MD_Stop)
-	elevio.SetDoorOpenLamp(true)
 	localElevator.Behaviour = constants.EB_DoorOpen
-	doorTimer.Reset(3 * time.Second)
+	elevio.SetDoorOpenLamp(true)
+	doorTimer.Reset(time.Second * constants.DoorOpenDurationS)
 	localElevator, _ = requestsClearAtCurrentFloor(localElevator, hallRequests, ClearHallRequest, updateStateChannel)
 	return localElevator
 }

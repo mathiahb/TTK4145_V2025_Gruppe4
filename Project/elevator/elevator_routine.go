@@ -7,9 +7,15 @@ import (
 	"time"
 )
 
-func ElevatorRoutine(portElevio int, initElevator constants.Elevator, elevatorChannels ElevatorChannels, fromSharedState shared_states.ToElevator, toSharedState shared_states.FromElevator) {
+func ElevatorRoutine(
+	portElevio int,
+	initElevator constants.Elevator,
+	elevatorChannels ElevatorChannels,
+	fromSharedState shared_states.ToElevator,
+	toSharedState shared_states.FromElevator,
+) {
 
-	localElevator := InitFSM(portElevio, initElevator, toSharedState, elevatorChannels)
+	var localElevator = InitFSM(portElevio, initElevator, toSharedState, elevatorChannels)
 	var hallRequests = HallRequestsUninitialized()
 	var isObstructed = false
 	var doorTimer = time.NewTimer(time.Second * constants.DoorOpenDurationS)
