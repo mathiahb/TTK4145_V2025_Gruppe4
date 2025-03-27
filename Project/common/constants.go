@@ -21,12 +21,17 @@ const (
 	IsStuckDurationS  = 5.0
 )
 
+// Motor direction (stop, up, down)
 const (
 	D_Stop Dirn = "stop"
 	D_Up   Dirn = "up"
 	D_Down Dirn = "down"
 )
 
+// Elevator behaviour:
+// (idle, door open, moving, 
+// stuck moving i.e. stuck when the elevator is suppeosed to be moving, 
+// stuck door open i.e. stuck when door is open because of obstruction)
 const (
 	EB_Idle     ElevatorBehaviour = "idle"
 	EB_DoorOpen ElevatorBehaviour = "doorOpen"
@@ -43,6 +48,7 @@ const (
 )
 
 // --------------- SHARED STATES -------------------- //
+// Defines message types sent from the network to shared states after completing the two-phase commit protocol
 const (
 	ADD          = "ADD"
 	REMOVE       = "REMOVE"

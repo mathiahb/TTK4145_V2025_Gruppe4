@@ -11,6 +11,7 @@ import (
 // Elevator behavior states
 type ElevatorBehaviour string
 
+// Checks if the elevator is stuck based on behaviour
 func (behavior ElevatorBehaviour) IsStuck() bool {
 	return behavior == EB_Stuck_DoorOpen || behavior == EB_Stuck_Moving
 }
@@ -29,14 +30,16 @@ type Elevator struct {
 type HallRequestType [][2]bool
 
 // --------------- SHARED STATES -------------------- //
-type HRAType struct { // Hall request assignment type
+
+// HRAType is on the format that the HRA request for its input. The HRA also return a HRAType.
+type HRAType struct { 
 	HallRequests HallRequestType     `json:"hallRequests"`
 	States       map[string]Elevator `json:"states"`
 }
 
-// getElevatorID returns a unique identifier for this elevator instance.
 var NameExtension int = 0 // Set by main
 
+// GetElevatorID returns a unique identifier for this elevator instance.
 func GetElevatorID() string {
 	hostname, err := os.Hostname()
 	if err != nil {

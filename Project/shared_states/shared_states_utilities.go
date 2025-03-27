@@ -18,9 +18,9 @@ type Command2PC struct {
 // makeHRAInputVariable creates a new HRAType input variable by filtering out
 // stuck elevators from the shared state and including only alive nodes' states
 // and hall requests.
-func makeHRAInputVariable(sharedState constants.HRAType, aliveNodes []string) constants.HRAType {
-	result := constants.HRAType{
-		States:       make(map[string]constants.Elevator),
+func makeHRAInputVariable(sharedState common.HRAType, aliveNodes []string) common.HRAType {
+	result := common.HRAType{
+		States:       make(map[string]common.Elevator),
 		HallRequests: sharedState.HallRequests,
 	}
 
@@ -37,7 +37,7 @@ func makeHRAInputVariable(sharedState constants.HRAType, aliveNodes []string) co
 
 // updateSharedStateByCommand updates the shared state based on a given two-phase commit command.
 // It handles adding and removing hall requests, and updating elevator states.
-func updateSharedStateByCommand(command Command2PC, sharedState constants.HRAType) constants.HRAType {
+func updateSharedStateByCommand(command Command2PC, sharedState common.HRAType) common.HRAType {
 
 	switch command.Command {
 
@@ -121,8 +121,9 @@ func getHallRequestAssignments(HRAInputVariable common.HRAType) map[string][][2]
 }
 
 // ===================== TRANSLATION TO/FROM NETWORK ===================== //
-// translateToNetwork serializes a given variable into a JSON string for
-// network transmission.
+
+// The network operates with JSON strings, while shared states and the elevator operates with distinct types. 
+// Therefore it necessary to translate to the network. The function turns any variable into JSON.
 func translateToNetwork(variable any) string {
 
 	translatedVariable, err := json.Marshal(variable)

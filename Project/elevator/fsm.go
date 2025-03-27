@@ -35,8 +35,8 @@ func InitFSM(
 	return localElevator
 }
 
-// FSMOnInitBetweenFloors is called when the elevator is between floors.
-// It sets the motor direction to down and the elevator behavior to moving.
+// FSMOnInitBetweenFloors is called when the elevator is initialized between floors.
+// It sets the motor direction to down and the elevator behaviour to moving.
 func FSMOnInitBetweenFloors(
 	localElevator common.Elevator,
 	UpdateState chan common.Elevator,
@@ -60,7 +60,7 @@ func turnOffAllLights() {
 	elevio.SetDoorOpenLamp(false)
 }
 
-// setHallLights sets the hall lights based on the hall requests.
+// SetHallLights sets the hall lights based on the hall requests that comes from the shared states module.
 func setHallLights(hallRequests common.HallRequestType) {
 
 	for floor := 0; floor < common.N_FLOORS; floor++ {
@@ -69,27 +69,11 @@ func setHallLights(hallRequests common.HallRequestType) {
 	}
 }
 
+// SetCabLights sets the cab lights based on the cab requests approved by the shared states module.
 func setCabLights(cabRequests []bool) {
 	for floor := 0; floor < common.N_FLOORS; floor++ {
 		elevio.SetButtonLamp(floor, elevio.BT_Cab, cabRequests[floor])
 	}
-}
-
-// FSMOpenDoor determines the elevator's behavior when the door is open.
-func FSMOpenDoor(
-	localElevator common.Elevator,
-	hallRequests common.HallRequestType,
-	doorTimer *time.Timer,
-	ClearHallRequest chan common.HallRequestType,
-	updateStateChannel chan common.Elevator,
-) common.Elevator {
-
-	elevio.SetMotorDirection(elevio.MD_Stop)
-	localElevator.Behaviour = common.EB_DoorOpen
-	elevio.SetDoorOpenLamp(true)
-	doorTimer.Reset(time.Second * common.DoorOpenDurationS)
-	localElevator, _ = requestsClearAtCurrentFloor(localElevator, hallRequests, ClearHallRequest, updateStateChannel)
-	return localElevator
 }
 
 // Resets the isStuckTimer
@@ -106,6 +90,7 @@ func FSMResetIsStuckTimer(isStuckTimer *time.Timer) {
 }
 
 // FSMStartMoving is used to start the elevator's motor when it is idle and has requests.
+// It resets the isStuckTimer each time the elevator starts moving.
 func FSMStartMoving(
 	localElevator common.Elevator,
 	hallRequests common.HallRequestType,
@@ -116,32 +101,29 @@ func FSMStartMoving(
 	isStuckTimer *time.Timer,
 ) common.Elevator {
 
-	// Hvis heisen er idle og har forespørsler, velg retning og start motor
+
 	if localElevator.Behaviour == common.EB_Idle && hasRequests(localElevator, hallRequests) {
 		localElevator.Dirn = requestsChooseDirection(localElevator, hallRequests)
 
-		FSMResetIsStuckTimer(isStuckTimer) // resetter timeren hver gang man begynner å bevege seg
+		FSMResetIsStuckTimer(isStuckTimer)
 
-		// Are there any requests at the current floor in the new direction localElevator.Dirn?
 		switch localElevator.Dirn {
 		case common.D_Up:
 			if hallRequests[localElevator.Floor][common.B_HallUp] || localElevator.CabRequests[localElevator.Floor] {
-				// Stop the elevator and open the door
-				localElevator = FSMOpenDoor(localElevator, hallRequests, doorTimer, ClearHallRequest, updateStateChannel)
+				localElevator, _ = FSMOpenDoor(localElevator, hallRequests, doorTimer, ClearHallRequest, updateStateChannel)
 			} else {
 				localElevator.Behaviour = common.EB_Moving
 				elevio.SetMotorDirection(elevio.MD_Up)
 			}
 		case common.D_Down:
 			if hallRequests[localElevator.Floor][common.B_HallDown] || localElevator.CabRequests[localElevator.Floor] {
-				// Stop the elevator and open the door
-				localElevator = FSMOpenDoor(localElevator, hallRequests, doorTimer, ClearHallRequest, updateStateChannel)
+				localElevator, _ = FSMOpenDoor(localElevator, hallRequests, doorTimer, ClearHallRequest, updateStateChannel)
 			} else {
 				localElevator.Behaviour = common.EB_Moving
 				elevio.SetMotorDirection(elevio.MD_Down)
 			}
 		case common.D_Stop:
-			localElevator = FSMOpenDoor(localElevator, hallRequests, doorTimer, ClearHallRequest, updateStateChannel)
+			localElevator, _ = FSMOpenDoor(localElevator, hallRequests, doorTimer, ClearHallRequest, updateStateChannel)
 
 		}
 
@@ -151,7 +133,7 @@ func FSMStartMoving(
 	return localElevator
 }
 
-// Communicates new state to the shared state when a button is pressed
+// FSMButtonPress communicates new state to the shared state when a button is pressed
 func FSMButtonPress(
 	btnFloor int,
 	btnType elevio.ButtonType,
@@ -181,6 +163,10 @@ func FSMButtonPress(
 	return localElevator
 }
 
+// FSMOnFloorArrival is called upon when the elevator arrives a new floor.
+// It resets the isStuckTimer. If the elevator has "stuck" behaviour when the elevator arrives a new floor, 
+// we can change it to moving as this is aclear sign of an active elevator.
+// The functions also checks if the elevator should stop. If the elevator stops, it opens the door and updates shared states.
 func FSMOnFloorArrival(
 	newFloor int,
 	localElevator common.Elevator,
@@ -195,27 +181,16 @@ func FSMOnFloorArrival(
 
 	FSMResetIsStuckTimer(isStuckTimer)
 
-	if localElevator.Behaviour == common.EB_Stuck_Moving { // dersom vi ankommer en etasje etter å ha brukt motoren, vet vi at vi ikke er stuck
+	if localElevator.Behaviour == common.EB_Stuck_Moving {
 		localElevator.Behaviour = common.EB_Moving
 	}
 
-	// 1. lagre ny etasje i lokal state
 	localElevator.Floor = newFloor
 	elevio.SetFloorIndicator(localElevator.Floor)
 
-	// 2. Sjekk om heisen skal stoppe
 	if localElevator.Behaviour == common.EB_Moving {
 		if requestsShouldStop(localElevator, hallRequests) {
-			elevio.SetMotorDirection(elevio.MD_Stop)
-			elevio.SetDoorOpenLamp(true)
-			localElevator.Behaviour = common.EB_DoorOpen
-
-			// Start dør-timer
-			doorTimer.Reset(time.Second * common.DoorOpenDurationS)
-
-			// 3. Fjerner requests på nåværende etasje
-			localElevator, hallRequests = requestsClearAtCurrentFloor(localElevator, hallRequests, ClearHallRequest, updateStateChannel)
-
+			localElevator, hallRequests = FSMOpenDoor(localElevator, hallRequests, doorTimer, ClearHallRequest, updateStateChannel) 
 		}
 	}
 	updateStateChannel <- localElevator
@@ -223,7 +198,27 @@ func FSMOnFloorArrival(
 	return localElevator, hallRequests
 }
 
-// **FSMOnDoorTimeout**: Kalles når dør-timeren utløper
+
+// FSMOpenDoor opens the elevator door by turning on the door light.
+// It determines the elevator's behavior when the door is open.
+func FSMOpenDoor(
+	localElevator common.Elevator,
+	hallRequests common.HallRequestType,
+	doorTimer *time.Timer,
+	ClearHallRequest chan common.HallRequestType,
+	updateStateChannel chan common.Elevator,
+) (common.Elevator, common.HallRequestType) {
+
+	elevio.SetMotorDirection(elevio.MD_Stop)
+	elevio.SetDoorOpenLamp(true)
+	localElevator.Behaviour = common.EB_DoorOpen
+	doorTimer.Reset(time.Second * common.DoorOpenDurationS)
+	localElevator, hallRequests = requestsClearAtCurrentFloor(localElevator, hallRequests, ClearHallRequest, updateStateChannel)
+	return localElevator, hallRequests
+}
+
+// FSMCloseDoors close the elevator doors by turning of the door light.
+// It updates the behaviour and calls FSMStartMoving
 func FSMCloseDoors(
 	localElevator common.Elevator,
 	hallRequests common.HallRequestType,
@@ -235,13 +230,10 @@ func FSMCloseDoors(
 ) common.Elevator {
 	fmt.Println("\nFSMOnDoorTimeout()")
 
-	// Hvis døren er åpen, bestem neste handling
 	if localElevator.Behaviour == common.EB_DoorOpen {
 		localElevator.Behaviour = common.EB_Idle
 		elevio.SetDoorOpenLamp(false)
-
 		elevatorStateChannel <- localElevator
-
 		localElevator = FSMStartMoving(localElevator, hallRequests, elevatorStateChannel, ClearHallRequest, updateStateChannel, doorTimer, isStuckTimer) // sjekker om det er noen forespørsel
 	}
 	return localElevator
