@@ -49,8 +49,9 @@ type NetworkCommunicationChannels struct {
 type Node struct {
 	p2p *peer_to_peer.P2P_Network
 
-	name             string // Elevator ID
-	next_TxID_number int
+	connected_to_network bool
+	name                 string // Elevator ID
+	next_TxID_number     int
 
 	mu_voting_resource sync.Mutex // TryLock to see if you can vote.
 
@@ -77,7 +78,8 @@ func New_Node(name string, communication_channels NetworkCommunicationChannels) 
 	node := Node{
 		p2p: peer_to_peer.New_P2P_Network(),
 
-		name: name,
+		name:                 name,
+		connected_to_network: false,
 
 		next_TxID_number: 0,
 
@@ -152,17 +154,23 @@ func (node *Node) reader() {
 
 		case commit := <-node.shared_state_communication.ToNetwork.TwoPhaseCommit.RequestCommit:
 			fmt.Printf("[%s] Got command: %+v\n\n", node.name, commit)
-			node.protocol_dispatcher.Do_Command(commit)
+
+			if !node.connected_to_network {
+				// We are not connected, just accept any change to shared state.
+				node.shared_state_communication.FromNetwork.TwoPhaseCommit.ProtocolCommited <- commit
+			} else {
+				node.protocol_dispatcher.Do_Command(commit)
+			}
 
 		case peerUpdate := <-node.peerUpdateCh:
-			weAreConnected := false
+			node.connected_to_network = false
 			for _, peer := range peerUpdate.Peers {
 				if peer == node.name {
-					weAreConnected = true
+					node.connected_to_network = true
 				}
 			}
 
-			if !weAreConnected {
+			if !node.connected_to_network {
 				// We're not connected to network, tell other modules we exist, but no one else
 				peerUpdate.Peers = append(peerUpdate.Peers, node.name)
 			} else {

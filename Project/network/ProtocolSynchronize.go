@@ -55,6 +55,10 @@ func (node *Node) send_Synchronization_Result(result string) {
 }
 
 func (node *Node) coordinate_Synchronization() bool {
+	if !node.connected_to_network {
+		return true // We're not connected, no need to do anything.
+	}
+
 	node.mu_voting_resource.Lock()
 	defer node.mu_voting_resource.Unlock()
 

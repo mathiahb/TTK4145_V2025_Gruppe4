@@ -1,9 +1,9 @@
 package network
 
 import (
+	"elevator_project/common"
 	"fmt"
 	"time"
-	"elevator_project/common"
 )
 
 // PROTOCOL - 2PC
@@ -64,6 +64,12 @@ func (node *Node) delete_communication_channel(prepare_message Message) {
 }
 
 func (node *Node) coordinate_2PC(cmd string) bool {
+	if !node.connected_to_network {
+		commit := node.create_Message("", TxID(""), cmd)
+		node.doLocalCommit(commit)
+		return true
+	}
+
 	node.mu_voting_resource.Lock()
 	defer node.mu_voting_resource.Unlock()
 
