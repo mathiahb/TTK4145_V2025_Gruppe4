@@ -1,9 +1,9 @@
 package elevator
 
 import (
+	"elevator_project/common"
 	"elevator_project/elevio"
 	"elevator_project/shared_states"
-	"elevator_project/common"
 	"fmt"
 	"strconv"
 	"time"
@@ -15,11 +15,7 @@ import (
 // InitFSM initializes the FSM for the elevator.
 func InitFSM(
 	portElevio int,
-<<<<<<< HEAD
-	localElevator constants.Elevator,
-=======
 	localElevator common.Elevator,
->>>>>>> 5e70c41fec4151086403f725eb15e9edacd13088
 	toSharedState shared_states.FromElevator,
 	elevatorChannels ElevatorChannels,
 ) common.Elevator {
@@ -42,15 +38,9 @@ func InitFSM(
 // FSMOnInitBetweenFloors is called when the elevator is between floors.
 // It sets the motor direction to down and the elevator behavior to moving.
 func FSMOnInitBetweenFloors(
-<<<<<<< HEAD
-	localElevator constants.Elevator,
-	UpdateState chan constants.Elevator,
-) constants.Elevator {
-=======
 	localElevator common.Elevator,
 	UpdateState chan common.Elevator,
 ) common.Elevator {
->>>>>>> 5e70c41fec4151086403f725eb15e9edacd13088
 
 	elevio.SetMotorDirection(elevio.MD_Down)
 	localElevator.Dirn = common.D_Down
@@ -70,12 +60,8 @@ func turnOffAllLights() {
 	elevio.SetDoorOpenLamp(false)
 }
 
-<<<<<<< HEAD
 // setHallLights sets the hall lights based on the hall requests.
-func setHallLights(hallRequests constants.HallRequestType) {
-=======
 func setHallLights(hallRequests common.HallRequestType) {
->>>>>>> 5e70c41fec4151086403f725eb15e9edacd13088
 
 	for floor := 0; floor < common.N_FLOORS; floor++ {
 		elevio.SetButtonLamp(floor, elevio.BT_HallUp, hallRequests[floor][common.B_HallUp])
@@ -106,10 +92,7 @@ func FSMOpenDoor(
 	return localElevator
 }
 
-<<<<<<< HEAD
 // Resets the isStuckTimer
-=======
->>>>>>> 5e70c41fec4151086403f725eb15e9edacd13088
 func FSMResetIsStuckTimer(isStuckTimer *time.Timer) {
 
 	if !isStuckTimer.Stop() {
@@ -122,10 +105,7 @@ func FSMResetIsStuckTimer(isStuckTimer *time.Timer) {
 
 }
 
-<<<<<<< HEAD
 // FSMStartMoving is used to start the elevator's motor when it is idle and has requests.
-=======
->>>>>>> 5e70c41fec4151086403f725eb15e9edacd13088
 func FSMStartMoving(
 	localElevator common.Elevator,
 	hallRequests common.HallRequestType,
@@ -175,17 +155,10 @@ func FSMStartMoving(
 func FSMButtonPress(
 	btnFloor int,
 	btnType elevio.ButtonType,
-<<<<<<< HEAD
-	localElevator constants.Elevator,
-	updateStateChannel chan constants.Elevator,
-	NewHallRequest chan constants.HallRequestType,
-) constants.Elevator {
-=======
 	localElevator common.Elevator,
 	updateStateChannel chan common.Elevator,
 	NewHallRequest chan common.HallRequestType,
 ) common.Elevator {
->>>>>>> 5e70c41fec4151086403f725eb15e9edacd13088
 	fmt.Printf("FSMOnRequestButtonPress(%d, %d)\n", btnFloor, btnType)
 
 	if btnType == elevio.BT_Cab {
@@ -216,23 +189,14 @@ func FSMOnFloorArrival(
 	updateStateChannel chan common.Elevator,
 	doorTimer *time.Timer,
 	isStuckTimer *time.Timer) (
-<<<<<<< HEAD
-	constants.Elevator, constants.HallRequestType) {
-=======
 	common.Elevator, common.HallRequestType) {
->>>>>>> 5e70c41fec4151086403f725eb15e9edacd13088
 
 	fmt.Printf("\nFSMOnFloorArrival(%d)\n", newFloor)
 
 	FSMResetIsStuckTimer(isStuckTimer)
 
-<<<<<<< HEAD
-	if localElevator.Behaviour == constants.EB_Stuck_Moving { // dersom vi ankommer en etasje etter å ha brukt motoren, vet vi at vi ikke er stuck
-		localElevator.Behaviour = constants.EB_Moving
-=======
 	if localElevator.Behaviour == common.EB_Stuck_Moving { // dersom vi ankommer en etasje etter å ha brukt motoren, vet vi at vi ikke er stuck
 		localElevator.Behaviour = common.EB_Moving
->>>>>>> 5e70c41fec4151086403f725eb15e9edacd13088
 	}
 
 	// 1. lagre ny etasje i lokal state
@@ -240,11 +204,7 @@ func FSMOnFloorArrival(
 	elevio.SetFloorIndicator(localElevator.Floor)
 
 	// 2. Sjekk om heisen skal stoppe
-<<<<<<< HEAD
-	if localElevator.Behaviour == constants.EB_Moving {
-=======
 	if localElevator.Behaviour == common.EB_Moving {
->>>>>>> 5e70c41fec4151086403f725eb15e9edacd13088
 		if requestsShouldStop(localElevator, hallRequests) {
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevio.SetDoorOpenLamp(true)
