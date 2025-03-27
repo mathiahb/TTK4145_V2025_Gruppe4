@@ -1,9 +1,9 @@
 package peer_to_peer
 
 import (
-	Constants "elevator_project/constants"
 	"fmt"
 	"strings"
+	"elevator_project/common"
 )
 
 type P2P_Message_Type string
@@ -47,16 +47,16 @@ func (message P2P_Message) To_String() string {
 	var result string = ""
 
 	result = result + message.Sender
-	result = result + Constants.P2P_FIELD_DELIMINATOR + string(message.Type)
-	result = result + Constants.P2P_FIELD_DELIMINATOR + message.Time.String()
-	result = result + Constants.P2P_FIELD_DELIMINATOR + message.dependency.To_String()
-	result = result + Constants.P2P_FIELD_DELIMINATOR + message.Message
+	result = result + common.P2P_FIELD_DELIMINATOR + string(message.Type)
+	result = result + common.P2P_FIELD_DELIMINATOR + message.Time.String()
+	result = result + common.P2P_FIELD_DELIMINATOR + message.dependency.To_String()
+	result = result + common.P2P_FIELD_DELIMINATOR + message.Message
 
 	return result
 }
 
 func P2P_Message_From_String(tcp_message string) P2P_Message {
-	fields := strings.Split(tcp_message, Constants.P2P_FIELD_DELIMINATOR)
+	fields := strings.Split(tcp_message, common.P2P_FIELD_DELIMINATOR)
 
 	if len(fields) != 5 {
 		fmt.Printf("ERROR: P2P_Message badly formatted! Did you accidentally use \\r\\n in a file? %s\n", tcp_message)

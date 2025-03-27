@@ -24,7 +24,7 @@ func (node *Node) coordinate_2PC(cmd Command, success_channel chan bool) {
     // Build a PREPARE message. We embed "Field=Value" in the payload
     txid := node.generateTxID()
     payload := fmt.Sprintf("%s=%s", cmd.Field, cmd.New_Value)
-    prepareMsg := node.create_Message(Constants.PREPARE, txid, payload)
+    prepareMsg := node.create_Message(common.PREPARE, txid, payload)
 
     // Step 1: Broadcast PREPARE
     node.Broadcast(prepareMsg)
@@ -48,12 +48,12 @@ WAIT_PREPARE_ACKS:
                 continue
             }
             switch msg.message_type {
-            case Constants.PREPARE_ACK:
+            case common.PREPARE_ACK:
                 ackCount++
                 fmt.Printf("[%s] 2PC coordinator got PREPARE_ACK from %s (%d/%d)\n",
                     node.name, msg.sender, ackCount, neededAcks)
 
-            case Constants.ABORT_COMMIT:
+            case common.ABORT_COMMIT:
                 fmt.Printf("[%s] 2PC coordinator sees ABORT => we ABORT.\n", node.name)
                 node.abort2PC(txid)
                 success_channel <- false
@@ -69,7 +69,7 @@ WAIT_PREPARE_ACKS:
     }
 
     // Step 2: If we got all PREPARE_ACK, broadcast COMMIT
-    commitMsg := node.create_Message(Constants.COMMIT, txid, payload)
+    commitMsg := node.create_Message(common.COMMIT, txid, payload)
     node.Broadcast(commitMsg)
     fmt.Printf("[%s] 2PC coordinator: broadcast COMMIT.\n", node.name)
 
@@ -93,11 +93,11 @@ WAIT_FINAL_ACKS:
             if msg.id != txid {
                 continue
             }
-            if msg.message_type == Constants.ACK {
+            if msg.message_type == common.ACK {
                 finalAckCount++
                 fmt.Printf("[%s] 2PC coordinator got final ACK from %s (%d/%d)\n",
                     node.name, msg.sender, finalAckCount, neededAcks)
-            } else if msg.message_type == Constants.ABORT_COMMIT {
+            } else if msg.message_type == common.ABORT_COMMIT {
                 // If a participant aborts now, it's basically an error:
                 fmt.Printf("[%s] 2PC coordinator sees ABORT during final ack => ignoring.\n", node.name)
             }

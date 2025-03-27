@@ -1,9 +1,9 @@
 package peer_to_peer
 
 import (
-	Constants "elevator_project/constants"
 	"fmt"
 	"sync"
+	"elevator_project/common"
 )
 
 type Dependency_Resolver struct {
@@ -17,15 +17,15 @@ type Dependency_Resolver struct {
 
 func New_Dependency_Resolver() *Dependency_Resolver {
 	return &Dependency_Resolver{
-		queue_list: make([]Dependency, Constants.P2P_MSG_TIME_HORIZON),
+		queue_list: make([]Dependency, common.P2P_MSG_TIME_HORIZON),
 		queue_head: 0,
 
-		Saved_Messages: make(map[Dependency]P2P_Message, Constants.P2P_MSG_TIME_HORIZON),
+		Saved_Messages: make(map[Dependency]P2P_Message, common.P2P_MSG_TIME_HORIZON),
 	}
 }
 
 func (controller *Dependency_Resolver) advance_head() {
-	controller.queue_head = (controller.queue_head + 1) % Constants.P2P_MSG_TIME_HORIZON
+	controller.queue_head = (controller.queue_head + 1) % common.P2P_MSG_TIME_HORIZON
 }
 
 func (controller *Dependency_Resolver) Emplace_New_Message(message P2P_Message) {

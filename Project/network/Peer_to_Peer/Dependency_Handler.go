@@ -2,8 +2,8 @@ package peer_to_peer
 
 import (
 	"container/heap"
-	Constants "elevator_project/constants"
 	"sync"
+	"elevator_project/common"
 )
 
 // Example from Golang container documentation for IntHeap
@@ -49,7 +49,7 @@ func (handler *Dependency_Handler) add_Dependency(dependency Dependency) {
 		return
 	}
 
-	if handler.min_heap.Len() == Constants.P2P_DEP_TIME_HORIZON {
+	if handler.min_heap.Len() == common.P2P_DEP_TIME_HORIZON {
 		old_dependency := heap.Pop(handler.min_heap).(Dependency)
 		delete(handler.lookup_map, old_dependency)
 	}

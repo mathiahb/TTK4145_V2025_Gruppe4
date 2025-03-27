@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"net"
 	"time"
-
+	"elevator_project/common"
 	"golang.org/x/net/ipv4"
-
-	Constants "elevator_project/constants"
 )
 
 // Package UDP
@@ -77,12 +75,12 @@ func (Channel UDP_Channel) udp_client(connection *net.UDPConn) {
 func (Channel UDP_Channel) udp_server(connection *ipv4.PacketConn) {
 	defer connection.Close()
 
-	ticker_read_UDP := time.NewTicker(Constants.UDP_WAIT_BEFORE_READING_AGAIN)
+	ticker_read_UDP := time.NewTicker(common.UDP_WAIT_BEFORE_READING_AGAIN)
 
 	for {
 		select {
 		case <-ticker_read_UDP.C:
-			deadline := time.Now().Add(Constants.UDP_READ_DEADLINE)
+			deadline := time.Now().Add(common.UDP_READ_DEADLINE)
 			connection.SetReadDeadline(deadline)
 
 			data := make([]byte, 1024)
@@ -101,7 +99,7 @@ func (Channel UDP_Channel) udp_server(connection *ipv4.PacketConn) {
 }
 
 func (channel *UDP_Channel) create_UDP_client() {
-	addr, err := net.ResolveUDPAddr("udp", Constants.UDP_BROADCAST_IP_PORT)
+	addr, err := net.ResolveUDPAddr("udp", common.UDP_BROADCAST_IP_PORT)
 	if err != nil {
 		panic(err)
 	}
@@ -116,12 +114,12 @@ func (channel *UDP_Channel) create_UDP_client() {
 
 // func create_UDP_server, to be called by a function that creates an UDP_Channel
 func (channel *UDP_Channel) create_UDP_server() error {
-	addr, err := net.ResolveUDPAddr("udp", Constants.UDP_BROADCAST_IP_PORT)
+	addr, err := net.ResolveUDPAddr("udp", common.UDP_BROADCAST_IP_PORT)
 	if err != nil {
 		panic(err)
 	}
 
-	connection, err := net.ListenPacket("udp4", Constants.UDP_BROADCAST_IP_PORT)
+	connection, err := net.ListenPacket("udp4", common.UDP_BROADCAST_IP_PORT)
 	if err != nil {
 		return err
 	}

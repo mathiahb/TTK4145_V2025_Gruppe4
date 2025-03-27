@@ -1,10 +1,10 @@
 package shared_states
 
 import (
-	"elevator_project/constants"
 	"encoding/json"
-	"testing"
 	"fmt"
+	"testing"
+	"elevator_project/common"
 )
 
 func TestConflictResolver(t *testing.T) {
@@ -17,41 +17,41 @@ func TestConflictResolver(t *testing.T) {
 	hallRequests3 := [][2]bool{{false, true}, {false, true}, {false, true}, {false, true}}
 	expected_bool_result := [][2]bool{{true, true}, {true, true}, {true, true}, {true, true}}
 
-	state1 := constants.HRAType{
-		States:       make(map[string]constants.Elevator),
+	state1 := common.HRAType{
+		States:       make(map[string]common.Elevator),
 		HallRequests: hallRequests1,
 	}
 
-	state2 := constants.HRAType{
-		States:       make(map[string]constants.Elevator),
+	state2 := common.HRAType{
+		States:       make(map[string]common.Elevator),
 		HallRequests: hallRequests2,
 	}
 
-	state3 := constants.HRAType{
-		States:       make(map[string]constants.Elevator),
+	state3 := common.HRAType{
+		States:       make(map[string]common.Elevator),
 		HallRequests: hallRequests3,
 	}
 
-	elevator1 := constants.Elevator{
-		Behaviour:   constants.EB_Idle,
+	elevator1 := common.Elevator{
+		Behaviour:   common.EB_Idle,
 		Floor:       2,
-		Dirn:        constants.D_Down,
+		Dirn:        common.D_Down,
 		CabRequests: []bool{false, false, false, false},
 	}
 
-	elevator2 := constants.Elevator{
-		Behaviour:   constants.EB_DoorOpen,
+	elevator2 := common.Elevator{
+		Behaviour:   common.EB_DoorOpen,
 		Floor:       3,
-		Dirn:        constants.D_Up,
+		Dirn:        common.D_Up,
 		CabRequests: []bool{true, true, true, true},
 	}
 
 	fake_elevator2 := elevator1
 
-	elevator3 := constants.Elevator{
-		Behaviour:   constants.EB_Moving,
+	elevator3 := common.Elevator{
+		Behaviour:   common.EB_Moving,
 		Floor:       1,
-		Dirn:        constants.D_Stop,
+		Dirn:        common.D_Stop,
 		CabRequests: []bool{false, true, false, true},
 	}
 
@@ -68,8 +68,8 @@ func TestConflictResolver(t *testing.T) {
 	state3.States[name2] = fake_elevator2
 	state3.States[name3] = elevator3
 
-	expected_result := constants.HRAType{
-		States:       make(map[string]constants.Elevator),
+	expected_result := common.HRAType{
+		States:       make(map[string]common.Elevator),
 		HallRequests: expected_bool_result,
 	}
 
@@ -115,43 +115,38 @@ func TestConflictResolver(t *testing.T) {
 
 }
 
-
-
-func TestTranslation(t *testing.T){
+func TestTranslation(t *testing.T) {
 
 	hallRequests1 := [][2]bool{{true, false}, {true, false}, {true, false}, {true, false}}
 
-	elevator1 := constants.Elevator{
-		Behaviour:   constants.EB_Idle,
+	elevator1 := common.Elevator{
+		Behaviour:   common.EB_Idle,
 		Floor:       2,
-		Dirn:        constants.D_Down,
+		Dirn:        common.D_Down,
 		CabRequests: []bool{false, false, false, false},
 	}
 
-	state1 := constants.HRAType{
-		States:       make(map[string]constants.Elevator),
+	state1 := common.HRAType{
+		States:       make(map[string]common.Elevator),
 		HallRequests: hallRequests1,
 	}
 
 	state1.States["Heis nummer 1"] = elevator1
 
-	translatedState1 := translateToNetwork(state1) 
-	deTranslatedState1 := translateFromNetwork[constants.HRAType](translatedState1)
-	//translatedHallRequest := translateToNetwork(hallRequests1) 
+	translatedState1 := translateToNetwork(state1)
+	deTranslatedState1 := translateFromNetwork[common.HRAType](translatedState1)
+	//translatedHallRequest := translateToNetwork(hallRequests1)
 	//deTranslatedHallRequest := translateFromNetwork[HallRequestType](translatedHallRequest) // HallRequestType [][2]bool
-	//HRAInputVariable.HallRequests = deTranslatedHallRequest 
+	//HRAInputVariable.HallRequests = deTranslatedHallRequest
 
-
-	result1 := fmt.Sprintf("%+v",state1)
+	result1 := fmt.Sprintf("%+v", state1)
 	result2 := fmt.Sprintf("%+v", deTranslatedState1)
-	
+
 	t.Logf("result1 = %s", result1)
 	t.Logf("result2 = %s", result2)
 
-	if(result1 != result2){
+	if result1 != result2 {
 		t.Errorf("Results did not match, %s != %s", result1, result2)
 	}
-	
-
 
 }

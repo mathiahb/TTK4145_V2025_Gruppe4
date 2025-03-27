@@ -1,9 +1,9 @@
 package network
 
 import (
-	Constants "elevator_project/constants"
 	"fmt"
 	"time"
+	"elevator_project/common"
 )
 
 // PROTOCOL - 2PC
@@ -68,7 +68,7 @@ func (node *Node) coordinate_2PC(cmd string) bool {
 	defer node.mu_voting_resource.Unlock()
 
 	// Build a message with type = PREPARE, and payload = "Field=New_Value"
-	prepareMsg := node.create_Vote_Message(Constants.PREPARE, cmd)
+	prepareMsg := node.create_Vote_Message(common.PREPARE, cmd)
 
 	comm := node.create_communication_channel(prepareMsg)
 	defer node.delete_communication_channel(prepareMsg)
@@ -80,7 +80,7 @@ func (node *Node) coordinate_2PC(cmd string) bool {
 	// Wait for PREPARE_ACK from all alive nodes to proceed
 	ackCount := 0
 
-	node.Broadcast(node.create_Message(Constants.PREPARE_ACK, prepareMsg.id, ""))
+	node.Broadcast(node.create_Message(common.PREPARE_ACK, prepareMsg.id, ""))
 
 	time_to_complete := time.After(time.Millisecond * 1000)
 
@@ -106,12 +106,12 @@ func (node *Node) coordinate_2PC(cmd string) bool {
 			}
 
 			switch msg.message_type {
-			case Constants.PREPARE_ACK:
+			case common.PREPARE_ACK:
 				// Successfully received an PREPARE_ACK
 				ackCount++
 				fmt.Printf("[%s] 2PC coordinator got PREPARE_ACK from %s\n", node.name, msg.sender)
 
-			case Constants.ABORT_COMMIT:
+			case common.ABORT_COMMIT:
 				// Some participant aborted -> we must abort
 				fmt.Printf("[%s] 2PC coordinator sees ABORT from %s => ABORT.\n", node.name, msg.sender)
 				node.abort2PC(prepareMsg)
@@ -158,7 +158,7 @@ func (node *Node) participate_2PC(prepareMsg Message) {
 	canCommit := true
 	if canCommit {
 		// Send PREPARE_ACK back to coordinator
-		ackMsg := node.create_Message(Constants.PREPARE_ACK, prepareMsg.id, "")
+		ackMsg := node.create_Message(common.PREPARE_ACK, prepareMsg.id, "")
 		node.Broadcast_Response(ackMsg, prepareMsg)
 		fmt.Printf("[%s] 2PC participant => PREPARE_ACK. Waiting for COMMIT/ABORT.\n", node.name)
 	} else {
@@ -178,10 +178,10 @@ func (node *Node) participate_2PC(prepareMsg Message) {
 				continue
 			}
 			switch msg.message_type {
-			case Constants.COMMIT:
+			case common.COMMIT:
 				go node.doLocalCommit(msg)
 				return
-			case Constants.ABORT_COMMIT:
+			case common.ABORT_COMMIT:
 				return
 			}
 		case <-timeout:
@@ -193,13 +193,13 @@ func (node *Node) participate_2PC(prepareMsg Message) {
 }
 
 func (node *Node) commit2PC(prepare_message Message, payload string) {
-	commitMsg := node.create_Message(Constants.COMMIT, prepare_message.id, payload)
+	commitMsg := node.create_Message(common.COMMIT, prepare_message.id, payload)
 	node.Broadcast_Response(commitMsg, prepare_message)
 	node.doLocalCommit(commitMsg)
 }
 
 func (node *Node) abort2PC(prepare_message Message) {
-	abortMsg := node.create_Message(Constants.ABORT_COMMIT, prepare_message.id, "")
+	abortMsg := node.create_Message(common.ABORT_COMMIT, prepare_message.id, "")
 	node.Broadcast_Response(abortMsg, prepare_message)
 }
 

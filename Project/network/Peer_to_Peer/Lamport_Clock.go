@@ -1,9 +1,9 @@
 package peer_to_peer
 
 import (
-	Constants "elevator_project/constants"
 	"fmt"
 	"strconv"
+	"elevator_project/common"
 )
 
 type Lamport_Clock struct {
@@ -53,8 +53,8 @@ func (receiver_clock *Lamport_Clock) Update(sender_clock Lamport_Clock) {
 // If a -> b, then b.time < a.time
 func (lesser Lamport_Clock) Is_Less_Than(greater Lamport_Clock) bool {
 	// Check if the clocks have wrapped around
-	const lower_edge int = Constants.LAMPORT_CLOCK_WRAPAROUND_LOWER_EDGE
-	const upper_edge int = Constants.LAMPORT_CLOCK_WRAPAROUND_UPPER_EDGE
+	const lower_edge int = common.LAMPORT_CLOCK_WRAPAROUND_LOWER_EDGE
+	const upper_edge int = common.LAMPORT_CLOCK_WRAPAROUND_UPPER_EDGE
 
 	if greater.time < lower_edge && lesser.time > upper_edge {
 		return true

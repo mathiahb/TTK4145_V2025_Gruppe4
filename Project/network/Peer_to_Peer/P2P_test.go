@@ -1,10 +1,10 @@
 package peer_to_peer
 
 import (
-	Constants "elevator_project/constants"
 	"strconv"
 	"testing"
 	"time"
+	"elevator_project/common"
 )
 
 func Test_Dependency_Horizon(t *testing.T) {
@@ -18,7 +18,7 @@ func Test_Dependency_Horizon(t *testing.T) {
 	first_dependency := Dependency{owner, clock}
 
 	// 1 more than dependency horizon, first dependency on list should be 1, but should be gone after crossing horizon.
-	for i := 0; i < Constants.P2P_DEP_TIME_HORIZON+1; i++ {
+	for i := 0; i < common.P2P_DEP_TIME_HORIZON+1; i++ {
 		dependency := Dependency{owner, clock}
 
 		handler.Add_Dependency(dependency)
@@ -43,8 +43,8 @@ func Test_Dependency_Horizon(t *testing.T) {
 }
 
 func Test_Lamport_Clock_Wraparound(t *testing.T) {
-	clock_high := Lamport_Clock{Constants.LAMPORT_CLOCK_WRAPAROUND_UPPER_EDGE + 1}
-	clock_low := Lamport_Clock{Constants.LAMPORT_CLOCK_WRAPAROUND_LOWER_EDGE - 1}
+	clock_high := Lamport_Clock{common.LAMPORT_CLOCK_WRAPAROUND_UPPER_EDGE + 1}
+	clock_low := Lamport_Clock{common.LAMPORT_CLOCK_WRAPAROUND_LOWER_EDGE - 1}
 
 	if !clock_high.Is_Less_Than(clock_low) {
 		t.Fatal("Wraparound clock is not returning true on wraparound!")
@@ -55,11 +55,11 @@ func Test_Dependency_Wraparound(t *testing.T) {
 	handler := New_Dependency_Handler()
 	clock := New_Lamport_Clock()
 
-	clock.time = Constants.LAMPORT_CLOCK_WRAPAROUND_UPPER_EDGE + 1
+	clock.time = common.LAMPORT_CLOCK_WRAPAROUND_UPPER_EDGE + 1
 
-	low_time := Constants.LAMPORT_CLOCK_WRAPAROUND_LOWER_EDGE - Constants.P2P_DEP_TIME_HORIZON // Avoid cyclical dependency
+	low_time := common.LAMPORT_CLOCK_WRAPAROUND_LOWER_EDGE - common.P2P_DEP_TIME_HORIZON // Avoid cyclical dependency
 
-	for i := 0; i < Constants.P2P_DEP_TIME_HORIZON+1; i++ {
+	for i := 0; i < common.P2P_DEP_TIME_HORIZON+1; i++ {
 		dependency := Dependency{strconv.Itoa(clock.time), clock}
 
 		handler.Add_Dependency(dependency)
@@ -73,7 +73,7 @@ func Test_Dependency_Wraparound(t *testing.T) {
 
 	clock.time = low_time
 
-	for i := 0; i < Constants.P2P_DEP_TIME_HORIZON+1; i++ {
+	for i := 0; i < common.P2P_DEP_TIME_HORIZON+1; i++ {
 		dependency := Dependency{strconv.Itoa(clock.time), clock}
 
 		handler.Add_Dependency(dependency)
@@ -100,10 +100,10 @@ func Test_P2P_Message_String(t *testing.T) {
 	body_field := "Hello from body!"
 
 	test_tcp_message :=
-		sender_field + Constants.P2P_FIELD_DELIMINATOR +
-			string(type_field) + Constants.P2P_FIELD_DELIMINATOR +
-			time_field.String() + Constants.P2P_FIELD_DELIMINATOR +
-			dependency_field.To_String() + Constants.P2P_FIELD_DELIMINATOR +
+		sender_field + common.P2P_FIELD_DELIMINATOR +
+			string(type_field) + common.P2P_FIELD_DELIMINATOR +
+			time_field.String() + common.P2P_FIELD_DELIMINATOR +
+			dependency_field.To_String() + common.P2P_FIELD_DELIMINATOR +
 			body_field
 
 	p2p_message := P2P_Message_From_String(test_tcp_message)
@@ -142,7 +142,7 @@ func Test_Message_Horizon(t *testing.T) {
 	clock := New_Lamport_Clock()
 
 	// 1 more than horizon
-	for i := 0; i < Constants.P2P_MSG_TIME_HORIZON+1; i++ {
+	for i := 0; i < common.P2P_MSG_TIME_HORIZON+1; i++ {
 		clock.Event()
 
 		p2p_message := New_P2P_Message("SENDER", MESSAGE, clock, "BODY")

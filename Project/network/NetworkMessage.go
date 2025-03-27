@@ -1,11 +1,11 @@
 package network
 
 import (
-	Constants "elevator_project/constants"
 	peer_to_peer "elevator_project/network/Peer_to_Peer"
 	"fmt"
 	"strconv"
 	"strings"
+	"elevator_project/common"
 )
 
 // Name:ID
@@ -44,7 +44,7 @@ func translate_Message(p2p_message peer_to_peer.P2P_Message) Message {
 		return result
 	}
 
-	result.message_type = message[0:Constants.SIZE_TYPE_FIELD]
+	result.message_type = message[0:common.SIZE_TYPE_FIELD]
 	id := split[1][0 : len(split[1])-2]     // Remove last 2 letters since they are a space and r.
 	sender := split[2][0 : len(split[2])-2] // Remove last 2 letters since they are a space and s.
 	result.id = TxID(id)

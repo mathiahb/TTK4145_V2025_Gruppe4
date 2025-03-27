@@ -1,10 +1,10 @@
 package shared_states
 
 import (
-	"elevator_project/constants"
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"elevator_project/common"
 )
 
 type Command2PC struct {
@@ -13,9 +13,9 @@ type Command2PC struct {
 	Data    string
 }
 
-func makeHRAInputVariable(sharedState constants.HRAType, aliveNodes []string) constants.HRAType {
-	result := constants.HRAType{
-		States:       make(map[string]constants.Elevator),
+func makeHRAInputVariable(sharedState common.HRAType, aliveNodes []string) common.HRAType {
+	result := common.HRAType{
+		States:       make(map[string]common.Elevator),
 		HallRequests: sharedState.HallRequests,
 	}
 
@@ -30,37 +30,36 @@ func makeHRAInputVariable(sharedState constants.HRAType, aliveNodes []string) co
 	return result
 }
 
-
-func updateSharedStateByCommand(command Command2PC, sharedState constants.HRAType) constants.HRAType {
+func updateSharedStateByCommand(command Command2PC, sharedState common.HRAType) common.HRAType {
 
 	switch command.Command {
 
-	case constants.ADD:
-		newHallRequest := translateFromNetwork[constants.HallRequestType](command.Data)
+	case common.ADD:
+		newHallRequest := translateFromNetwork[common.HallRequestType](command.Data)
 
 		for i, value := range newHallRequest {
 			sharedState.HallRequests[i][0] = sharedState.HallRequests[i][0] || value[0]
 			sharedState.HallRequests[i][1] = sharedState.HallRequests[i][1] || value[1]
 		}
 
-	case constants.REMOVE:
-		removeHallRequest := translateFromNetwork[constants.HallRequestType](command.Data)
+	case common.REMOVE:
+		removeHallRequest := translateFromNetwork[common.HallRequestType](command.Data)
 
 		for i, value := range removeHallRequest {
 			sharedState.HallRequests[i][0] = sharedState.HallRequests[i][0] && (!value[0])
 			sharedState.HallRequests[i][1] = sharedState.HallRequests[i][1] && (!value[1])
 		}
 
-	case constants.UPDATE_STATE:
+	case common.UPDATE_STATE:
 
-		newState := translateFromNetwork[constants.Elevator](command.Data)
+		newState := translateFromNetwork[common.Elevator](command.Data)
 		sharedState.States[command.Name] = newState
 	}
 	return sharedState
 
 }
 
-func reactToSharedStateUpdate(sharedState constants.HRAType, aliveNodes []string, localID string, toElevator ToElevator) {
+func reactToSharedStateUpdate(sharedState common.HRAType, aliveNodes []string, localID string, toElevator ToElevator) {
 
 	HRAInputVariable := makeHRAInputVariable(sharedState, aliveNodes)
 	HRAResults := getHallRequestAssignments(HRAInputVariable)
@@ -75,8 +74,7 @@ func reactToSharedStateUpdate(sharedState constants.HRAType, aliveNodes []string
 	}
 }
 
-
-func getHallRequestAssignments(HRAInputVariable constants.HRAType) map[string][][2]bool {
+func getHallRequestAssignments(HRAInputVariable common.HRAType) map[string][][2]bool {
 
 	// Convert to JSON
 	jsonBytes, err := json.Marshal(HRAInputVariable)

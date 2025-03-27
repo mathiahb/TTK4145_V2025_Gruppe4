@@ -1,10 +1,10 @@
 package TCP
 
 import (
-	Constants "elevator_project/constants"
 	"fmt"
 	"io"
 	"time"
+	"elevator_project/common"
 )
 
 // Protected functions
@@ -12,7 +12,7 @@ import (
 // Reads a TCP message from the TCP Connection and puts all detected messages in the TCP message onto the Read Channel.
 // Handles splitting messages using the TCP Split Handler.
 func (TCP_Connection *TCP_Connection) read() {
-	deadline := time.Now().Add(Constants.TCP_READ_DEADLNE)
+	deadline := time.Now().Add(common.TCP_READ_DEADLNE)
 	TCP_Connection.connection.SetReadDeadline(deadline)
 
 	data := make([]byte, 4096)
@@ -37,7 +37,7 @@ func (TCP_Connection *TCP_Connection) read() {
 
 // Writes a string onto the TCP Connection, function handles necessary
 func (TCP_Connection *TCP_Connection) write(message string) {
-	deadline := time.Now().Add(Constants.TCP_READ_DEADLNE)
+	deadline := time.Now().Add(common.TCP_READ_DEADLNE)
 	TCP_Connection.connection.SetWriteDeadline(deadline)
 
 	tcp_message := TCP_Connection.split_handler.Make_Null_Terminated_TCP_Message(message)
@@ -58,7 +58,7 @@ func (connection *TCP_Connection) handle_TCP_Connection(connection_manager *TCP_
 	defer connection.connection.Close()
 	defer connection_manager.Remove_Connection(*connection)
 
-	when_to_read_ticker := time.NewTicker(Constants.TCP_WAIT_BEFORE_READING_AGAIN)
+	when_to_read_ticker := time.NewTicker(common.TCP_WAIT_BEFORE_READING_AGAIN)
 
 	for {
 		select {
