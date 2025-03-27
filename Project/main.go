@@ -36,7 +36,7 @@ func main() {
 		fromSharedStateToElevator,
 		toSharedStateFromElevator,
 		fromSharedStateToNetwork,
-		toSharedStateFromNetwork, 
+		toSharedStateFromNetwork,
 	)
 
 	initialElevator := <-initResponseChannel

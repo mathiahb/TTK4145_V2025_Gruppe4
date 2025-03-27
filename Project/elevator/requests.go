@@ -9,18 +9,19 @@ func HallRequestsUninitialized() constants.HallRequestType {
 	return hallRequests
 }
 
-// requestsShouldStop sjekker om heisen skal stoppe på nåværende etasje
+// requestsShouldStop checks if the elevator should stop at the current floor
+// by checking if there are any requests for the current floor.
 func requestsShouldStop(
-	localElevator constants.Elevator, 
+	localElevator constants.Elevator,
 	hallRequests constants.HallRequestType,
 ) bool {
 
-	// 1. Stopp alltid hvis en cab-request er på denne etasjen
+	// 1. Always stop if there is a cab request at this floor
 	if localElevator.CabRequests[localElevator.Floor] {
 		return true
 	}
 
-	// 2. Stopp hvis hall-forespørsel er tildelt denne heisen i denne etasjen
+	// 2. Stop if a hall request is assigned to this elevator at this floor
 	if localElevator.Dirn == constants.D_Up && hallRequests[localElevator.Floor][constants.B_HallUp] {
 		return true
 	}
@@ -28,7 +29,7 @@ func requestsShouldStop(
 		return true
 	}
 
-	// 3. Hvis det ikke er flere hall requests i denne retningen, stopp
+	// 3. If there are no more hall requests in this direction, stop
 	if localElevator.Dirn == constants.D_Up {
 		return !requests_above(localElevator, hallRequests)
 	}
@@ -40,12 +41,11 @@ func requestsShouldStop(
 	return false
 }
 
-// requestsClearAtCurrentFloor rydder bestillinger på gjeldende etasje
-// localElevator, hallRequests, ClearHallRequest, updateStateChannel
+// requestsClearAtCurrentFloor clears hall- and cab requests at the current floor
 func requestsClearAtCurrentFloor(
-	localElevator constants.Elevator, 
-	hallRequests constants.HallRequestType, 
-	ClearHallRequest chan constants.HallRequestType, 
+	localElevator constants.Elevator,
+	hallRequests constants.HallRequestType,
+	ClearHallRequest chan constants.HallRequestType,
 	UpdateState chan constants.Elevator,
 ) (constants.Elevator, constants.HallRequestType) {
 
@@ -105,8 +105,9 @@ func requestsClearAtCurrentFloor(
 	return localElevator, hallRequests
 }
 
+// requests_above checks if there are any requests above the current floor
 func requests_above(
-	localElevator constants.Elevator, 
+	localElevator constants.Elevator,
 	hallRequests constants.HallRequestType,
 ) bool {
 	for f := localElevator.Floor + 1; f < constants.N_FLOORS; f++ {
@@ -117,8 +118,9 @@ func requests_above(
 	return false
 }
 
+// requests_below checks if there are any requests below the current floor
 func requests_below(
-	localElevator constants.Elevator, 
+	localElevator constants.Elevator,
 	hallRequests constants.HallRequestType,
 ) bool {
 	for f := 0; f < localElevator.Floor; f++ {
@@ -129,8 +131,9 @@ func requests_below(
 	return false
 }
 
+// hasRequests checks if the elevator has any requests
 func hasRequests(
-	localElevator constants.Elevator, 
+	localElevator constants.Elevator,
 	hallRequests [][2]bool,
 ) bool {
 
@@ -151,25 +154,26 @@ func hasRequests(
 	return false
 }
 
-// requestsChooseDirection velger retning basert på forespørsler
+// requestsChooseDirection chooses the direction the elevator should move
+// based on the current floor and the requests in the system
 func requestsChooseDirection(
-	localElevator constants.Elevator, 
+	localElevator constants.Elevator,
 	hallRequests constants.HallRequestType,
 ) constants.Dirn {
 
-	// Hvis det er noen forespørsler over heisen
+	// Checks if there are any requests above the elevator -> move up
 	for f := localElevator.Floor + 1; f < constants.N_FLOORS; f++ {
 		if hallRequests[f][constants.B_HallUp] || hallRequests[f][constants.B_HallDown] || localElevator.CabRequests[f] {
 			return constants.D_Up
 		}
 	}
 
-	// Hvis det er noen forespørsler under heisen
+	// Checks if there are any requests below the elevator -> move down
 	for f := 0; f < localElevator.Floor; f++ {
 		if hallRequests[f][constants.B_HallUp] || hallRequests[f][constants.B_HallDown] || localElevator.CabRequests[f] {
 			return constants.D_Down
 		}
 	}
-	// Ingen forespørsler under eller over, stopp
+	// If there are no requests, the elevator should stop
 	return constants.D_Stop
 }

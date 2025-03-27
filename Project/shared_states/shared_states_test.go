@@ -43,6 +43,7 @@ func transferToNetworkChannels(toNetwork ToNetwork, fromNetwork FromNetwork) net
 	}
 }
 
+// fakeElevator simulates an elevator's interaction with shared states.
 type fakeElevator struct {
 	toSharedState   FromElevator
 	fromSharedState ToElevator
@@ -55,6 +56,7 @@ type fakeElevator struct {
 	information_global_cr chan []bool
 }
 
+// run handles the fake elevator's state updates and communication with shared states.
 func (elevator fakeElevator) run() {
 	global_cr := make([]bool, 4)
 	local_hr := make(constants.HallRequestType, 4)
@@ -76,6 +78,7 @@ func (elevator fakeElevator) run() {
 	}
 }
 
+// TestSharedStateUpdate tests the shared state update mechanism by simulating elevator requests and verifying results.
 func TestSharedStateUpdate(t *testing.T) {
 	name1 := constants.GetElevatorID()
 

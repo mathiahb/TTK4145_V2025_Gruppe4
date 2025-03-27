@@ -9,12 +9,14 @@ import (
 	"time"
 )
 
-// FSM (Finite State Machine) styrer heisens tilstand og oppførsel basert på knappetrykk, etasjeanløp og dørlukkingshendelser.
+// FSM (Finite State Machine) controls the elevator's state and behavior
+// based on button presses, floor arrivals, and door closing events.
 
+// InitFSM initializes the FSM for the elevator.
 func InitFSM(
-	portElevio int, 
-	localElevator constants.Elevator, 
-	toSharedState shared_states.FromElevator, 
+	portElevio int,
+	localElevator constants.Elevator,
+	toSharedState shared_states.FromElevator,
 	elevatorChannels ElevatorChannels,
 ) constants.Elevator {
 
@@ -33,8 +35,10 @@ func InitFSM(
 	return localElevator
 }
 
+// FSMOnInitBetweenFloors is called when the elevator is between floors.
+// It sets the motor direction to down and the elevator behavior to moving.
 func FSMOnInitBetweenFloors(
-	localElevator constants.Elevator, 
+	localElevator constants.Elevator,
 	UpdateState chan constants.Elevator,
 ) constants.Elevator {
 
@@ -56,6 +60,7 @@ func turnOffAllLights() {
 	elevio.SetDoorOpenLamp(false)
 }
 
+// setHallLights sets the hall lights based on the hall requests.
 func setHallLights(hallRequests constants.HallRequestType) {
 
 	for floor := 0; floor < constants.N_FLOORS; floor++ {
@@ -70,6 +75,7 @@ func setCabLights(cabRequests []bool) {
 	}
 }
 
+// FSMOpenDoor determines the elevator's behavior when the door is open.
 func FSMOpenDoor(
 	localElevator constants.Elevator,
 	hallRequests constants.HallRequestType,
@@ -86,7 +92,8 @@ func FSMOpenDoor(
 	return localElevator
 }
 
-func FSMResetIsStuckTimer(isStuckTimer *time.Timer){
+// Resets the isStuckTimer
+func FSMResetIsStuckTimer(isStuckTimer *time.Timer) {
 
 	if !isStuckTimer.Stop() {
 		select {
@@ -98,7 +105,7 @@ func FSMResetIsStuckTimer(isStuckTimer *time.Timer){
 
 }
 
-
+// FSMStartMoving is used to start the elevator's motor when it is idle and has requests.
 func FSMStartMoving(
 	localElevator constants.Elevator,
 	hallRequests constants.HallRequestType,
@@ -144,11 +151,12 @@ func FSMStartMoving(
 	return localElevator
 }
 
+// Communicates new state to the shared state when a button is pressed
 func FSMButtonPress(
-	btnFloor int, 
-	btnType elevio.ButtonType, 
-	localElevator constants.Elevator, 
-	updateStateChannel chan constants.Elevator, 
+	btnFloor int,
+	btnType elevio.ButtonType,
+	localElevator constants.Elevator,
+	updateStateChannel chan constants.Elevator,
 	NewHallRequest chan constants.HallRequestType,
 ) constants.Elevator {
 	fmt.Printf("FSMOnRequestButtonPress(%d, %d)\n", btnFloor, btnType)
@@ -180,15 +188,14 @@ func FSMOnFloorArrival(
 	ClearHallRequest chan constants.HallRequestType,
 	updateStateChannel chan constants.Elevator,
 	doorTimer *time.Timer,
-	isStuckTimer *time.Timer)(
-constants.Elevator, constants.HallRequestType) {
+	isStuckTimer *time.Timer) (
+	constants.Elevator, constants.HallRequestType) {
 
 	fmt.Printf("\nFSMOnFloorArrival(%d)\n", newFloor)
 
-
 	FSMResetIsStuckTimer(isStuckTimer)
 
-	if localElevator.Behaviour == constants.EB_Stuck_Moving { // dersom vi ankommer en etasje etter å ha brukt motoren, vet vi at vi ikke er stuck 
+	if localElevator.Behaviour == constants.EB_Stuck_Moving { // dersom vi ankommer en etasje etter å ha brukt motoren, vet vi at vi ikke er stuck
 		localElevator.Behaviour = constants.EB_Moving
 	}
 
@@ -198,7 +205,7 @@ constants.Elevator, constants.HallRequestType) {
 
 	// 2. Sjekk om heisen skal stoppe
 	if localElevator.Behaviour == constants.EB_Moving {
-		if requestsShouldStop(localElevator, hallRequests) { 
+		if requestsShouldStop(localElevator, hallRequests) {
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevio.SetDoorOpenLamp(true)
 			localElevator.Behaviour = constants.EB_DoorOpen

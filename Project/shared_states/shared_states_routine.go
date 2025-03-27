@@ -5,9 +5,13 @@ import (
 	"fmt"
 )
 
-// ===================== SHARED STATE ===================== //
-// Bridge between network and the elevator. The shared states communicates also with the HRA.
-
+// SharedStatesRoutine synchronizes the elevator system's shared state between local and network components.
+// It handles hall requests, state updates, network discovery, and conflict resolution during synchronization.
+// Parameters:
+// - initResult: Channel for sending the initial local elevator state.
+// - toElevator/fromElevator: Channels for communication with the local elevator.
+// - toNetwork/fromNetwork: Channels for communication with the network.
+// Runs as a goroutine, continuously processing events to maintain consistency.
 func SharedStatesRoutine(
 	initResult chan constants.Elevator,
 	toElevator ToElevator,
@@ -28,7 +32,7 @@ func SharedStatesRoutine(
 	for {
 		select {
 		// 2PC
-		case newHallRequest := <-fromElevator.NewHallRequest: // får inn en enkelt hallRequest {false, false} {false, false} {true, false} {false, false}
+		case newHallRequest := <-fromElevator.NewHallRequest: // receives a single hall request {false, false} {false, false} {true, false} {false, false}
 			fmt.Printf("[%s] Got new HR Request: %+v\n\n", localID, newHallRequest)
 			command := Command2PC{
 				Command: constants.ADD,
@@ -37,7 +41,7 @@ func SharedStatesRoutine(
 			}
 			go func() { toNetwork.Inform2PC <- translateToNetwork(command) }()
 
-		case clearHallRequest := <-fromElevator.ClearHallRequest: // får inn en enkelt hallRequest {false, false} {false, false} {true, false} {false, false}
+		case clearHallRequest := <-fromElevator.ClearHallRequest: // receives a single hall request {false, false} {false, false} {true, false} {false, false}
 			fmt.Printf("[%s] Got clear HR Request: %+v\n\n", localID, clearHallRequest)
 			command := Command2PC{
 				Command: constants.REMOVE,
@@ -65,7 +69,7 @@ func SharedStatesRoutine(
 			fmt.Printf("SharedStateThread: New alive nodes: %v\n", aliveNodes)
 			go reactToSharedStateUpdate(sharedState, aliveNodes, localID, toElevator)
 
-		// synkronisering
+		// sycnhronization
 		case <-fromNetwork.ProtocolRequestInformation:
 			fmt.Printf("SharedStateThread: Responding to information request\n")
 			go func() { toNetwork.RespondToInformationRequest <- translateToNetwork(sharedState) }()
