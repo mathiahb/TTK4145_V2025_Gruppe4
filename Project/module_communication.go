@@ -1,9 +1,9 @@
 package main
 
 import (
-	"elevator_project/constants"
 	"elevator_project/network"
 	"elevator_project/shared_states"
+	"elevator_project/common"
 )
 
 func newFromSharedStateToNetwork() shared_states.ToNetwork {
@@ -29,17 +29,17 @@ func newToSharedStateFromNetwork() shared_states.FromNetwork {
 
 func newFromSharedStateToElevator() shared_states.ToElevator {
 	return shared_states.ToElevator{
-		UpdateHallRequestLights: make(chan constants.HallRequestType),
+		UpdateHallRequestLights: make(chan common.HallRequestType),
 		ApprovedCabRequests:     make(chan []bool),
-		ApprovedHRA:             make(chan constants.HallRequestType),
+		ApprovedHRA:             make(chan common.HallRequestType),
 	}
 }
 
 func newToSharedStateFromElevator() shared_states.FromElevator {
 	return shared_states.FromElevator{
-		NewHallRequest:   make(chan constants.HallRequestType),
-		ClearHallRequest: make(chan constants.HallRequestType),
-		UpdateState:      make(chan constants.Elevator),
+		NewHallRequest:   make(chan common.HallRequestType),
+		ClearHallRequest: make(chan common.HallRequestType),
+		UpdateState:      make(chan common.Elevator),
 	}
 }
 

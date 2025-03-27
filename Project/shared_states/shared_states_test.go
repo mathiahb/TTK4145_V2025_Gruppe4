@@ -1,11 +1,11 @@
 package shared_states
 
 import (
-	"elevator_project/constants"
 	network "elevator_project/network"
 	"fmt"
 	"testing"
 	"time"
+	"elevator_project/common"
 )
 
 func transferToNetworkChannels(toNetwork ToNetwork, fromNetwork FromNetwork) network.NetworkCommunicationChannels {
@@ -51,16 +51,16 @@ type fakeElevator struct {
 	get_information chan bool
 	close_channel   chan bool
 
-	information_local_hr  chan constants.HallRequestType
-	information_global_hr chan constants.HallRequestType
+	information_local_hr  chan common.HallRequestType
+	information_global_hr chan common.HallRequestType
 	information_global_cr chan []bool
 }
 
 // run handles the fake elevator's state updates and communication with shared states.
 func (elevator fakeElevator) run() {
 	global_cr := make([]bool, 4)
-	local_hr := make(constants.HallRequestType, 4)
-	global_hr := make(constants.HallRequestType, 4)
+	local_hr := make(common.HallRequestType, 4)
+	global_hr := make(common.HallRequestType, 4)
 
 	for {
 		select {
@@ -80,7 +80,7 @@ func (elevator fakeElevator) run() {
 
 // TestSharedStateUpdate tests the shared state update mechanism by simulating elevator requests and verifying results.
 func TestSharedStateUpdate(t *testing.T) {
-	name1 := constants.GetElevatorID()
+	name1 := common.GetElevatorID()
 
 	toNetwork := ToNetwork{
 		RespondWithInterpretation:   make(chan string, 1),
@@ -100,15 +100,15 @@ func TestSharedStateUpdate(t *testing.T) {
 	}
 
 	toElevator := ToElevator{
-		UpdateHallRequestLights: make(chan constants.HallRequestType, 1),
+		UpdateHallRequestLights: make(chan common.HallRequestType, 1),
 		ApprovedCabRequests:     make(chan []bool, 1),
-		ApprovedHRA:             make(chan constants.HallRequestType, 1),
+		ApprovedHRA:             make(chan common.HallRequestType, 1),
 	}
 
 	fromElevator := FromElevator{
-		NewHallRequest:   make(chan constants.HallRequestType, 1),
-		ClearHallRequest: make(chan constants.HallRequestType, 1),
-		UpdateState:      make(chan constants.Elevator, 1),
+		NewHallRequest:   make(chan common.HallRequestType, 1),
+		ClearHallRequest: make(chan common.HallRequestType, 1),
+		UpdateState:      make(chan common.Elevator, 1),
 	}
 
 	fakeElevator := fakeElevator{
@@ -117,8 +117,8 @@ func TestSharedStateUpdate(t *testing.T) {
 
 		get_information:       make(chan bool),
 		close_channel:         make(chan bool),
-		information_local_hr:  make(chan constants.HallRequestType, 1),
-		information_global_hr: make(chan constants.HallRequestType, 1),
+		information_local_hr:  make(chan common.HallRequestType, 1),
+		information_global_hr: make(chan common.HallRequestType, 1),
 		information_global_cr: make(chan []bool, 1),
 	}
 
@@ -127,27 +127,27 @@ func TestSharedStateUpdate(t *testing.T) {
 	Node1.Connect()
 	defer Node1.Close()
 
-	go SharedStatesRoutine(make(chan constants.Elevator), toElevator, fromElevator, toNetwork, fromNetwork)
+	go SharedStatesRoutine(make(chan common.Elevator), toElevator, fromElevator, toNetwork, fromNetwork)
 	go fakeElevator.run()
 	defer close(fakeElevator.close_channel)
 
-	elevator := constants.Elevator{
-		Behaviour:   constants.EB_Idle,
-		Dirn:        constants.D_Stop,
+	elevator := common.Elevator{
+		Behaviour:   common.EB_Idle,
+		Dirn:        common.D_Stop,
 		Floor:       2,
 		CabRequests: make([]bool, 4),
 	}
 
 	fakeElevator.toSharedState.UpdateState <- elevator
 
-	floor1up := constants.HallRequestType{{true, false}, {false, false}, {false, false}, {false, false}}
-	floor1dn := constants.HallRequestType{{false, true}, {false, false}, {false, false}, {false, false}}
-	floor2up := constants.HallRequestType{{false, false}, {true, false}, {false, false}, {false, false}}
-	//floor2dn := constants.HallRequestType{{false, false}, {false, true}, {false, false}, {false, false}}
-	//floor3up := constants.HallRequestType{{false, false}, {false, false}, {true, false}, {false, false}}
-	//floor3dn := constants.HallRequestType{{false, false}, {false, false}, {false, true}, {false, false}}
-	//floor4up := constants.HallRequestType{{false, false}, {false, false}, {false, false}, {true, false}}
-	//floor4dn := constants.HallRequestType{{false, false}, {false, false}, {false, false}, {false, true}}
+	floor1up := common.HallRequestType{{true, false}, {false, false}, {false, false}, {false, false}}
+	floor1dn := common.HallRequestType{{false, true}, {false, false}, {false, false}, {false, false}}
+	floor2up := common.HallRequestType{{false, false}, {true, false}, {false, false}, {false, false}}
+	//floor2dn := common.HallRequestType{{false, false}, {false, true}, {false, false}, {false, false}}
+	//floor3up := common.HallRequestType{{false, false}, {false, false}, {true, false}, {false, false}}
+	//floor3dn := common.HallRequestType{{false, false}, {false, false}, {false, true}, {false, false}}
+	//floor4up := common.HallRequestType{{false, false}, {false, false}, {false, false}, {true, false}}
+	//floor4dn := common.HallRequestType{{false, false}, {false, false}, {false, false}, {false, true}}
 
 	fakeElevator.toSharedState.NewHallRequest <- floor1up
 	fakeElevator.toSharedState.NewHallRequest <- floor1dn
@@ -158,7 +158,7 @@ func TestSharedStateUpdate(t *testing.T) {
 
 	fakeElevator.get_information <- true
 
-	expectedhrresult := constants.HallRequestType{{true, false}, {true, false}, {false, false}, {false, false}}
+	expectedhrresult := common.HallRequestType{{true, false}, {true, false}, {false, false}, {false, false}}
 	expectedcrresult := make([]bool, 4)
 
 	expectedhrresultAsString := fmt.Sprintf("%+v", expectedhrresult)

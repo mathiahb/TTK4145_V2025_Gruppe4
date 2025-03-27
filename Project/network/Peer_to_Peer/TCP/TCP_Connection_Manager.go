@@ -1,9 +1,9 @@
 package TCP
 
 import (
-	Constants "elevator_project/constants"
 	"fmt"
 	"sync"
+	"elevator_project/common"
 )
 
 // TCP Connection Manager
@@ -20,7 +20,7 @@ type TCP_Connection_Manager struct {
 func New_TCP_Connection_Manager() *TCP_Connection_Manager {
 	return &TCP_Connection_Manager{
 		Connections:         make(map[string]TCP_Connection),
-		Global_Read_Channel: make(chan string, Constants.TCP_BUFFER_SIZE),
+		Global_Read_Channel: make(chan string, common.TCP_BUFFER_SIZE),
 		stop_server_channel: make(chan bool),
 	}
 }

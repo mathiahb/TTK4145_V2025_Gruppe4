@@ -1,19 +1,18 @@
 package shared_states
-
-import (
-	"elevator_project/constants"
+import(
+	"elevator_project/common"
 )
 
 type ToElevator struct {
-	UpdateHallRequestLights chan constants.HallRequestType
+	UpdateHallRequestLights chan common.HallRequestType
 	ApprovedCabRequests     chan []bool
-	ApprovedHRA             chan constants.HallRequestType
+	ApprovedHRA             chan common.HallRequestType
 }
 
 type FromElevator struct {
-	NewHallRequest   chan constants.HallRequestType
-	ClearHallRequest chan constants.HallRequestType
-	UpdateState      chan constants.Elevator
+	NewHallRequest   chan common.HallRequestType
+	ClearHallRequest chan common.HallRequestType
+	UpdateState      chan common.Elevator
 }
 
 type ToNetwork struct {

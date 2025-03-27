@@ -1,12 +1,12 @@
 package main
 
 import (
-	"elevator_project/constants"
 	"elevator_project/elevator"
 	"elevator_project/elevio"
 	"elevator_project/network"
 	"elevator_project/shared_states"
 	"flag"
+	"elevator_project/common"
 )
 
 func main() {
@@ -17,18 +17,18 @@ func main() {
 	flag.IntVar(&nameExtension, "name", 0, "Appends the name to the computer name, to be used when running multiple on the same computer. Default: 0")
 
 	flag.Parse()
-	constants.NameExtension = nameExtension
+	common.NameExtension = nameExtension
 
 	fromSharedStateToNetwork := newFromSharedStateToNetwork()
 	fromSharedStateToElevator := newFromSharedStateToElevator()
 	toSharedStateFromNetwork := newToSharedStateFromNetwork()
 	toSharedStateFromElevator := newToSharedStateFromElevator()
 
-	initResponseChannel := make(chan constants.Elevator)
+	initResponseChannel := make(chan common.Elevator)
 
 	network_channels := transferSharedStateChannelsToNetworkChannels(fromSharedStateToNetwork, toSharedStateFromNetwork)
 
-	Node := network.New_Node(constants.GetElevatorID(), network_channels)
+	Node := network.New_Node(common.GetElevatorID(), network_channels)
 	defer Node.Close()
 
 	go shared_states.SharedStatesRoutine(

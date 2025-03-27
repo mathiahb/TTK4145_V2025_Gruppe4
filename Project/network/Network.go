@@ -1,13 +1,14 @@
 package network
 
 import (
-	Constants "elevator_project/constants"
 	"fmt"
 	"sync"
+	"elevator_project/common"
 
 	peer_to_peer "elevator_project/network/Peer_to_Peer"
 
 	peers "Network-go/network/peers"
+	
 )
 
 type CommunicationToNetwork struct {
@@ -165,11 +166,11 @@ func (node *Node) reader() {
 
 			switch message.message_type {
 			// SYNCHRONIZATION
-			case Constants.SYNC_REQUEST:
+			case common.SYNC_REQUEST:
 				go node.participate_In_Synchronization(message)
 
 				// 2PC
-			case Constants.PREPARE: // Received a synchronization request
+			case common.PREPARE: // Received a synchronization request
 				go node.participate_2PC(message)
 
 			default:

@@ -1,9 +1,9 @@
 package peer_to_peer
 
 import (
-	Constants "elevator_project/constants"
 	"fmt"
 	"strings"
+	"elevator_project/common"
 )
 
 type Dependency struct {
@@ -21,11 +21,11 @@ func New_Dependency(owner string, clock Lamport_Clock) Dependency {
 // Format Dependency:
 // DEPENDENCYOWNER/LAMPORTCLOCK
 func (dependency Dependency) To_String() string {
-	return dependency.Dependency_Owner + Constants.P2P_DEP_DELIMINATOR + dependency.Dependency_Clock.String()
+	return dependency.Dependency_Owner + common.P2P_DEP_DELIMINATOR + dependency.Dependency_Clock.String()
 }
 
 func Dependency_From_String(str string) Dependency {
-	fields := strings.Split(str, Constants.P2P_DEP_DELIMINATOR)
+	fields := strings.Split(str, common.P2P_DEP_DELIMINATOR)
 
 	if len(fields) != 2 {
 		fmt.Printf("Error parsing dependency! %s\n", str)

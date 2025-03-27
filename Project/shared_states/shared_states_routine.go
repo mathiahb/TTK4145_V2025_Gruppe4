@@ -1,8 +1,8 @@
 package shared_states
 
 import (
-	"elevator_project/constants"
 	"fmt"
+	"elevator_project/common"
 )
 
 // SharedStatesRoutine synchronizes the elevator system's shared state between local and network components.
@@ -13,17 +13,17 @@ import (
 // - toNetwork/fromNetwork: Channels for communication with the network.
 // Runs as a goroutine, continuously processing events to maintain consistency.
 func SharedStatesRoutine(
-	initResult chan constants.Elevator,
+	initResult chan common.Elevator,
 	toElevator ToElevator,
 	fromElevator FromElevator,
 	toNetwork ToNetwork,
 	fromNetwork FromNetwork,
 ) {
-	var sharedState constants.HRAType = constants.HRAType{
-		States:       make(map[string]constants.Elevator),
-		HallRequests: make(constants.HallRequestType, constants.N_FLOORS),
+	var sharedState common.HRAType = common.HRAType{
+		States:       make(map[string]common.Elevator),
+		HallRequests: make(common.HallRequestType, common.N_FLOORS),
 	}
-	var localID string = constants.GetElevatorID()
+	var localID string = common.GetElevatorID()
 	var aliveNodes []string = make([]string, 0)
 	var initializing bool = true
 
@@ -35,7 +35,7 @@ func SharedStatesRoutine(
 		case newHallRequest := <-fromElevator.NewHallRequest: // receives a single hall request {false, false} {false, false} {true, false} {false, false}
 			fmt.Printf("[%s] Got new HR Request: %+v\n\n", localID, newHallRequest)
 			command := Command2PC{
-				Command: constants.ADD,
+				Command: common.ADD,
 				Name:    localID,
 				Data:    translateToNetwork(newHallRequest),
 			}
@@ -44,7 +44,7 @@ func SharedStatesRoutine(
 		case clearHallRequest := <-fromElevator.ClearHallRequest: // receives a single hall request {false, false} {false, false} {true, false} {false, false}
 			fmt.Printf("[%s] Got clear HR Request: %+v\n\n", localID, clearHallRequest)
 			command := Command2PC{
-				Command: constants.REMOVE,
+				Command: common.REMOVE,
 				Name:    localID,
 				Data:    translateToNetwork(clearHallRequest),
 			}
@@ -53,7 +53,7 @@ func SharedStatesRoutine(
 		case newState := <-fromElevator.UpdateState:
 			fmt.Printf("[%s] Got new State Request: %+v\n\n", localID, newState)
 			command := Command2PC{
-				Command: constants.UPDATE_STATE,
+				Command: common.UPDATE_STATE,
 				Name:    localID,
 				Data:    translateToNetwork(newState),
 			}
@@ -78,17 +78,17 @@ func SharedStatesRoutine(
 			go func() { toNetwork.RespondWithInterpretation <- ResolveSharedStateConflicts(states) }()
 
 		case newSharedState := <-fromNetwork.ResultFromSynchronization:
-			sharedState = translateFromNetwork[constants.HRAType](newSharedState)
+			sharedState = translateFromNetwork[common.HRAType](newSharedState)
 
 			if initializing {
 				initializing = false
 				result, ok := sharedState.States[localID]
 				if !ok {
-					result = constants.Elevator{
-						Behaviour:   constants.EB_Idle,
-						Dirn:        constants.D_Stop,
+					result = common.Elevator{
+						Behaviour:   common.EB_Idle,
+						Dirn:        common.D_Stop,
 						Floor:       -1,
-						CabRequests: make([]bool, constants.N_FLOORS),
+						CabRequests: make([]bool, common.N_FLOORS),
 					}
 				}
 				go func() { initResult <- result }()

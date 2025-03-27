@@ -1,10 +1,9 @@
 package peer_to_peer
 
 import (
-	Constants "elevator_project/constants"
 	"fmt"
 	"time"
-
+	"elevator_project/common"
 	"elevator_project/network/Peer_to_Peer/TCP"
 	"elevator_project/network/Peer_to_Peer/UDP"
 )
@@ -30,7 +29,7 @@ type P2P_Network struct {
 }
 
 func New_P2P_Network() *P2P_Network {
-	read_channel := make(chan P2P_Message, Constants.P2P_BUFFER_SIZE)
+	read_channel := make(chan P2P_Message, common.P2P_BUFFER_SIZE)
 
 	tcp_manager := TCP.New_TCP_Connection_Manager()
 	udp_channel := UDP.New_UDP_Channel()
@@ -57,7 +56,7 @@ func New_P2P_Network() *P2P_Network {
 	go network.peer_detection()
 	go network.reader()
 
-	time.Sleep(Constants.P2P_TIME_UNTIL_EXPECTED_ALL_CONNECTED)
+	time.Sleep(common.P2P_TIME_UNTIL_EXPECTED_ALL_CONNECTED)
 
 	return &network
 }
@@ -147,7 +146,7 @@ func (network *P2P_Network) publisher(message P2P_Message) {
 }
 
 func (network *P2P_Network) peer_detection() {
-	renew_presence_ticker := time.NewTicker(Constants.UDP_WAIT_BEFORE_TRANSMITTING_AGAIN)
+	renew_presence_ticker := time.NewTicker(common.UDP_WAIT_BEFORE_TRANSMITTING_AGAIN)
 
 	for {
 		select {

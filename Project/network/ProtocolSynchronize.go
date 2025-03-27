@@ -1,9 +1,9 @@
 package network
 
 import (
-	Constants "elevator_project/constants"
 	"fmt"
 	"time"
+	"elevator_project/common"
 )
 
 // PROTOCOL - Synchronize
@@ -58,10 +58,10 @@ func (node *Node) coordinate_Synchronization() bool {
 	node.mu_voting_resource.Lock()
 	defer node.mu_voting_resource.Unlock()
 
-	//begin_synchronization_message := node.create_Message(Constants.SYNC_AFTER_DISCOVERY, begin_discovery_message.id, "")
+	//begin_synchronization_message := node.create_Message(common.SYNC_AFTER_DISCOVERY, begin_discovery_message.id, "")
 	//node.Broadcast(begin_synchronization_message)
 
-	begin_synchronization_message := node.create_Vote_Message(Constants.SYNC_REQUEST, "")
+	begin_synchronization_message := node.create_Vote_Message(common.SYNC_REQUEST, "")
 
 	comm := node.create_communication_channel(begin_synchronization_message)
 	defer node.delete_communication_channel(begin_synchronization_message)
@@ -81,7 +81,7 @@ func (node *Node) coordinate_Synchronization() bool {
 				return false
 			}
 
-			if response.message_type == Constants.SYNC_RESPONSE && response.id == begin_synchronization_message.id {
+			if response.message_type == common.SYNC_RESPONSE && response.id == begin_synchronization_message.id {
 				combined_information[response.sender] = response.payload
 
 				if len(combined_information) == len(node.alive_nodes_manager.Get_Alive_Nodes()) {
@@ -93,7 +93,7 @@ func (node *Node) coordinate_Synchronization() bool {
 					return true
 				}
 			}
-			if response.message_type == Constants.ABORT_COMMIT && response.id == begin_synchronization_message.id {
+			if response.message_type == common.ABORT_COMMIT && response.id == begin_synchronization_message.id {
 				node.abort_Synchronization(begin_synchronization_message)
 
 				return false
@@ -108,19 +108,19 @@ func (node *Node) coordinate_Synchronization() bool {
 }
 
 func (node *Node) broadcast_Synchronization_Result(begin_synchronization_message Message, result string) {
-	message := node.create_Message(Constants.SYNC_RESULT, begin_synchronization_message.id, result)
+	message := node.create_Message(common.SYNC_RESULT, begin_synchronization_message.id, result)
 	node.Broadcast_Response(message, begin_synchronization_message)
 }
 
 func (node *Node) abort_Synchronization(begin_synchronization_message Message) {
-	message := node.create_Message(Constants.ABORT_SYNCHRONIZATION, begin_synchronization_message.id, "")
+	message := node.create_Message(common.ABORT_SYNCHRONIZATION, begin_synchronization_message.id, "")
 	node.Broadcast_Response(message, begin_synchronization_message)
 }
 
 func (node *Node) send_Own_Information_For_Synchronization(synchronization_message Message) {
 	information := node.get_Synchronization_Information()
 
-	response := node.create_Message(Constants.SYNC_RESPONSE, synchronization_message.id, information)
+	response := node.create_Message(common.SYNC_RESPONSE, synchronization_message.id, information)
 	node.Broadcast(response)
 }
 
@@ -148,12 +148,12 @@ func (node *Node) participate_In_Synchronization(begin_message Message) {
 	for {
 		select {
 		case result := <-comm:
-			if result.message_type == Constants.SYNC_RESULT && result.id == begin_message.id {
+			if result.message_type == common.SYNC_RESULT && result.id == begin_message.id {
 				node.send_Synchronization_Result(result.payload)
 				return
 			}
 
-			if result.message_type == Constants.ABORT_COMMIT && result.id == begin_message.id {
+			if result.message_type == common.ABORT_COMMIT && result.id == begin_message.id {
 				return
 			}
 		case <-timeout:

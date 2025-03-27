@@ -3,8 +3,7 @@ package TCP
 import (
 	"fmt"
 	"net"
-
-	Constants "elevator_project/constants"
+	"elevator_project/common"
 )
 
 // Package TCP
@@ -47,7 +46,7 @@ type TCP_Connection struct {
 
 // Creates a new TCP conneciton bound to a shared read channel.
 func New_TCP_Connection(name string, read_channel chan string, connection net.Conn) TCP_Connection {
-	write_channel := make(chan string, Constants.TCP_BUFFER_SIZE)
+	write_channel := make(chan string, common.TCP_BUFFER_SIZE)
 	close_channel := make(chan bool)
 
 	return TCP_Connection{
