@@ -31,10 +31,12 @@ func main() {
 	Node := network.New_Node(constants.GetElevatorID(), network_channels)
 	defer Node.Close()
 
-	go shared_states.SharedStateThread(
+	go shared_states.SharedStatesRoutine(
 		initResponseChannel,
-		fromSharedStateToElevator, toSharedStateFromNetwork,
-		fromSharedStateToNetwork, toSharedStateFromElevator,
+		fromSharedStateToElevator,
+		toSharedStateFromElevator,
+		fromSharedStateToNetwork,
+		toSharedStateFromNetwork, 
 	)
 
 	initialElevator := <-initResponseChannel

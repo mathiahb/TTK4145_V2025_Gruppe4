@@ -62,16 +62,16 @@ func ElevatorRoutine(
 
 				if !isObstructed {
 					fmt.Printf("Door is not obstructed, closing door\n")
-					doorTimer.Reset(3 * time.Second)
+					doorTimer.Reset(time.Second * constants.DoorOpenDurationS)
 				} else if localElevator.Behaviour == constants.EB_DoorOpen { // Check to not flood the 2PC channel.
-					localElevator.Behaviour = constants.EB_Stuck_DoorOpen
+					localElevator.Behaviour = constants.EB_Stuck_DoorOpen // definerer det å ha obstruction mens døren er åpen som at heisen er stuck, ettersom den da ikke kan ta ordre for en uviss fremtid
 					toSharedState.UpdateState <- localElevator
 				}
 			}
 
-			// -- Timeren går ut etter 3 sek --
-			// Skal alltid trigges når døren lukkes
-		case <-doorTimer.C:
+			
+			
+		case <-doorTimer.C: // Skal alltid trigges når døren lukkes, både etter dørtimer eller opendoorduration etter at obstuksjonen er ferdig
 			fmt.Printf("Door timer expired, obstruction: %v\n", isObstructed)
 			if !isObstructed {
 				fmt.Printf("Door is not obstructed, closing door\n")
@@ -83,7 +83,7 @@ func ElevatorRoutine(
 				localElevator = FSMCloseDoors(localElevator, hallRequests, toSharedState.UpdateState, doorTimer, isStuckTimer, toSharedState.ClearHallRequest, toSharedState.UpdateState)
 			}
 
-		case <-isStuckTimer.C:
+		case <-isStuckTimer.C: // dersom motoren ikke fungerer selv om heisen er koblet til f.eks.
 			if localElevator.Behaviour == constants.EB_Moving {
 				fmt.Printf("\n\n[%s] ELEVATOR IS STUCK\n\n", constants.GetElevatorID())
 				localElevator.Behaviour = constants.EB_Stuck_Moving

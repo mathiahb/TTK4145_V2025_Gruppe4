@@ -86,6 +86,19 @@ func FSMOpenDoor(
 	return localElevator
 }
 
+func FSMResetIsStuckTimer(isStuckTimer *time.Timer){
+
+	if !isStuckTimer.Stop() {
+		select {
+		case <-isStuckTimer.C:
+		default:
+		}
+	}
+	isStuckTimer.Reset(time.Second * constants.IsStuckDurationS)
+
+}
+
+
 func FSMStartMoving(
 	localElevator constants.Elevator,
 	hallRequests constants.HallRequestType,
@@ -100,13 +113,7 @@ func FSMStartMoving(
 	if localElevator.Behaviour == constants.EB_Idle && hasRequests(localElevator, hallRequests) {
 		localElevator.Dirn = requestsChooseDirection(localElevator, hallRequests)
 
-		if !isStuckTimer.Stop() {
-			select {
-			case <-isStuckTimer.C:
-			default:
-			}
-		}
-		isStuckTimer.Reset(5 * time.Second)
+		FSMResetIsStuckTimer(isStuckTimer) // resetter timeren hver gang man begynner å bevege seg
 
 		// Are there any requests at the current floor in the new direction localElevator.Dirn?
 		switch localElevator.Dirn {
@@ -178,15 +185,10 @@ constants.Elevator, constants.HallRequestType) {
 
 	fmt.Printf("\nFSMOnFloorArrival(%d)\n", newFloor)
 
-	if !isStuckTimer.Stop() {
-		select {
-		case <-isStuckTimer.C:
-		default:
-		}
-	}
-	isStuckTimer.Reset(time.Second * constants.IsStuckDurationS)
 
-	if localElevator.Behaviour == constants.EB_Stuck_Moving {
+	FSMResetIsStuckTimer(isStuckTimer)
+
+	if localElevator.Behaviour == constants.EB_Stuck_Moving { // dersom vi ankommer en etasje etter å ha brukt motoren, vet vi at vi ikke er stuck 
 		localElevator.Behaviour = constants.EB_Moving
 	}
 

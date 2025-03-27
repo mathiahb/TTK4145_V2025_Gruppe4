@@ -2,7 +2,6 @@ package elevator
 
 import (
 	"elevator_project/constants"
-	"elevator_project/shared_states"
 )
 
 func HallRequestsUninitialized() constants.HallRequestType {
@@ -106,7 +105,10 @@ func requestsClearAtCurrentFloor(
 	return localElevator, hallRequests
 }
 
-func requests_above(localElevator constants.Elevator, hallRequests constants.HallRequestType) bool {
+func requests_above(
+	localElevator constants.Elevator, 
+	hallRequests constants.HallRequestType,
+) bool {
 	for f := localElevator.Floor + 1; f < constants.N_FLOORS; f++ {
 		if hallRequests[f][constants.B_HallUp] || hallRequests[f][constants.B_HallDown] || localElevator.CabRequests[f] {
 			return true
@@ -115,7 +117,10 @@ func requests_above(localElevator constants.Elevator, hallRequests constants.Hal
 	return false
 }
 
-func requests_below(localElevator constants.Elevator, hallRequests constants.HallRequestType) bool {
+func requests_below(
+	localElevator constants.Elevator, 
+	hallRequests constants.HallRequestType,
+) bool {
 	for f := 0; f < localElevator.Floor; f++ {
 		if hallRequests[f][constants.B_HallUp] || hallRequests[f][constants.B_HallDown] || localElevator.CabRequests[f] {
 			return true
@@ -124,7 +129,10 @@ func requests_below(localElevator constants.Elevator, hallRequests constants.Hal
 	return false
 }
 
-func hasRequests(localElevator constants.Elevator, hallRequests [][2]bool) bool {
+func hasRequests(
+	localElevator constants.Elevator, 
+	hallRequests [][2]bool,
+) bool {
 
 	// Sjekk cab requests
 	for _, request := range localElevator.CabRequests {
@@ -144,7 +152,10 @@ func hasRequests(localElevator constants.Elevator, hallRequests [][2]bool) bool 
 }
 
 // requestsChooseDirection velger retning basert på forespørsler
-func requestsChooseDirection(localElevator constants.Elevator, hallRequests constants.HallRequestType) constants.Dirn {
+func requestsChooseDirection(
+	localElevator constants.Elevator, 
+	hallRequests constants.HallRequestType,
+) constants.Dirn {
 
 	// Hvis det er noen forespørsler over heisen
 	for f := localElevator.Floor + 1; f < constants.N_FLOORS; f++ {

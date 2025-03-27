@@ -25,7 +25,7 @@ func transferToNetworkChannels(toNetwork ToNetwork, fromNetwork FromNetwork) net
 		},
 		FromNetwork: network.CommunicationFromNetwork{
 			Discovery: struct{ Updated_Alive_Nodes chan []string }{
-				Updated_Alive_Nodes: fromNetwork.New_alive_nodes,
+				Updated_Alive_Nodes: fromNetwork.NewAliveNodes,
 			},
 			Synchronization: struct {
 				ProtocolRequestInformation     chan bool
@@ -87,7 +87,7 @@ func TestSharedStateUpdate(t *testing.T) {
 	}
 
 	fromNetwork := FromNetwork{
-		New_alive_nodes: make(chan []string, 1),
+		NewAliveNodes: make(chan []string, 1),
 
 		ProtocolRequestInformation:     make(chan bool, 1),
 		ProtocolRequestsInterpretation: make(chan map[string]string, 1),
@@ -124,7 +124,7 @@ func TestSharedStateUpdate(t *testing.T) {
 	Node1.Connect()
 	defer Node1.Close()
 
-	go SharedStateThread(make(chan constants.Elevator), toElevator, fromNetwork, toNetwork, fromElevator)
+	go SharedStatesRoutine(make(chan constants.Elevator), toElevator, fromElevator, toNetwork, fromNetwork)
 	go fakeElevator.run()
 	defer close(fakeElevator.close_channel)
 

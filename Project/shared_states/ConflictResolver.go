@@ -9,7 +9,11 @@ import (
 // Function that keeps the priority order:
 // No requests are lost
 // An elevator has control over it's own states.
-func resolveDifferences(state1 HRAType, state2 HRAType, owner_of_state2 string) HRAType {
+func resolveDifferences(
+	state1 HRAType, 
+	state2 HRAType, 
+	owner_of_state2 string,
+) HRAType {
 	elevatorState, ok := state2.States[owner_of_state2]
 
 	// State2 is authorative over it's own state

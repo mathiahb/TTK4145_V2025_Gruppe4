@@ -17,7 +17,7 @@ func newFromSharedStateToNetwork() shared_states.ToNetwork {
 
 func newToSharedStateFromNetwork() shared_states.FromNetwork {
 	return shared_states.FromNetwork{
-		New_alive_nodes: make(chan []string),
+		NewAliveNodes: make(chan []string),
 
 		ProtocolRequestInformation:     make(chan bool),
 		ProtocolRequestsInterpretation: make(chan map[string]string),
@@ -60,7 +60,7 @@ func transferSharedStateChannelsToNetworkChannels(toNetwork shared_states.ToNetw
 		},
 		FromNetwork: network.CommunicationFromNetwork{
 			Discovery: struct{ Updated_Alive_Nodes chan []string }{
-				Updated_Alive_Nodes: fromNetwork.New_alive_nodes,
+				Updated_Alive_Nodes: fromNetwork.NewAliveNodes,
 			},
 			Synchronization: struct {
 				ProtocolRequestInformation     chan bool

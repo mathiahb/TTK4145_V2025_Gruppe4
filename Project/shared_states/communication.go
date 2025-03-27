@@ -23,10 +23,9 @@ type ToNetwork struct {
 }
 
 type FromNetwork struct {
-	New_alive_nodes                chan []string
+	NewAliveNodes                  chan []string
 	ApprovedBy2PC                  chan string
 	ProtocolRequestInformation     chan bool
 	ProtocolRequestsInterpretation chan map[string]string
 	ResultFromSynchronization      chan string
 }
-
