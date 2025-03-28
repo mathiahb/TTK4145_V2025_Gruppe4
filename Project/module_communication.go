@@ -1,9 +1,9 @@
 package main
 
 import (
+	"elevator_project/common"
 	"elevator_project/network"
 	"elevator_project/shared_states"
-	"elevator_project/common"
 )
 
 func newFromSharedStateToNetwork() shared_states.ToNetwork {
@@ -59,8 +59,8 @@ func transferSharedStateChannelsToNetworkChannels(toNetwork shared_states.ToNetw
 			},
 		},
 		FromNetwork: network.CommunicationFromNetwork{
-			Discovery: struct{ Updated_Alive_Nodes chan []string }{
-				Updated_Alive_Nodes: fromNetwork.NewAliveNodes,
+			Discovery: struct{ UpdatedAliveNodes chan []string }{
+				UpdatedAliveNodes: fromNetwork.NewAliveNodes,
 			},
 			Synchronization: struct {
 				ProtocolRequestInformation     chan bool

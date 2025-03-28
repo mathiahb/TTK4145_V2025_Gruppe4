@@ -120,8 +120,7 @@ func getHallRequestAssignments(HRAInputVariable common.HRAType) map[string][][2]
 	return output
 }
 
-
-// The network operates with JSON strings, while shared states and the elevator operates with distinct types. 
+// The network operates with JSON strings, while shared states and the elevator operates with distinct types.
 // Therefore it necessary to translate to the network. The function turns any variable into JSON.
 func translateToNetwork(variable any) string {
 

@@ -82,6 +82,6 @@ func (connection TCPConnection) Close() {
 	}
 }
 
-func (connection TCPConnection) Get_Name() string {
+func (connection TCPConnection) GetName() string {
 	return connection.connectionName
 }

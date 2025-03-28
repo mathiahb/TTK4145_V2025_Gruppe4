@@ -24,8 +24,8 @@ func CreateTestNetworkCommunicationChannels() NetworkCommunicationChannels {
 			},
 		},
 		FromNetwork: CommunicationFromNetwork{
-			Discovery: struct{ Updated_Alive_Nodes chan []string }{
-				Updated_Alive_Nodes: make(chan []string, 1),
+			Discovery: struct{ UpdatedAliveNodes chan []string }{
+				UpdatedAliveNodes: make(chan []string, 1),
 			},
 			Synchronization: struct {
 				ProtocolRequestInformation     chan bool
@@ -69,8 +69,8 @@ func TestDiscovery(t *testing.T) {
 	Node1 := NewNode(name1, CreateTestNetworkCommunicationChannels())
 	Node2 := NewNode(name2, CreateTestNetworkCommunicationChannels()) // Node 2
 
-	response_channel1 := Node1.sharedStateCommunication.FromNetwork.Discovery.Updated_Alive_Nodes
-	response_channel2 := Node2.sharedStateCommunication.FromNetwork.Discovery.Updated_Alive_Nodes
+	responseChannel1 := Node1.sharedStateCommunication.FromNetwork.Discovery.UpdatedAliveNodes
+	responseChannel2 := Node2.sharedStateCommunication.FromNetwork.Discovery.UpdatedAliveNodes
 
 	defer Node1.Close()
 	defer Node2.Close()
@@ -81,9 +81,9 @@ func TestDiscovery(t *testing.T) {
 
 	// Is Node1 a result?
 	select {
-	case node1_result := <-response_channel1:
-		if !stringSlicesEqual(node1_result, result1) && !stringSlicesEqual(node1_result, result2) {
-			t.Errorf("Node 1 result doesn't make sense! %s\n", node1_result)
+	case node1Result := <-responseChannel1:
+		if !stringSlicesEqual(node1Result, result1) && !stringSlicesEqual(node1Result, result2) {
+			t.Errorf("Node 1 result doesn't make sense! %s\n", node1Result)
 		}
 	default:
 		t.Errorf("Received no response from Node 1.\n")
@@ -91,9 +91,9 @@ func TestDiscovery(t *testing.T) {
 
 	// Is Node2 a result?
 	select {
-	case node2_result := <-response_channel2:
-		if !stringSlicesEqual(node2_result, result1) && !stringSlicesEqual(node2_result, result2) {
-			t.Errorf("Node 2 result doesn't make sense! %s\n", node2_result)
+	case node2Result := <-responseChannel2:
+		if !stringSlicesEqual(node2Result, result1) && !stringSlicesEqual(node2Result, result2) {
+			t.Errorf("Node 2 result doesn't make sense! %s\n", node2Result)
 		}
 	default:
 		t.Errorf("Received no response from Node 2.\n")
@@ -101,10 +101,10 @@ func TestDiscovery(t *testing.T) {
 }
 
 func TestDiscoveryMany(t *testing.T) {
-	response_channel := make(chan []string, 12)
+	responseChannel := make(chan []string, 12)
 
 	networkCommunication := CreateTestNetworkCommunicationChannels()
-	networkCommunication.FromNetwork.Discovery.Updated_Alive_Nodes = response_channel
+	networkCommunication.FromNetwork.Discovery.UpdatedAliveNodes = responseChannel
 
 	Node1 := NewNode("Node0", networkCommunication)
 	defer Node1.Close()
@@ -112,7 +112,7 @@ func TestDiscoveryMany(t *testing.T) {
 	name := "Node"
 	for id := 1; id < 10; id++ {
 		networkCommunication := CreateTestNetworkCommunicationChannels()
-		networkCommunication.FromNetwork.Discovery.Updated_Alive_Nodes = response_channel
+		networkCommunication.FromNetwork.Discovery.UpdatedAliveNodes = responseChannel
 
 		Node := NewNode(name+strconv.Itoa(id), networkCommunication)
 		defer Node.Close()
@@ -125,14 +125,14 @@ func TestDiscoveryMany(t *testing.T) {
 	var result []string
 
 	select {
-	case result = <-response_channel:
+	case result = <-responseChannel:
 	default:
 		t.Fatalf("Didn't receive first response!")
 	}
 
 	for i := 1; i < 10; i++ {
 		select {
-		case other := <-response_channel:
+		case other := <-responseChannel:
 			if !stringSlicesEqual(result, other) {
 				t.Errorf("Response %d does not match first response! %s != %s\n", i, result, other)
 			}
@@ -142,7 +142,7 @@ func TestDiscoveryMany(t *testing.T) {
 	}
 
 	select {
-	case other := <-response_channel:
+	case other := <-responseChannel:
 		t.Errorf("Received too many responses! %s\n", other)
 	default:
 	}
@@ -180,7 +180,7 @@ func TestSynchronization(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 10)
 
-	success_message := "Success"
+	successMessage := "Success"
 
 	select {
 	case results := <-Node1.sharedStateCommunication.FromNetwork.Synchronization.ProtocolRequestsInterpretation:
@@ -192,7 +192,7 @@ func TestSynchronization(t *testing.T) {
 			t.Errorf("Results in Node 2 did not match sent info! %s != %s\n", results[Node2.name], info2)
 		}
 
-		Node1.sharedStateCommunication.ToNetwork.Synchronization.RespondWithInterpretation <- success_message
+		Node1.sharedStateCommunication.ToNetwork.Synchronization.RespondWithInterpretation <- successMessage
 	default:
 		t.Fatalf("Node 1 never asked for interpretation!")
 	}
@@ -201,8 +201,8 @@ func TestSynchronization(t *testing.T) {
 
 	select {
 	case result := <-Node1.sharedStateCommunication.FromNetwork.Synchronization.ResultFromSynchronization:
-		if result != success_message {
-			t.Errorf("Result returned by Node 1 is not the success message! %s != %s\n", result, success_message)
+		if result != successMessage {
+			t.Errorf("Result returned by Node 1 is not the success message! %s != %s\n", result, successMessage)
 		}
 	default:
 		t.Errorf("Did not receive result from Node 1!")
@@ -210,8 +210,8 @@ func TestSynchronization(t *testing.T) {
 
 	select {
 	case result := <-Node2.sharedStateCommunication.FromNetwork.Synchronization.ResultFromSynchronization:
-		if result != success_message {
-			t.Errorf("Result returned by Node 2 is not the success message! %s != %s\n", result, success_message)
+		if result != successMessage {
+			t.Errorf("Result returned by Node 2 is not the success message! %s != %s\n", result, successMessage)
 		}
 	default:
 		t.Errorf("Did not receive result from Node 2!")
@@ -283,9 +283,9 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 
 	// Is Node1 a result?
 	select {
-	case node1_result := <-Node1.sharedStateCommunication.FromNetwork.Discovery.Updated_Alive_Nodes:
-		if !stringSlicesEqual(node1_result, result1) && !stringSlicesEqual(node1_result, result2) {
-			t.Fatalf("Node 1 result doesn't make sense! %s\n", node1_result)
+	case node1Result := <-Node1.sharedStateCommunication.FromNetwork.Discovery.UpdatedAliveNodes:
+		if !stringSlicesEqual(node1Result, result1) && !stringSlicesEqual(node1Result, result2) {
+			t.Fatalf("Node 1 result doesn't make sense! %s\n", node1Result)
 		}
 	default:
 		t.Fatalf("Received no response from Node 1.\n")
@@ -293,9 +293,9 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 
 	// Is Node2 a result?
 	select {
-	case node2_result := <-Node2.sharedStateCommunication.FromNetwork.Discovery.Updated_Alive_Nodes:
-		if !stringSlicesEqual(node2_result, result1) && !stringSlicesEqual(node2_result, result2) {
-			t.Fatalf("Node 2 result doesn't make sense! %s\n", node2_result)
+	case node2Result := <-Node2.sharedStateCommunication.FromNetwork.Discovery.UpdatedAliveNodes:
+		if !stringSlicesEqual(node2Result, result1) && !stringSlicesEqual(node2Result, result2) {
+			t.Fatalf("Node 2 result doesn't make sense! %s\n", node2Result)
 		}
 	default:
 		t.Fatalf("Received no response from Node 2.\n")
@@ -324,7 +324,7 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 
 	time.Sleep(time.Millisecond * 10)
 
-	success_message := "Success"
+	successMessage := "Success"
 
 	select {
 	case results := <-Node1.sharedStateCommunication.FromNetwork.Synchronization.ProtocolRequestsInterpretation:
@@ -336,7 +336,7 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 			t.Errorf("Results in Node 2 did not match sent info! %s != %s\n", results[Node2.name], info2)
 		}
 
-		Node1.sharedStateCommunication.ToNetwork.Synchronization.RespondWithInterpretation <- success_message
+		Node1.sharedStateCommunication.ToNetwork.Synchronization.RespondWithInterpretation <- successMessage
 	default:
 		t.Fatalf("Node 1 never asked for interpretation!")
 	}
@@ -345,8 +345,8 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 
 	select {
 	case result := <-Node1.sharedStateCommunication.FromNetwork.Synchronization.ResultFromSynchronization:
-		if result != success_message {
-			t.Errorf("Result returned by Node 1 is not the success message! %s != %s\n", result, success_message)
+		if result != successMessage {
+			t.Errorf("Result returned by Node 1 is not the success message! %s != %s\n", result, successMessage)
 		}
 	default:
 		t.Errorf("Did not receive result from Node 1!")
@@ -354,8 +354,8 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 
 	select {
 	case result := <-Node2.sharedStateCommunication.FromNetwork.Synchronization.ResultFromSynchronization:
-		if result != success_message {
-			t.Errorf("Result returned by Node 2 is not the success message! %s != %s\n", result, success_message)
+		if result != successMessage {
+			t.Errorf("Result returned by Node 2 is not the success message! %s != %s\n", result, successMessage)
 		}
 	default:
 		t.Errorf("Did not receive result from Node 2!")

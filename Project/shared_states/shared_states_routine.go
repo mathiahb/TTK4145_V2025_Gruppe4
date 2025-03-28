@@ -1,8 +1,8 @@
 package shared_states
 
 import (
-	"fmt"
 	"elevator_project/common"
+	"fmt"
 )
 
 // SharedStatesRoutine synchronizes the elevator system's shared state between
@@ -30,7 +30,7 @@ func SharedStatesRoutine(
 	for {
 		select {
 		// Two phase commit
-		case newHallRequest := <-fromElevator.NewHallRequest: 
+		case newHallRequest := <-fromElevator.NewHallRequest:
 			fmt.Printf("[%s] Got new HR Request: %+v\n\n", localID, newHallRequest)
 			command := Command2PC{
 				Command: common.ADD,
@@ -39,7 +39,7 @@ func SharedStatesRoutine(
 			}
 			go func() { toNetwork.Inform2PC <- translateToNetwork(command) }()
 
-		case clearHallRequest := <-fromElevator.ClearHallRequest: 
+		case clearHallRequest := <-fromElevator.ClearHallRequest:
 			fmt.Printf("[%s] Got clear HR Request: %+v\n\n", localID, clearHallRequest)
 			command := Command2PC{
 				Command: common.REMOVE,

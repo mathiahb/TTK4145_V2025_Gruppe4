@@ -27,7 +27,7 @@ type CommunicationToNetwork struct {
 
 type CommunicationFromNetwork struct {
 	Discovery struct {
-		Updated_Alive_Nodes chan []string
+		UpdatedAliveNodes chan []string
 	}
 
 	Synchronization struct {
@@ -180,7 +180,7 @@ func (node *Node) reader() {
 			}
 
 			node.aliveNodesManager.SetAliveNodes(peerUpdate.Peers)
-			node.sharedStateCommunication.FromNetwork.Discovery.Updated_Alive_Nodes <- node.aliveNodesManager.GetAliveNodes()
+			node.sharedStateCommunication.FromNetwork.Discovery.UpdatedAliveNodes <- node.aliveNodesManager.GetAliveNodes()
 
 		case p2pMessage := <-node.p2p.ReadChannel:
 			message := translateMessage(p2pMessage)

@@ -10,8 +10,8 @@ import (
 // No requests are lost
 // An elevator has control over it's own states.
 func resolveDifferences(
-	state1 common.HRAType, 
-	state2 common.HRAType, 
+	state1 common.HRAType,
+	state2 common.HRAType,
 	ownerOfState2 string,
 ) common.HRAType {
 	elevatorState, ok := state2.States[ownerOfState2]
