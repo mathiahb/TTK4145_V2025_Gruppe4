@@ -22,12 +22,12 @@ Dependency-Resolver
 ---
 Stores sent messages, and resends messages upon request from others. Used to ensure dependency ordering and almost-guaranteed sending.
 
-P2P_Message
+P2PMessage
 ---
-A struct created using P2P_Network.Create_Message(message, type).
-Contains the Sender, Message, LamportClock, Type and eventual dependency added by message_to_send.Depend_On(message_received)
+A struct created using P2P_Network.CreateMessage(message, type).
+Contains the Sender, Message, LamportClock, Type and eventual dependency added by message_to_send.DependOn(message_received)
 
 P2P_Network
 ---
-Provides the network functionality when created using New_P2P_Network().
+Provides the network functionality when created using NewP2PNetwork().
 Will automatically connect to other nodes on the same network. And uses Dependency-Handler and Dependency-Resolver to handle idempotency and dependency ordering.

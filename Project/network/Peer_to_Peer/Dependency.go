@@ -1,9 +1,9 @@
-package peer_to_peer
+package peerToPeer
 
 import (
+	"elevator_project/common"
 	"fmt"
 	"strings"
-	"elevator_project/common"
 )
 
 type Dependency struct {

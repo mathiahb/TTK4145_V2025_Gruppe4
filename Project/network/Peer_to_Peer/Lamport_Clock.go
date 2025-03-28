@@ -1,9 +1,9 @@
-package peer_to_peer
+package peerToPeer
 
 import (
+	"elevator_project/common"
 	"fmt"
 	"strconv"
-	"elevator_project/common"
 )
 
 type Lamport_Clock struct {

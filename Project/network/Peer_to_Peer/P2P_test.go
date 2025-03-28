@@ -1,10 +1,10 @@
-package peer_to_peer
+package peerToPeer
 
 import (
+	"elevator_project/common"
 	"strconv"
 	"testing"
 	"time"
-	"elevator_project/common"
 )
 
 func Test_Dependency_Horizon(t *testing.T) {
@@ -106,31 +106,31 @@ func Test_P2P_Message_String(t *testing.T) {
 			dependency_field.To_String() + common.P2P_FIELD_DELIMINATOR +
 			body_field
 
-	p2p_message := P2P_Message_From_String(test_tcp_message)
+	p2pMessage := P2P_Message_From_String(test_tcp_message)
 
-	t.Logf("P2P_message generated: %s\n", p2p_message.To_String())
+	t.Logf("P2P_message generated: %s\n", p2pMessage.To_String())
 
-	if p2p_message.Sender != sender_field {
-		t.Fatalf("Sender field mismatch!\n%s != %s\n", p2p_message.Sender, sender_field)
+	if p2pMessage.Sender != sender_field {
+		t.Fatalf("Sender field mismatch!\n%s != %s\n", p2pMessage.Sender, sender_field)
 	}
 
-	if string(p2p_message.Type) != string(type_field) {
-		t.Fatalf("Type field mismatch!\n%s != %s\n", p2p_message.Type, type_field)
+	if string(p2pMessage.Type) != string(type_field) {
+		t.Fatalf("Type field mismatch!\n%s != %s\n", p2pMessage.Type, type_field)
 	}
 
-	if p2p_message.Time.String() != time_field.String() {
-		t.Fatalf("Time field mismatch!\n%s != %s\n", p2p_message.Time.String(), time_field.String())
+	if p2pMessage.Time.String() != time_field.String() {
+		t.Fatalf("Time field mismatch!\n%s != %s\n", p2pMessage.Time.String(), time_field.String())
 	}
 
-	if p2p_message.dependency.To_String() != dependency_field.To_String() {
-		t.Fatalf("Dependency field mismatch!\n%s != %s\n", p2p_message.dependency.To_String(), dependency_field.To_String())
+	if p2pMessage.dependency.To_String() != dependency_field.To_String() {
+		t.Fatalf("Dependency field mismatch!\n%s != %s\n", p2pMessage.dependency.To_String(), dependency_field.To_String())
 	}
 
-	if p2p_message.Message != body_field {
-		t.Fatalf("Body field mismatch!\n%s != %s\n", p2p_message.Message, body_field)
+	if p2pMessage.Message != body_field {
+		t.Fatalf("Body field mismatch!\n%s != %s\n", p2pMessage.Message, body_field)
 	}
 
-	stringed_p2p_message := p2p_message.To_String()
+	stringed_p2p_message := p2pMessage.To_String()
 
 	if stringed_p2p_message != test_tcp_message {
 		t.Fatalf("Stringed message:\n%s\n---\nDid not match origin string %s\n", stringed_p2p_message, test_tcp_message)
@@ -145,20 +145,20 @@ func Test_Message_Horizon(t *testing.T) {
 	for i := 0; i < common.P2P_MSG_TIME_HORIZON+1; i++ {
 		clock.Event()
 
-		p2p_message := New_P2P_Message("SENDER", MESSAGE, clock, "BODY")
-		resolver.Emplace_New_Message(p2p_message)
+		p2pMessage := New_P2P_Message("SENDER", MESSAGE, clock, "BODY")
+		resolver.Emplace_New_Message(p2pMessage)
 
 		dependency := New_Dependency("SENDER", clock)
 
 		resolved_p2p_message, ok := resolver.Get_Message(dependency)
 
 		if !ok {
-			t.Fatalf("Failed to get an ok on sending %s:\n", p2p_message.To_String())
+			t.Fatalf("Failed to get an ok on sending %s:\n", p2pMessage.To_String())
 		}
 
-		if p2p_message.To_String() != resolved_p2p_message.To_String() {
+		if p2pMessage.To_String() != resolved_p2p_message.To_String() {
 			t.Fatalf("Returned string was ok, but not correct! %s != %s\n",
-				p2p_message.To_String(), resolved_p2p_message.To_String())
+				p2pMessage.To_String(), resolved_p2p_message.To_String())
 		}
 	}
 
@@ -178,32 +178,32 @@ func Test_Message_Horizon(t *testing.T) {
 		t.Fatal("Did not find the second message that was supposed to be in horizon!")
 	}
 
-	p2p_message := New_P2P_Message("SENDER", MESSAGE, New_Lamport_Clock_From_String("2"), "BODY")
-	if message.To_String() != p2p_message.To_String() {
+	p2pMessage := New_P2P_Message("SENDER", MESSAGE, New_Lamport_Clock_From_String("2"), "BODY")
+	if message.To_String() != p2pMessage.To_String() {
 		t.Fatalf("Returned second dependency was ok, but not correct! %s != %s\n",
-			message.To_String(), p2p_message.To_String())
+			message.To_String(), p2pMessage.To_String())
 	}
 }
 
 func Test_Network(t *testing.T) {
-	network_1 := New_P2P_Network()
-	network_2 := New_P2P_Network()
+	network_1 := NewP2PNetwork()
+	network_2 := NewP2PNetwork()
 	defer network_1.Close()
 	defer network_2.Close()
 
 	time.Sleep(time.Second)
 
-	p2p_message := network_1.Create_Message("Hello!")
+	p2pMessage := network_1.CreateMessage("Hello!")
 
-	network_1.Broadcast(p2p_message)
+	network_1.Broadcast(p2pMessage)
 
 	time.Sleep(time.Second)
 
 	select {
 	case received_message := <-network_2.Read_Channel:
-		if p2p_message.To_String() != received_message.To_String() {
+		if p2pMessage.To_String() != received_message.To_String() {
 			t.Fatalf("Error Peer2Peer! Message received did not match sent!\n%s != %s\n",
-				p2p_message.To_String(), received_message.To_String())
+				p2pMessage.To_String(), received_message.To_String())
 		}
 	default:
 		t.Fatal("Error Peer2Peer! Message was never received!")
@@ -211,31 +211,31 @@ func Test_Network(t *testing.T) {
 }
 
 func Test_Dependency_Resend(t *testing.T) {
-	network_1 := New_P2P_Network()
-	network_2 := New_P2P_Network()
+	network_1 := NewP2PNetwork()
+	network_2 := NewP2PNetwork()
 	defer network_1.Close()
 	defer network_2.Close()
 
 	time.Sleep(time.Second) // Let the networks connect to each other. Takes about 1.2x UDP SERVER LIFETIME (~300ms)
 
-	p2p_message := network_1.Create_Message("Hello!")
+	p2pMessage := network_1.CreateMessage("Hello!")
 
-	network_1.Broadcast(p2p_message)
+	network_1.Broadcast(p2pMessage)
 
-	network_3 := New_P2P_Network()
+	network_3 := NewP2PNetwork()
 	defer network_3.Close()
 
 	time.Sleep(time.Second)
 
 	select {
 	case received_message := <-network_2.Read_Channel:
-		if p2p_message.To_String() != received_message.To_String() {
+		if p2pMessage.To_String() != received_message.To_String() {
 			t.Fatalf("Error Peer2Peer! Message received did not match sent!\n%s != %s\n",
-				p2p_message.To_String(), received_message.To_String())
+				p2pMessage.To_String(), received_message.To_String())
 		}
 
-		p2p_depended_message := network_2.Create_Message("Hello 2!")
-		p2p_depended_message.Depend_On(received_message)
+		p2p_depended_message := network_2.CreateMessage("Hello 2!")
+		p2p_depended_message.DependOn(received_message)
 
 		network_2.Broadcast(p2p_depended_message)
 
@@ -243,16 +243,16 @@ func Test_Dependency_Resend(t *testing.T) {
 
 		select {
 		case received_message_network_3 := <-network_3.Read_Channel:
-			if p2p_message.To_String() != received_message_network_3.To_String() {
+			if p2pMessage.To_String() != received_message_network_3.To_String() {
 				t.Fatalf("Error Peer2Peer! Depended message received did not match sent!\n%s != %s\n",
-					p2p_message.To_String(), received_message.To_String())
+					p2pMessage.To_String(), received_message.To_String())
 			}
 
 			select {
 			case received_depended_message := <-network_3.Read_Channel:
 				if p2p_depended_message.To_String() != received_depended_message.To_String() {
 					t.Fatalf("Error Peer2Peer! Depended message received did not match sent!\n%s != %s\n",
-						p2p_message.To_String(), received_message.To_String())
+						p2pMessage.To_String(), received_message.To_String())
 				}
 			default:
 				t.Fatal("Error Peer2Peer Network 3! Hello 2 Message was never received!")
@@ -268,25 +268,25 @@ func Test_Dependency_Resend(t *testing.T) {
 }
 
 func Test_Double_Send(t *testing.T) {
-	network_1 := New_P2P_Network()
-	network_2 := New_P2P_Network()
+	network_1 := NewP2PNetwork()
+	network_2 := NewP2PNetwork()
 	defer network_1.Close()
 	defer network_2.Close()
 
 	time.Sleep(time.Second)
 
-	p2p_message := network_1.Create_Message("Hello!")
+	p2pMessage := network_1.CreateMessage("Hello!")
 
-	network_1.Broadcast(p2p_message)
-	network_1.Broadcast(p2p_message)
+	network_1.Broadcast(p2pMessage)
+	network_1.Broadcast(p2pMessage)
 
 	time.Sleep(time.Second)
 
 	select {
 	case received_message := <-network_2.Read_Channel:
-		if p2p_message.To_String() != received_message.To_String() {
+		if p2pMessage.To_String() != received_message.To_String() {
 			t.Fatalf("Error Peer2Peer! Message received did not match sent!\n%s != %s\n",
-				p2p_message.To_String(), received_message.To_String())
+				p2pMessage.To_String(), received_message.To_String())
 		}
 
 		select {

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	peer_to_peer "elevator_project/network/Peer_to_Peer"
+	peerToPeer "elevator_project/network/Peer_to_Peer"
 )
 
 func CreateTestNetworkCommunicationChannels() NetworkCommunicationChannels {
@@ -66,16 +66,16 @@ func TestDiscovery(t *testing.T) {
 	result1 := []string{name1, name2}
 	result2 := []string{name2, name1}
 
-	Node1 := New_Node(name1, CreateTestNetworkCommunicationChannels())
-	Node2 := New_Node(name2, CreateTestNetworkCommunicationChannels()) // Node 2
+	Node1 := NewNode(name1, CreateTestNetworkCommunicationChannels())
+	Node2 := NewNode(name2, CreateTestNetworkCommunicationChannels()) // Node 2
 
-	response_channel1 := Node1.shared_state_communication.FromNetwork.Discovery.Updated_Alive_Nodes
-	response_channel2 := Node2.shared_state_communication.FromNetwork.Discovery.Updated_Alive_Nodes
+	response_channel1 := Node1.sharedStateCommunication.FromNetwork.Discovery.Updated_Alive_Nodes
+	response_channel2 := Node2.sharedStateCommunication.FromNetwork.Discovery.Updated_Alive_Nodes
 
 	defer Node1.Close()
 	defer Node2.Close()
 
-	Node1.protocol_dispatcher.Do_Synchronization()
+	Node1.protocolDispatcher.DoSynchronization()
 
 	time.Sleep(time.Millisecond * 150)
 
@@ -106,7 +106,7 @@ func TestDiscoveryMany(t *testing.T) {
 	networkCommunication := CreateTestNetworkCommunicationChannels()
 	networkCommunication.FromNetwork.Discovery.Updated_Alive_Nodes = response_channel
 
-	Node1 := New_Node("Node0", networkCommunication)
+	Node1 := NewNode("Node0", networkCommunication)
 	defer Node1.Close()
 
 	name := "Node"
@@ -114,11 +114,11 @@ func TestDiscoveryMany(t *testing.T) {
 		networkCommunication := CreateTestNetworkCommunicationChannels()
 		networkCommunication.FromNetwork.Discovery.Updated_Alive_Nodes = response_channel
 
-		Node := New_Node(name+strconv.Itoa(id), networkCommunication)
+		Node := NewNode(name+strconv.Itoa(id), networkCommunication)
 		defer Node.Close()
 	}
 
-	Node1.protocol_dispatcher.Do_Synchronization()
+	Node1.protocolDispatcher.DoSynchronization()
 
 	time.Sleep(time.Millisecond * 150)
 
@@ -150,14 +150,14 @@ func TestDiscoveryMany(t *testing.T) {
 
 func TestSynchronization(t *testing.T) {
 
-	Node1 := New_Node("Node1", CreateTestNetworkCommunicationChannels())
-	Node2 := New_Node("Node2", CreateTestNetworkCommunicationChannels())
+	Node1 := NewNode("Node1", CreateTestNetworkCommunicationChannels())
+	Node2 := NewNode("Node2", CreateTestNetworkCommunicationChannels())
 	defer Node1.Close()
 	defer Node2.Close()
 
 	time.Sleep(time.Millisecond * 100)
 
-	Node1.protocol_dispatcher.Do_Synchronization()
+	Node1.protocolDispatcher.DoSynchronization()
 
 	time.Sleep(time.Millisecond * 150)
 
@@ -165,15 +165,15 @@ func TestSynchronization(t *testing.T) {
 	info2 := "Node2 Hello"
 
 	select {
-	case <-Node1.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestInformation:
-		Node1.shared_state_communication.ToNetwork.Synchronization.RespondToInformationRequest <- info1
+	case <-Node1.sharedStateCommunication.FromNetwork.Synchronization.ProtocolRequestInformation:
+		Node1.sharedStateCommunication.ToNetwork.Synchronization.RespondToInformationRequest <- info1
 	default:
 		t.Fatalf("Node 1 did not request Information!")
 	}
 
 	select {
-	case <-Node2.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestInformation:
-		Node2.shared_state_communication.ToNetwork.Synchronization.RespondToInformationRequest <- info2
+	case <-Node2.sharedStateCommunication.FromNetwork.Synchronization.ProtocolRequestInformation:
+		Node2.sharedStateCommunication.ToNetwork.Synchronization.RespondToInformationRequest <- info2
 	default:
 		t.Fatalf("Node 2 did not request Information!")
 	}
@@ -183,7 +183,7 @@ func TestSynchronization(t *testing.T) {
 	success_message := "Success"
 
 	select {
-	case results := <-Node1.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestsInterpretation:
+	case results := <-Node1.sharedStateCommunication.FromNetwork.Synchronization.ProtocolRequestsInterpretation:
 		if results[Node1.name] != info1 {
 			t.Errorf("Results in Node 1 did not match sent info! %s != %s\n", results[Node1.name], info1)
 		}
@@ -192,7 +192,7 @@ func TestSynchronization(t *testing.T) {
 			t.Errorf("Results in Node 2 did not match sent info! %s != %s\n", results[Node2.name], info2)
 		}
 
-		Node1.shared_state_communication.ToNetwork.Synchronization.RespondWithInterpretation <- success_message
+		Node1.sharedStateCommunication.ToNetwork.Synchronization.RespondWithInterpretation <- success_message
 	default:
 		t.Fatalf("Node 1 never asked for interpretation!")
 	}
@@ -200,7 +200,7 @@ func TestSynchronization(t *testing.T) {
 	time.Sleep(time.Millisecond * 10)
 
 	select {
-	case result := <-Node1.shared_state_communication.FromNetwork.Synchronization.ResultFromSynchronization:
+	case result := <-Node1.sharedStateCommunication.FromNetwork.Synchronization.ResultFromSynchronization:
 		if result != success_message {
 			t.Errorf("Result returned by Node 1 is not the success message! %s != %s\n", result, success_message)
 		}
@@ -209,7 +209,7 @@ func TestSynchronization(t *testing.T) {
 	}
 
 	select {
-	case result := <-Node2.shared_state_communication.FromNetwork.Synchronization.ResultFromSynchronization:
+	case result := <-Node2.sharedStateCommunication.FromNetwork.Synchronization.ResultFromSynchronization:
 		if result != success_message {
 			t.Errorf("Result returned by Node 2 is not the success message! %s != %s\n", result, success_message)
 		}
@@ -219,32 +219,32 @@ func TestSynchronization(t *testing.T) {
 }
 
 func Test2PC(t *testing.T) {
-	Node1 := New_Node("Node1", CreateTestNetworkCommunicationChannels())
-	Node2 := New_Node("Node2", CreateTestNetworkCommunicationChannels())
+	Node1 := NewNode("Node1", CreateTestNetworkCommunicationChannels())
+	Node2 := NewNode("Node2", CreateTestNetworkCommunicationChannels())
 	defer Node1.Close()
 	defer Node2.Close()
 
 	time.Sleep(time.Millisecond * 100)
 
-	Node1.protocol_dispatcher.Do_Synchronization()
+	Node1.protocolDispatcher.DoSynchronization()
 
 	time.Sleep(time.Millisecond * 150)
-	<-Node1.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestInformation
-	Node1.shared_state_communication.ToNetwork.Synchronization.RespondToInformationRequest <- ""
-	<-Node2.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestInformation
-	Node2.shared_state_communication.ToNetwork.Synchronization.RespondToInformationRequest <- ""
-	<-Node1.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestsInterpretation
-	Node1.shared_state_communication.ToNetwork.Synchronization.RespondWithInterpretation <- ""
+	<-Node1.sharedStateCommunication.FromNetwork.Synchronization.ProtocolRequestInformation
+	Node1.sharedStateCommunication.ToNetwork.Synchronization.RespondToInformationRequest <- ""
+	<-Node2.sharedStateCommunication.FromNetwork.Synchronization.ProtocolRequestInformation
+	Node2.sharedStateCommunication.ToNetwork.Synchronization.RespondToInformationRequest <- ""
+	<-Node1.sharedStateCommunication.FromNetwork.Synchronization.ProtocolRequestsInterpretation
+	Node1.sharedStateCommunication.ToNetwork.Synchronization.RespondWithInterpretation <- ""
 
 	// Do Test Here.
 	command := "some command"
 
-	Node1.protocol_dispatcher.Do_Command(command)
+	Node1.protocolDispatcher.DoCommand(command)
 
 	time.Sleep(time.Millisecond * 100)
 
 	select {
-	case result := <-Node1.shared_state_communication.FromNetwork.TwoPhaseCommit.ProtocolCommited:
+	case result := <-Node1.sharedStateCommunication.FromNetwork.TwoPhaseCommit.ProtocolCommited:
 		if result != command {
 			t.Errorf("Received command came back malformed! %s != %s.", command, result)
 		}
@@ -253,7 +253,7 @@ func Test2PC(t *testing.T) {
 	}
 
 	select {
-	case result := <-Node2.shared_state_communication.FromNetwork.TwoPhaseCommit.ProtocolCommited:
+	case result := <-Node2.sharedStateCommunication.FromNetwork.TwoPhaseCommit.ProtocolCommited:
 		if result != command {
 			t.Errorf("Received command from Node 2 came back malformed! %s != %s.", command, result)
 		}
@@ -270,11 +270,11 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 	result2 := []string{name2, name1}
 
 	// Testing retry of Discovery
-	Node1.protocol_dispatcher.Do_Synchronization()
+	Node1.protocolDispatcher.DoSynchronization()
 	time.Sleep(time.Millisecond)
 
-	p2p_message := <-Node2.p2p.Read_Channel
-	message := translate_Message(p2p_message)
+	p2pMessage := <-Node2.p2p.Read_Channel
+	message := translateMessage(p2pMessage)
 	Node2.abort_Synchronization(message)
 
 	go Node2.reader()
@@ -283,7 +283,7 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 
 	// Is Node1 a result?
 	select {
-	case node1_result := <-Node1.shared_state_communication.FromNetwork.Discovery.Updated_Alive_Nodes:
+	case node1_result := <-Node1.sharedStateCommunication.FromNetwork.Discovery.Updated_Alive_Nodes:
 		if !stringSlicesEqual(node1_result, result1) && !stringSlicesEqual(node1_result, result2) {
 			t.Fatalf("Node 1 result doesn't make sense! %s\n", node1_result)
 		}
@@ -293,7 +293,7 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 
 	// Is Node2 a result?
 	select {
-	case node2_result := <-Node2.shared_state_communication.FromNetwork.Discovery.Updated_Alive_Nodes:
+	case node2_result := <-Node2.sharedStateCommunication.FromNetwork.Discovery.Updated_Alive_Nodes:
 		if !stringSlicesEqual(node2_result, result1) && !stringSlicesEqual(node2_result, result2) {
 			t.Fatalf("Node 2 result doesn't make sense! %s\n", node2_result)
 		}
@@ -309,15 +309,15 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 	info2 := "Node2 Hello"
 
 	select {
-	case <-Node1.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestInformation:
-		Node1.shared_state_communication.ToNetwork.Synchronization.RespondToInformationRequest <- info1
+	case <-Node1.sharedStateCommunication.FromNetwork.Synchronization.ProtocolRequestInformation:
+		Node1.sharedStateCommunication.ToNetwork.Synchronization.RespondToInformationRequest <- info1
 	default:
 		t.Fatalf("Node 1 did not request Information!")
 	}
 
 	select {
-	case <-Node2.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestInformation:
-		Node2.shared_state_communication.ToNetwork.Synchronization.RespondToInformationRequest <- info2
+	case <-Node2.sharedStateCommunication.FromNetwork.Synchronization.ProtocolRequestInformation:
+		Node2.sharedStateCommunication.ToNetwork.Synchronization.RespondToInformationRequest <- info2
 	default:
 		t.Fatalf("Node 2 did not request Information!")
 	}
@@ -327,7 +327,7 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 	success_message := "Success"
 
 	select {
-	case results := <-Node1.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestsInterpretation:
+	case results := <-Node1.sharedStateCommunication.FromNetwork.Synchronization.ProtocolRequestsInterpretation:
 		if results[Node1.name] != info1 {
 			t.Errorf("Results in Node 1 did not match sent info! %s != %s\n", results[Node1.name], info1)
 		}
@@ -336,7 +336,7 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 			t.Errorf("Results in Node 2 did not match sent info! %s != %s\n", results[Node2.name], info2)
 		}
 
-		Node1.shared_state_communication.ToNetwork.Synchronization.RespondWithInterpretation <- success_message
+		Node1.sharedStateCommunication.ToNetwork.Synchronization.RespondWithInterpretation <- success_message
 	default:
 		t.Fatalf("Node 1 never asked for interpretation!")
 	}
@@ -344,7 +344,7 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 	time.Sleep(time.Millisecond * 10)
 
 	select {
-	case result := <-Node1.shared_state_communication.FromNetwork.Synchronization.ResultFromSynchronization:
+	case result := <-Node1.sharedStateCommunication.FromNetwork.Synchronization.ResultFromSynchronization:
 		if result != success_message {
 			t.Errorf("Result returned by Node 1 is not the success message! %s != %s\n", result, success_message)
 		}
@@ -353,7 +353,7 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 	}
 
 	select {
-	case result := <-Node2.shared_state_communication.FromNetwork.Synchronization.ResultFromSynchronization:
+	case result := <-Node2.sharedStateCommunication.FromNetwork.Synchronization.ResultFromSynchronization:
 		if result != success_message {
 			t.Errorf("Result returned by Node 2 is not the success message! %s != %s\n", result, success_message)
 		}
@@ -366,26 +366,26 @@ func TestDispatchRetry(t *testing.T) {
 	name1 := "Node1"
 	name2 := "Node2"
 
-	Node1 := New_Node(name1, CreateTestNetworkCommunicationChannels())
+	Node1 := NewNode(name1, CreateTestNetworkCommunicationChannels())
 
 	// Need manual control over node 2, not using NewNode that automatically starts a reader and dispatcher.
 	Node2 := Node{
-		p2p: peer_to_peer.New_P2P_Network(),
+		p2p: peerToPeer.NewP2PNetwork(),
 
 		name: name2,
 
-		next_TxID_number: 0,
+		nextTxIDNumber: 0,
 
-		alive_nodes_manager: AliveNodeManager{
-			alive_nodes: make([]string, 0),
+		aliveNodesManager: AliveNodeManager{
+			aliveNodes: make([]string, 0),
 		},
-		protocol_dispatcher: *New_Protocol_Dispatcher(),
+		protocolDispatcher: *NewProtocolDispatcher(),
 
 		comm: make(chan Message, 32),
 
-		close_channel: make(chan bool),
+		closeChannel: make(chan bool),
 
-		shared_state_communication: CreateTestNetworkCommunicationChannels(),
+		sharedStateCommunication: CreateTestNetworkCommunicationChannels(),
 	}
 	defer Node1.Close()
 	defer Node2.Close()

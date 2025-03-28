@@ -1,9 +1,9 @@
-package peer_to_peer
+package peerToPeer
 
 import (
 	"container/heap"
-	"sync"
 	"elevator_project/common"
+	"sync"
 )
 
 // Example from Golang container documentation for IntHeap

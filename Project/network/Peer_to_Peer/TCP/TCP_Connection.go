@@ -39,7 +39,7 @@ type TCP_Connection struct {
 	Read_Channel  chan string
 
 	// Protected
-	close_channel   chan bool
+	closeChannel    chan bool
 	connection_name string
 	connection      net.Conn
 
@@ -53,12 +53,12 @@ type TCP_Connection struct {
 // Creates a new TCP conneciton bound to a shared read channel.
 func New_TCP_Connection(name string, read_channel chan string, connection net.Conn) TCP_Connection {
 	write_channel := make(chan string, common.TCP_BUFFER_SIZE)
-	close_channel := make(chan bool)
+	closeChannel := make(chan bool)
 
 	return TCP_Connection{
 		Write_Channel: write_channel,
 		Read_Channel:  read_channel,
-		close_channel: close_channel,
+		closeChannel:  closeChannel,
 
 		connection_name: name,
 		connection:      connection,
@@ -73,12 +73,12 @@ func New_TCP_Connection(name string, read_channel chan string, connection net.Co
 
 func (connection TCP_Connection) Close() {
 	select {
-	case <-connection.close_channel:
+	case <-connection.closeChannel:
 		// Connection was already closed!
 		fmt.Printf("Error: Attempted to close closed channel %s!\n", connection.connection_name)
 		return
 	default:
-		close(connection.close_channel)
+		close(connection.closeChannel)
 	}
 }
 

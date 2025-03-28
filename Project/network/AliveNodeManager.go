@@ -3,30 +3,30 @@ package network
 import "sync"
 
 type AliveNodeManager struct {
-	mu          sync.Mutex
-	alive_nodes []string
+	mu         sync.Mutex
+	aliveNodes []string
 }
 
-func (manager *AliveNodeManager) Get_Alive_Nodes() []string {
+func (manager *AliveNodeManager) GetAliveNodes() []string {
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
 
-	return manager.alive_nodes
+	return manager.aliveNodes
 }
 
-func (manager *AliveNodeManager) Set_Alive_Nodes(new_nodes []string) {
+func (manager *AliveNodeManager) SetAliveNodes(newNodes []string) {
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
 
-	manager.alive_nodes = new_nodes
+	manager.aliveNodes = newNodes
 }
 
-func (manager *AliveNodeManager) Is_Node_Alive(node string) bool {
+func (manager *AliveNodeManager) IsNodeAlive(node string) bool {
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
 
-	for _, alive_node := range manager.alive_nodes {
-		if alive_node == node {
+	for _, aliveNode := range manager.aliveNodes {
+		if aliveNode == node {
 			return true
 		}
 	}

@@ -1,12 +1,12 @@
 package main
 
 import (
+	"elevator_project/common"
 	"elevator_project/elevator"
 	"elevator_project/elevio"
 	"elevator_project/network"
 	"elevator_project/shared_states"
 	"flag"
-	"elevator_project/common"
 )
 
 func main() {
@@ -28,7 +28,7 @@ func main() {
 
 	network_channels := transferSharedStateChannelsToNetworkChannels(fromSharedStateToNetwork, toSharedStateFromNetwork)
 
-	Node := network.New_Node(common.GetElevatorID(), network_channels)
+	Node := network.NewNode(common.GetElevatorID(), network_channels)
 	defer Node.Close()
 
 	go shared_states.SharedStatesRoutine(

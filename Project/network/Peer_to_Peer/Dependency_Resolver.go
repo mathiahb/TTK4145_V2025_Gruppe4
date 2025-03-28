@@ -1,9 +1,9 @@
-package peer_to_peer
+package peerToPeer
 
 import (
+	"elevator_project/common"
 	"fmt"
 	"sync"
-	"elevator_project/common"
 )
 
 type Dependency_Resolver struct {
@@ -12,7 +12,7 @@ type Dependency_Resolver struct {
 	queue_list []Dependency
 	queue_head int
 
-	Saved_Messages map[Dependency]P2P_Message
+	Saved_Messages map[Dependency]P2PMessage
 }
 
 func New_Dependency_Resolver() *Dependency_Resolver {
@@ -20,7 +20,7 @@ func New_Dependency_Resolver() *Dependency_Resolver {
 		queue_list: make([]Dependency, common.P2P_MSG_TIME_HORIZON),
 		queue_head: 0,
 
-		Saved_Messages: make(map[Dependency]P2P_Message, common.P2P_MSG_TIME_HORIZON),
+		Saved_Messages: make(map[Dependency]P2PMessage, common.P2P_MSG_TIME_HORIZON),
 	}
 }
 
@@ -28,7 +28,7 @@ func (controller *Dependency_Resolver) advance_head() {
 	controller.queue_head = (controller.queue_head + 1) % common.P2P_MSG_TIME_HORIZON
 }
 
-func (controller *Dependency_Resolver) Emplace_New_Message(message P2P_Message) {
+func (controller *Dependency_Resolver) Emplace_New_Message(message P2PMessage) {
 	if message.Type != MESSAGE {
 		return
 	}
@@ -45,7 +45,7 @@ func (controller *Dependency_Resolver) Emplace_New_Message(message P2P_Message) 
 	controller.Saved_Messages[key] = message
 }
 
-func (controller *Dependency_Resolver) Get_Message(dependency Dependency) (P2P_Message, bool) {
+func (controller *Dependency_Resolver) Get_Message(dependency Dependency) (P2PMessage, bool) {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
 
@@ -53,7 +53,7 @@ func (controller *Dependency_Resolver) Get_Message(dependency Dependency) (P2P_M
 	return message, ok
 }
 
-func (network *P2P_Network) handle_special_case(message P2P_Message) {
+func (network *P2P_Network) handle_special_case(message P2PMessage) {
 	switch message.Type {
 	case REQUEST_MISSING_DEPENDENCY:
 		requested_dependency := Dependency_From_String(message.Message)

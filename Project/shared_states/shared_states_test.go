@@ -1,11 +1,11 @@
 package shared_states
 
 import (
+	"elevator_project/common"
 	network "elevator_project/network"
 	"fmt"
 	"testing"
 	"time"
-	"elevator_project/common"
 )
 
 func transferToNetworkChannels(toNetwork ToNetwork, fromNetwork FromNetwork) network.NetworkCommunicationChannels {
@@ -49,7 +49,7 @@ type fakeElevator struct {
 	fromSharedState ToElevator
 
 	get_information chan bool
-	close_channel   chan bool
+	closeChannel    chan bool
 
 	information_local_hr  chan common.HallRequestType
 	information_global_hr chan common.HallRequestType
@@ -64,7 +64,7 @@ func (elevator fakeElevator) run() {
 
 	for {
 		select {
-		case <-elevator.close_channel:
+		case <-elevator.closeChannel:
 			return
 		case <-elevator.get_information:
 			elevator.information_local_hr <- local_hr
@@ -116,20 +116,20 @@ func TestSharedStateUpdate(t *testing.T) {
 		toSharedState:   fromElevator,
 
 		get_information:       make(chan bool),
-		close_channel:         make(chan bool),
+		closeChannel:          make(chan bool),
 		information_local_hr:  make(chan common.HallRequestType, 1),
 		information_global_hr: make(chan common.HallRequestType, 1),
 		information_global_cr: make(chan []bool, 1),
 	}
 
 	// Open node
-	Node1 := network.New_Node(name1, transferToNetworkChannels(toNetwork, fromNetwork))
+	Node1 := network.NewNode(name1, transferToNetworkChannels(toNetwork, fromNetwork))
 	Node1.Connect()
 	defer Node1.Close()
 
 	go SharedStatesRoutine(make(chan common.Elevator), toElevator, fromElevator, toNetwork, fromNetwork)
 	go fakeElevator.run()
-	defer close(fakeElevator.close_channel)
+	defer close(fakeElevator.closeChannel)
 
 	elevator := common.Elevator{
 		Behaviour:   common.EB_Idle,

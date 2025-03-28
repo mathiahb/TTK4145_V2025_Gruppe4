@@ -6,31 +6,31 @@ import (
 )
 
 type ProtocolDispatcher struct {
-	command_queue             chan string
-	repeat_command            chan string
-	should_do_synchronization chan bool
+	commandQueue            chan string
+	repeatCommand           chan string
+	shouldDoSynchronization chan bool
 }
 
-func New_Protocol_Dispatcher() *ProtocolDispatcher {
+func NewProtocolDispatcher() *ProtocolDispatcher {
 	return &ProtocolDispatcher{
-		command_queue:             make(chan string, 32),
-		repeat_command:            make(chan string, 1),
-		should_do_synchronization: make(chan bool, 32),
+		commandQueue:            make(chan string, 32),
+		repeatCommand:           make(chan string, 1),
+		shouldDoSynchronization: make(chan bool, 32),
 	}
 }
 
-func (dispatcher ProtocolDispatcher) Do_Synchronization() {
-	dispatcher.should_do_synchronization <- true
+func (dispatcher ProtocolDispatcher) DoSynchronization() {
+	dispatcher.shouldDoSynchronization <- true
 }
 
-func (dispatcher ProtocolDispatcher) Do_Command(command string) {
-	dispatcher.command_queue <- command
+func (dispatcher ProtocolDispatcher) DoCommand(command string) {
+	dispatcher.commandQueue <- command
 }
 
 func (dispatcher ProtocolDispatcher) Flush_Synchronization_Channel() {
 	for {
 		select {
-		case <-dispatcher.should_do_synchronization:
+		case <-dispatcher.shouldDoSynchronization:
 		default:
 			return
 		}
@@ -46,7 +46,7 @@ func Wait_After_Protocol() {
 	time.Sleep(100 * time.Millisecond)
 }
 
-func (node *Node) start_dispatcher() {
+func (node *Node) startDispatcher() {
 	go node.dispatcher()
 }
 
@@ -56,12 +56,12 @@ func (node *Node) dispatcher() {
 	for {
 		// First check if we should do Discovery -> Synchronize
 		select {
-		case <-node.protocol_dispatcher.should_do_synchronization:
-			node.protocol_dispatcher.Flush_Synchronization_Channel()
+		case <-node.protocolDispatcher.shouldDoSynchronization:
+			node.protocolDispatcher.Flush_Synchronization_Channel()
 			success := node.coordinate_Synchronization()
 
 			if !success {
-				go node.protocol_dispatcher.Do_Synchronization()
+				go node.protocolDispatcher.DoSynchronization()
 				Random_Wait()
 			}
 			continue
@@ -70,11 +70,11 @@ func (node *Node) dispatcher() {
 
 		// Then check if we aborted a command
 		select {
-		case command := <-node.protocol_dispatcher.repeat_command:
-			success := node.coordinate_2PC(command)
+		case command := <-node.protocolDispatcher.repeatCommand:
+			success := node.coordinate2PC(command)
 
 			if !success {
-				go func() { node.protocol_dispatcher.repeat_command <- command }()
+				go func() { node.protocolDispatcher.repeatCommand <- command }()
 				Random_Wait()
 			}
 			continue
@@ -83,28 +83,28 @@ func (node *Node) dispatcher() {
 
 		// Then wait for new commands/discovery
 		select {
-		case <-node.protocol_dispatcher.should_do_synchronization:
-			node.protocol_dispatcher.Flush_Synchronization_Channel()
+		case <-node.protocolDispatcher.shouldDoSynchronization:
+			node.protocolDispatcher.Flush_Synchronization_Channel()
 			success := node.coordinate_Synchronization()
 
 			if !success {
-				go node.protocol_dispatcher.Do_Synchronization()
+				go node.protocolDispatcher.DoSynchronization()
 				Random_Wait()
 			}
 
-		case command := <-node.protocol_dispatcher.repeat_command:
-			success := node.coordinate_2PC(command)
+		case command := <-node.protocolDispatcher.repeatCommand:
+			success := node.coordinate2PC(command)
 
 			if !success {
-				go func() { node.protocol_dispatcher.repeat_command <- command }()
+				go func() { node.protocolDispatcher.repeatCommand <- command }()
 				Random_Wait()
 			}
 
-		case command := <-node.protocol_dispatcher.command_queue:
-			success := node.coordinate_2PC(command)
+		case command := <-node.protocolDispatcher.commandQueue:
+			success := node.coordinate2PC(command)
 
 			if !success {
-				go func() { node.protocol_dispatcher.repeat_command <- command }()
+				go func() { node.protocolDispatcher.repeatCommand <- command }()
 				Random_Wait()
 			}
 		}

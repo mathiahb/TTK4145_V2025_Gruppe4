@@ -18,11 +18,11 @@ import (
 
 	Expected procedure
 	---
-	Coordinator: 2PC dispatched -> go node.coordinate_2PC(success_channel)
+	Coordinator: 2PC dispatched -> go node.coordinate2PC(success_channel)
 	Coordinator: Broadcast PREPARE
 	Coordinator: Waits for responses
 
-	Participants: Other nodes receives PREPARE -> go node.participate_2PC()
+	Participants: Other nodes receives PREPARE -> go node.participate2PC()
 	Participants: Every node responds PREPARE_ACK OR Abort Commit
 
 	Coordinator: Receives responses
@@ -47,37 +47,37 @@ import (
 
 */
 
-func (node *Node) create_communication_channel(prepare_message Message) chan Message {
-	node.mu_communication_channels.Lock()
-	defer node.mu_communication_channels.Unlock()
+func (node *Node) createCommunicationChannel(prepareMessage Message) chan Message {
+	node.muCommunicationChannels.Lock()
+	defer node.muCommunicationChannels.Unlock()
 
 	comm := make(chan Message, 32)
-	node.communication_channels[prepare_message.id] = comm
+	node.communicationChannels[prepareMessage.id] = comm
 	return comm
 }
 
-func (node *Node) delete_communication_channel(prepare_message Message) {
-	node.mu_communication_channels.Lock()
-	defer node.mu_communication_channels.Unlock()
+func (node *Node) deleteCommunicationChannel(prepareMessage Message) {
+	node.muCommunicationChannels.Lock()
+	defer node.muCommunicationChannels.Unlock()
 
-	delete(node.communication_channels, prepare_message.id)
+	delete(node.communicationChannels, prepareMessage.id)
 }
 
-func (node *Node) coordinate_2PC(cmd string) bool {
-	if !node.connected_to_network {
-		commit := node.create_Message("", TxID(""), cmd)
+func (node *Node) coordinate2PC(cmd string) bool {
+	if !node.connectedToNetwork {
+		commit := node.createMessage("", TxID(""), cmd)
 		node.doLocalCommit(commit)
 		return true
 	}
 
-	node.mu_voting_resource.Lock()
-	defer node.mu_voting_resource.Unlock()
+	node.muVotingResource.Lock()
+	defer node.muVotingResource.Unlock()
 
 	// Build a message with type = PREPARE, and payload = "Field=New_Value"
-	prepareMsg := node.create_Vote_Message(common.PREPARE, cmd)
+	prepareMsg := node.createVoteMessage(common.PREPARE, cmd)
 
-	comm := node.create_communication_channel(prepareMsg)
-	defer node.delete_communication_channel(prepareMsg)
+	comm := node.createCommunicationChannel(prepareMsg)
+	defer node.deleteCommunicationChannel(prepareMsg)
 
 	// Broadcast the PREPARE to all nodes
 	node.Broadcast(prepareMsg)
@@ -86,12 +86,12 @@ func (node *Node) coordinate_2PC(cmd string) bool {
 	// Wait for PREPARE_ACK from all alive nodes to proceed
 	ackCount := 0
 
-	node.Broadcast(node.create_Message(common.PREPARE_ACK, prepareMsg.id, ""))
+	node.Broadcast(node.createMessage(common.PREPARE_ACK, prepareMsg.id, ""))
 
-	time_to_complete := time.After(time.Millisecond * 1000)
+	timeToComplete := time.After(time.Millisecond * 1000)
 
 	for {
-		if ackCount == len(node.Get_Alive_Nodes()) {
+		if ackCount == len(node.GetAliveNodes()) {
 			// Everyone acknowledged, so let's COMMIT
 			go node.commit2PC(prepareMsg, cmd)
 			return true
@@ -104,14 +104,14 @@ func (node *Node) coordinate_2PC(cmd string) bool {
 				continue
 			}
 
-			if !node.alive_nodes_manager.Is_Node_Alive(msg.sender) {
+			if !node.aliveNodesManager.IsNodeAlive(msg.sender) {
 				node.abort2PC(prepareMsg)
 
 				node.Connect()
 				return false
 			}
 
-			switch msg.message_type {
+			switch msg.messageType {
 			case common.PREPARE_ACK:
 				// Successfully received an PREPARE_ACK
 				ackCount++
@@ -124,8 +124,8 @@ func (node *Node) coordinate_2PC(cmd string) bool {
 				return false
 			}
 
-		case <-time_to_complete:
-			if ackCount == len(node.Get_Alive_Nodes()) {
+		case <-timeToComplete:
+			if ackCount == len(node.GetAliveNodes()) {
 				// Everyone acknowledged, so let's COMMIT
 				go node.commit2PC(prepareMsg, cmd)
 				return true
@@ -135,37 +135,37 @@ func (node *Node) coordinate_2PC(cmd string) bool {
 			fmt.Printf("[%s] 2PC coordinator timed out waiting for ACKs => ABORT.\n", node.name)
 			go node.abort2PC(prepareMsg)
 
-			node.protocol_timed_out()
+			node.protocolTimedOut()
 			return false
 		}
 	}
 }
 
-func (node *Node) participate_2PC(prepareMsg Message) {
+func (node *Node) participate2PC(prepareMsg Message) {
 	if node.isTxIDFromUs(prepareMsg.id) {
 		// We don't want to vote for ourselves
 		return
 	}
 
 	// Attempt to lock so no other protocols run concurrently
-	//ok := node.mu_voting_resource.TryLock()
+	//ok := node.muVotingResource.TryLock()
 	//if !ok {
 	//	node.abort2PC(prepareMsg.id)
 	//	return
 	//}
-	//defer node.mu_voting_resource.Unlock()
+	//defer node.muVotingResource.Unlock()
 
 	// Parse the payload to get the command
 	// Decide if we can do this command
 
-	comm := node.create_communication_channel(prepareMsg)
-	defer node.delete_communication_channel(prepareMsg)
+	comm := node.createCommunicationChannel(prepareMsg)
+	defer node.deleteCommunicationChannel(prepareMsg)
 
 	canCommit := true
 	if canCommit {
 		// Send PREPARE_ACK back to coordinator
-		ackMsg := node.create_Message(common.PREPARE_ACK, prepareMsg.id, "")
-		node.Broadcast_Response(ackMsg, prepareMsg)
+		ackMsg := node.createMessage(common.PREPARE_ACK, prepareMsg.id, "")
+		node.BroadcastResponse(ackMsg, prepareMsg)
 		fmt.Printf("[%s] 2PC participant => PREPARE_ACK. Waiting for COMMIT/ABORT.\n", node.name)
 	} else {
 		// If we can't commit, broadcast ABORT and return
@@ -183,7 +183,7 @@ func (node *Node) participate_2PC(prepareMsg Message) {
 			if msg.id != prepareMsg.id {
 				continue
 			}
-			switch msg.message_type {
+			switch msg.messageType {
 			case common.COMMIT:
 				go node.doLocalCommit(msg)
 				return
@@ -192,21 +192,21 @@ func (node *Node) participate_2PC(prepareMsg Message) {
 			}
 		case <-timeout:
 			fmt.Printf("[%s] 2PC participant timed out waiting => ABORT.\n", node.name)
-			node.protocol_timed_out()
+			node.protocolTimedOut()
 			return
 		}
 	}
 }
 
-func (node *Node) commit2PC(prepare_message Message, payload string) {
-	commitMsg := node.create_Message(common.COMMIT, prepare_message.id, payload)
-	node.Broadcast_Response(commitMsg, prepare_message)
+func (node *Node) commit2PC(prepareMessage Message, payload string) {
+	commitMsg := node.createMessage(common.COMMIT, prepareMessage.id, payload)
+	node.BroadcastResponse(commitMsg, prepareMessage)
 	node.doLocalCommit(commitMsg)
 }
 
-func (node *Node) abort2PC(prepare_message Message) {
-	abortMsg := node.create_Message(common.ABORT_COMMIT, prepare_message.id, "")
-	node.Broadcast_Response(abortMsg, prepare_message)
+func (node *Node) abort2PC(prepareMessage Message) {
+	abortMsg := node.createMessage(common.ABORT_COMMIT, prepareMessage.id, "")
+	node.BroadcastResponse(abortMsg, prepareMessage)
 }
 
 func (node *Node) doLocalCommit(msg Message) {
@@ -214,5 +214,5 @@ func (node *Node) doLocalCommit(msg Message) {
 	// Parse the payload to get the command
 	fmt.Printf("[%s] Doing commit %s.\n", node.name, msg.payload)
 
-	node.shared_state_communication.FromNetwork.TwoPhaseCommit.ProtocolCommited <- msg.payload
+	node.sharedStateCommunication.FromNetwork.TwoPhaseCommit.ProtocolCommited <- msg.payload
 }

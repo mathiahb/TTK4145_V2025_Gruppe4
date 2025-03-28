@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	peer_to_peer "elevator_project/network/Peer_to_Peer"
+	peerToPeer "elevator_project/network/Peer_to_Peer"
 
 	peers "Network-go/network/peers"
 )
@@ -47,16 +47,16 @@ type NetworkCommunicationChannels struct {
 }
 
 type Node struct {
-	p2p *peer_to_peer.P2P_Network
+	p2p *peerToPeer.P2P_Network
 
-	connected_to_network bool
-	name                 string // Elevator ID
-	next_TxID_number     int
+	connectedToNetwork bool
+	name               string // Elevator ID
+	nextTxIDNumber     int
 
-	mu_voting_resource sync.Mutex // TryLock to see if you can vote.
+	muVotingResource sync.Mutex // TryLock to see if you can vote.
 
-	alive_nodes_manager AliveNodeManager
-	protocol_dispatcher ProtocolDispatcher
+	aliveNodesManager  AliveNodeManager
+	protocolDispatcher ProtocolDispatcher
 
 	comm chan Message
 
@@ -64,81 +64,81 @@ type Node struct {
 	txEnable     chan bool
 	peerUpdateCh chan peers.PeerUpdate
 
-	mu_communication_channels sync.Mutex
-	communication_channels    map[TxID]chan Message
+	muCommunicationChannels sync.Mutex
+	communicationChannels   map[TxID]chan Message
 
-	close_channel chan bool
+	closeChannel chan bool
 
 	// Shared State connection
-	shared_state_communication NetworkCommunicationChannels
+	sharedStateCommunication NetworkCommunicationChannels
 }
 
-func New_Node(name string, communication_channels NetworkCommunicationChannels) *Node {
+func NewNode(name string, communicationChannels NetworkCommunicationChannels) *Node {
 
 	node := Node{
-		p2p: peer_to_peer.New_P2P_Network(),
+		p2p: peerToPeer.NewP2PNetwork(),
 
-		name:                 name,
-		connected_to_network: false,
+		name:               name,
+		connectedToNetwork: false,
 
-		next_TxID_number: 0,
+		nextTxIDNumber: 0,
 
-		alive_nodes_manager: AliveNodeManager{
-			alive_nodes: make([]string, 0),
+		aliveNodesManager: AliveNodeManager{
+			aliveNodes: make([]string, 0),
 		},
-		protocol_dispatcher: *New_Protocol_Dispatcher(),
+		protocolDispatcher: *NewProtocolDispatcher(),
 
 		txEnable:     make(chan bool),
 		peerUpdateCh: make(chan peers.PeerUpdate),
 
-		comm:                   make(chan Message, 32), // Velg en passende bufferstørrelse
-		communication_channels: make(map[TxID]chan Message),
+		comm:                  make(chan Message, 32), // Velg en passende bufferstørrelse
+		communicationChannels: make(map[TxID]chan Message),
 
-		close_channel: make(chan bool),
+		closeChannel: make(chan bool),
 
-		shared_state_communication: communication_channels,
+		sharedStateCommunication: communicationChannels,
 	}
 
 	go peers.Receiver(common.PEERS_PORT, node.peerUpdateCh)
 	go peers.Transmitter(common.PEERS_PORT, name, node.txEnable)
 
-	node.start_reader()
-	node.start_dispatcher()
+	node.startReader()
+	node.startDispatcher()
 
 	return &node
 }
 
 func (node *Node) Connect() {
-	node.protocol_dispatcher.Do_Synchronization()
+	node.protocolDispatcher.DoSynchronization()
 }
 
 func (node *Node) Close() {
 	node.p2p.Close()
-	close(node.close_channel)
+	close(node.closeChannel)
 }
 
 func (node *Node) Broadcast(message Message) {
-	node.p2p.Broadcast(message.p2p_message)
+	node.p2p.Broadcast(message.p2pMessage)
 }
 
-func (node *Node) Broadcast_Response(message Message, responding_to Message) {
-	message.p2p_message.Depend_On(responding_to.p2p_message)
-	node.p2p.Broadcast(message.p2p_message)
+func (node *Node) BroadcastResponse(message Message, respondingTo Message) {
+	message.p2pMessage.DependOn(respondingTo.p2pMessage)
+	node.p2p.Broadcast(message.p2pMessage)
 }
 
-func (node *Node) protocol_timed_out() {
+func (node *Node) protocolTimedOut() {
 	node.Connect() // Reconnect to the others
 }
 
-func (node *Node) start_reader() {
+func (node *Node) startReader() {
 	go node.reader()
 }
 
-func (node *Node) forward_To_Network(message Message) {
-	node.mu_communication_channels.Lock()
-	defer node.mu_communication_channels.Unlock()
+func (node *Node) forwardToNetwork(message Message) {
+	node.muCommunicationChannels.Lock()
+	defer node.muCommunicationChannels.Unlock()
 
-	comm, ok := node.communication_channels[message.id]
+	comm, ok := node.communicationChannels[message.id]
 	if ok {
 		go func() { comm <- message }()
 	}
@@ -149,61 +149,61 @@ func (node *Node) reader() {
 
 	for {
 		select {
-		case <-node.close_channel:
+		case <-node.closeChannel:
 			return
 
-		case commit := <-node.shared_state_communication.ToNetwork.TwoPhaseCommit.RequestCommit:
+		case commit := <-node.sharedStateCommunication.ToNetwork.TwoPhaseCommit.RequestCommit:
 			fmt.Printf("[%s] Got command: %+v\n\n", node.name, commit)
 
-			if !node.connected_to_network {
+			if !node.connectedToNetwork {
 				// We are not connected, just accept any change to shared state.
-				node.shared_state_communication.FromNetwork.TwoPhaseCommit.ProtocolCommited <- commit
+				node.sharedStateCommunication.FromNetwork.TwoPhaseCommit.ProtocolCommited <- commit
 			} else {
-				node.protocol_dispatcher.Do_Command(commit)
+				node.protocolDispatcher.DoCommand(commit)
 			}
 
 		case peerUpdate := <-node.peerUpdateCh:
-			node.connected_to_network = false
+			node.connectedToNetwork = false
 			for _, peer := range peerUpdate.Peers {
 				if peer == node.name {
-					node.connected_to_network = true
+					node.connectedToNetwork = true
 				}
 			}
 
-			node.txEnable <- node.connected_to_network
+			node.txEnable <- node.connectedToNetwork
 
-			if !node.connected_to_network {
+			if !node.connectedToNetwork {
 				// We're not connected to network, tell other modules we exist, but no one else
 				peerUpdate.Peers = append(peerUpdate.Peers, node.name)
 			} else {
-				node.protocol_dispatcher.Do_Synchronization()
+				node.protocolDispatcher.DoSynchronization()
 			}
 
-			node.alive_nodes_manager.Set_Alive_Nodes(peerUpdate.Peers)
-			node.shared_state_communication.FromNetwork.Discovery.Updated_Alive_Nodes <- node.alive_nodes_manager.Get_Alive_Nodes()
+			node.aliveNodesManager.SetAliveNodes(peerUpdate.Peers)
+			node.sharedStateCommunication.FromNetwork.Discovery.Updated_Alive_Nodes <- node.aliveNodesManager.GetAliveNodes()
 
-		case p2p_message := <-node.p2p.Read_Channel:
-			message := translate_Message(p2p_message)
+		case p2pMessage := <-node.p2p.Read_Channel:
+			message := translateMessage(p2pMessage)
 
 			fmt.Printf("[%s] Received message: %s, decoded to \"%s: %s %s\"\n",
-				node.name, p2p_message.Message, message.id, message.message_type, message.payload)
+				node.name, p2pMessage.Message, message.id, message.messageType, message.payload)
 
-			switch message.message_type {
+			switch message.messageType {
 			// SYNCHRONIZATION
 			case common.SYNC_REQUEST:
-				go node.participate_In_Synchronization(message)
+				go node.participateInSynchronization(message)
 
 				// 2PC
 			case common.PREPARE: // Received a synchronization request
-				go node.participate_2PC(message)
+				go node.participate2PC(message)
 
 			default:
-				node.forward_To_Network(message)
+				node.forwardToNetwork(message)
 			}
 		}
 	}
 }
 
-func (node *Node) Get_Alive_Nodes() []string {
-	return node.alive_nodes_manager.Get_Alive_Nodes()
+func (node *Node) GetAliveNodes() []string {
+	return node.aliveNodesManager.GetAliveNodes()
 }

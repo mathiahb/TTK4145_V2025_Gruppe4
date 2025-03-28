@@ -85,7 +85,7 @@ func (connection *TCP_Connection) handle_TCP_Connection(connection_manager *TCP_
 		case <-connection.watchdog_timer.C:
 			return // No heartbeats heard within watchdog time, disconnect...
 
-		case <-connection.close_channel:
+		case <-connection.closeChannel:
 			return
 		}
 

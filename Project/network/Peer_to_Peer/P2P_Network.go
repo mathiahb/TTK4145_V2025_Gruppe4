@@ -1,25 +1,25 @@
-package peer_to_peer
+package peerToPeer
 
 import (
-	"fmt"
-	"time"
 	"elevator_project/common"
 	"elevator_project/network/Peer_to_Peer/TCP"
 	"elevator_project/network/Peer_to_Peer/UDP"
+	"fmt"
+	"time"
 )
 
-// Package peer_to_peer
+// Package peerToPeer
 //
 // Handles Peer Detection over UDP and Communication over TCP
 // Does not handle elevator detection (not all peers must be elevators, some may be listeners!)
 
 type P2P_Network struct {
-	Read_Channel chan P2P_Message
+	Read_Channel chan P2PMessage
 
 	TCP *TCP.TCP_Connection_Manager
 	UDP UDP.UDP_Channel
 
-	close_channel chan bool
+	closeChannel chan bool
 
 	tcp_server_address string
 
@@ -28,8 +28,8 @@ type P2P_Network struct {
 	clock               Lamport_Clock
 }
 
-func New_P2P_Network() *P2P_Network {
-	read_channel := make(chan P2P_Message, common.P2P_BUFFER_SIZE)
+func NewP2PNetwork() *P2P_Network {
+	read_channel := make(chan P2PMessage, common.P2P_BUFFER_SIZE)
 
 	tcp_manager := TCP.New_TCP_Connection_Manager()
 	udp_channel := UDP.New_UDP_Channel()
@@ -44,7 +44,7 @@ func New_P2P_Network() *P2P_Network {
 		TCP: tcp_manager,
 		UDP: udp_channel,
 
-		close_channel: make(chan bool),
+		closeChannel: make(chan bool),
 
 		tcp_server_address: server_address,
 
@@ -62,44 +62,44 @@ func New_P2P_Network() *P2P_Network {
 }
 
 func (network *P2P_Network) Close() {
-	close(network.close_channel)
+	close(network.closeChannel)
 	network.TCP.Close_All()
 	network.UDP.Close()
 }
 
-func (network *P2P_Network) Broadcast(message P2P_Message) {
+func (network *P2P_Network) Broadcast(message P2PMessage) {
 	network.dependency_resolver.Emplace_New_Message(message)
 	network.TCP.Broadcast(message.To_String())
 }
 
-func (network *P2P_Network) Send(message P2P_Message, recipient string) {
+func (network *P2P_Network) Send(message P2PMessage, recipient string) {
 	network.TCP.Send(message.To_String(), recipient)
 }
 
-func (network *P2P_Network) Create_Message(message string) P2P_Message {
-	return network.create_Message(message, MESSAGE)
+func (network *P2P_Network) CreateMessage(message string) P2PMessage {
+	return network.createMessage(message, MESSAGE)
 }
 
 func (network *P2P_Network) request_Dependency(dependency Dependency) {
-	message := network.create_Message(dependency.To_String(), REQUEST_MISSING_DEPENDENCY)
+	message := network.createMessage(dependency.To_String(), REQUEST_MISSING_DEPENDENCY)
 	network.Send(message, dependency.Dependency_Owner)
 }
 
-func (network *P2P_Network) create_Message(message string, message_type P2P_Message_Type) P2P_Message {
+func (network *P2P_Network) createMessage(message string, messageType P2P_Message_Type) P2PMessage {
 	network.clock.Event()
 
-	return New_P2P_Message(network.tcp_server_address, message_type, network.clock, message)
+	return New_P2P_Message(network.tcp_server_address, messageType, network.clock, message)
 }
 func (network *P2P_Network) reader() {
 	for {
 		select {
 		case tcp_message := <-network.TCP.Global_Read_Channel:
-			p2p_message := P2P_Message_From_String(tcp_message)
+			p2pMessage := P2P_Message_From_String(tcp_message)
 
-			network.clock.Update(p2p_message.Time)
-			go network.publisher(p2p_message)
+			network.clock.Update(p2pMessage.Time)
+			go network.publisher(p2pMessage)
 
-		case <-network.close_channel:
+		case <-network.closeChannel:
 			return
 
 		default:
@@ -108,7 +108,7 @@ func (network *P2P_Network) reader() {
 	}
 }
 
-func (network *P2P_Network) publisher(message P2P_Message) {
+func (network *P2P_Network) publisher(message P2PMessage) {
 	new_dependency := New_Dependency(message.Sender, message.Time)
 
 	if network.dependency_handler.Have_Seen_Dependency_Before(new_dependency) {
@@ -122,7 +122,7 @@ func (network *P2P_Network) publisher(message P2P_Message) {
 		select {
 		case <-timeout.C:
 			return // Timed out.
-		case <-network.close_channel:
+		case <-network.closeChannel:
 			return // Network closed.
 		default:
 		}
@@ -150,7 +150,7 @@ func (network *P2P_Network) peer_detection() {
 
 	for {
 		select {
-		case <-network.close_channel:
+		case <-network.closeChannel:
 			return // P2P Connection closed
 
 		case <-renew_presence_ticker.C:

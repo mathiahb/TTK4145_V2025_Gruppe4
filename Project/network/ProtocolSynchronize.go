@@ -41,37 +41,37 @@ import (
 */
 
 func (node *Node) get_Synchronization_Information() string {
-	node.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestInformation <- true
-	return <-node.shared_state_communication.ToNetwork.Synchronization.RespondToInformationRequest
+	node.sharedStateCommunication.FromNetwork.Synchronization.ProtocolRequestInformation <- true
+	return <-node.sharedStateCommunication.ToNetwork.Synchronization.RespondToInformationRequest
 }
 
 func (node *Node) interpret_Synchronization_Responses(responses map[string]string) string {
-	node.shared_state_communication.FromNetwork.Synchronization.ProtocolRequestsInterpretation <- responses
-	return <-node.shared_state_communication.ToNetwork.Synchronization.RespondWithInterpretation
+	node.sharedStateCommunication.FromNetwork.Synchronization.ProtocolRequestsInterpretation <- responses
+	return <-node.sharedStateCommunication.ToNetwork.Synchronization.RespondWithInterpretation
 }
 
 func (node *Node) send_Synchronization_Result(result string) {
-	node.shared_state_communication.FromNetwork.Synchronization.ResultFromSynchronization <- result
+	node.sharedStateCommunication.FromNetwork.Synchronization.ResultFromSynchronization <- result
 }
 
 func (node *Node) coordinate_Synchronization() bool {
-	if !node.connected_to_network {
+	if !node.connectedToNetwork {
 		return true // We're not connected, no need to do anything.
 	}
 
-	ok := node.mu_voting_resource.TryLock()
+	ok := node.muVotingResource.TryLock()
 	if !ok {
 		return false
 	}
-	defer node.mu_voting_resource.Unlock()
+	defer node.muVotingResource.Unlock()
 
-	//begin_synchronization_message := node.create_Message(common.SYNC_AFTER_DISCOVERY, begin_discovery_message.id, "")
+	//begin_synchronization_message := node.createMessage(common.SYNC_AFTER_DISCOVERY, begin_discovery_message.id, "")
 	//node.Broadcast(begin_synchronization_message)
 
-	begin_synchronization_message := node.create_Vote_Message(common.SYNC_REQUEST, "")
+	begin_synchronization_message := node.createVoteMessage(common.SYNC_REQUEST, "")
 
-	comm := node.create_communication_channel(begin_synchronization_message)
-	defer node.delete_communication_channel(begin_synchronization_message)
+	comm := node.createCommunicationChannel(begin_synchronization_message)
+	defer node.deleteCommunicationChannel(begin_synchronization_message)
 
 	node.Broadcast(begin_synchronization_message)
 	node.send_Own_Information_For_Synchronization(begin_synchronization_message)
@@ -81,17 +81,17 @@ func (node *Node) coordinate_Synchronization() bool {
 	for {
 		select {
 		case response := <-comm:
-			if !node.alive_nodes_manager.Is_Node_Alive(response.sender) {
+			if !node.aliveNodesManager.IsNodeAlive(response.sender) {
 				node.abort_Synchronization(begin_synchronization_message)
 
 				node.Connect()
 				return false
 			}
 
-			if response.message_type == common.SYNC_RESPONSE && response.id == begin_synchronization_message.id {
+			if response.messageType == common.SYNC_RESPONSE && response.id == begin_synchronization_message.id {
 				combined_information[response.sender] = response.payload
 
-				if len(combined_information) == len(node.alive_nodes_manager.Get_Alive_Nodes()) {
+				if len(combined_information) == len(node.aliveNodesManager.GetAliveNodes()) {
 					result := node.interpret_Synchronization_Responses(combined_information)
 
 					go node.broadcast_Synchronization_Result(begin_synchronization_message, result)
@@ -100,14 +100,14 @@ func (node *Node) coordinate_Synchronization() bool {
 					return true
 				}
 			}
-			if response.message_type == common.ABORT_SYNCHRONIZATION && response.id == begin_synchronization_message.id {
+			if response.messageType == common.ABORT_SYNCHRONIZATION && response.id == begin_synchronization_message.id {
 				node.abort_Synchronization(begin_synchronization_message)
 
 				return false
 			}
 		case <-timeout:
 			node.abort_Synchronization(begin_synchronization_message)
-			node.protocol_timed_out()
+			node.protocolTimedOut()
 
 			return false
 		}
@@ -115,42 +115,42 @@ func (node *Node) coordinate_Synchronization() bool {
 }
 
 func (node *Node) broadcast_Synchronization_Result(begin_synchronization_message Message, result string) {
-	message := node.create_Message(common.SYNC_RESULT, begin_synchronization_message.id, result)
-	node.Broadcast_Response(message, begin_synchronization_message)
+	message := node.createMessage(common.SYNC_RESULT, begin_synchronization_message.id, result)
+	node.BroadcastResponse(message, begin_synchronization_message)
 }
 
 func (node *Node) abort_Synchronization(begin_synchronization_message Message) {
-	message := node.create_Message(common.ABORT_SYNCHRONIZATION, begin_synchronization_message.id, "")
-	node.Broadcast_Response(message, begin_synchronization_message)
+	message := node.createMessage(common.ABORT_SYNCHRONIZATION, begin_synchronization_message.id, "")
+	node.BroadcastResponse(message, begin_synchronization_message)
 }
 
 func (node *Node) send_Own_Information_For_Synchronization(synchronization_message Message) {
 	information := node.get_Synchronization_Information()
 
-	response := node.create_Message(common.SYNC_RESPONSE, synchronization_message.id, information)
+	response := node.createMessage(common.SYNC_RESPONSE, synchronization_message.id, information)
 	node.Broadcast(response)
 }
 
-func (node *Node) participate_In_Synchronization(begin_message Message) {
+func (node *Node) participateInSynchronization(begin_message Message) {
 	if node.isTxIDFromUs(begin_message.id) {
 		return
 	}
 
-	ok := node.mu_voting_resource.TryLock()
+	ok := node.muVotingResource.TryLock()
 	if !ok {
 		node.abort_Synchronization(begin_message)
 		return
 	}
-	defer node.mu_voting_resource.Unlock()
+	defer node.muVotingResource.Unlock()
 
-	if !node.alive_nodes_manager.Is_Node_Alive(node.name) {
+	if !node.aliveNodesManager.IsNodeAlive(node.name) {
 		// Node is dead, so we should reconnect
 		node.Connect()
 		return
 	}
 
-	comm := node.create_communication_channel(begin_message)
-	defer node.delete_communication_channel(begin_message)
+	comm := node.createCommunicationChannel(begin_message)
+	defer node.deleteCommunicationChannel(begin_message)
 
 	node.send_Own_Information_For_Synchronization(begin_message)
 
@@ -159,12 +159,12 @@ func (node *Node) participate_In_Synchronization(begin_message Message) {
 	for {
 		select {
 		case result := <-comm:
-			if result.message_type == common.SYNC_RESULT && result.id == begin_message.id {
+			if result.messageType == common.SYNC_RESULT && result.id == begin_message.id {
 				node.send_Synchronization_Result(result.payload)
 				return
 			}
 
-			if result.message_type == common.ABORT_SYNCHRONIZATION && result.id == begin_message.id {
+			if result.messageType == common.ABORT_SYNCHRONIZATION && result.id == begin_message.id {
 				return
 			}
 		case <-timeout:
