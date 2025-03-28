@@ -1,8 +1,8 @@
 package TCP
 
 import (
-	"strings"
 	"elevator_project/common"
+	"strings"
 )
 
 // Struct that handles the fact that TCP messages can be cut short in a read statement.
@@ -10,8 +10,8 @@ type TCP_Split_Handler struct {
 	split_message_to_be_handled string
 }
 
-func (handler *TCP_Split_Handler) Split_Null_Terminated_Tcp_Message(tcp_message string) []string {
-	split_messages := strings.Split(tcp_message, common.NULL)
+func (handler *TCP_Split_Handler) Split_Null_Terminated_Tcp_Message(tcpMessage string) []string {
+	split_messages := strings.Split(tcpMessage, common.NULL)
 
 	// Handle message that has been split due to buffer size or partial TCP transmission.
 	//---

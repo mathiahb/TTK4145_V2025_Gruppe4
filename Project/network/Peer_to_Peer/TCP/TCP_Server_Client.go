@@ -1,21 +1,21 @@
 package TCP
 
 import (
+	"elevator_project/common"
 	"fmt"
 	"net"
 	"strconv"
 	"time"
-	"elevator_project/common"
 )
 
 func (connection_manager *TCP_Connection_Manager) setup_TCP_Connection(connection net.Conn) {
 	// Add the incoming connection to the connection manager
 	connection_name := connection.RemoteAddr().String()
-	if connection_manager.Does_Connection_Exist(connection_name) {
+	if connection_manager.DoesConnectionExist(connection_name) {
 		return // We are already connected...
 	}
 
-	connection_object := New_TCP_Connection(connection_name, connection_manager.Global_Read_Channel, connection)
+	connection_object := New_TCP_Connection(connection_name, connection_manager.GlobalReadChannel, connection)
 	connection_manager.Add_Connection(connection_object)
 
 	// We don't want to delay, send everything asap.

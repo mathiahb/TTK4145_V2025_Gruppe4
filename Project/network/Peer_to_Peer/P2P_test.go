@@ -8,8 +8,8 @@ import (
 )
 
 func Test_Dependency_Horizon(t *testing.T) {
-	handler := New_Dependency_Handler()
-	clock := New_Lamport_Clock()
+	handler := NewDependencyHandler()
+	clock := NewLamportClock()
 
 	owner := "OWNER"
 
@@ -23,28 +23,28 @@ func Test_Dependency_Horizon(t *testing.T) {
 
 		handler.Add_Dependency(dependency)
 
-		if !handler.Has_Dependency(dependency) {
+		if !handler.HasDependency(dependency) {
 			t.Fatal("Handler did not add dependency to list!\n")
 		}
 
 		clock.Event()
 	}
 
-	if handler.Has_Dependency(first_dependency) {
+	if handler.HasDependency(first_dependency) {
 		t.Fatalf("First dependency was not removed! Map length: %d, Heap length: %d\n", len(handler.lookup_map), handler.min_heap.Len())
 	}
 
-	second_dependency := Dependency{owner, New_Lamport_Clock_From_String("2")}
+	second_dependency := Dependency{owner, NewLamportClockFromString("2")}
 
-	if !handler.Has_Dependency(second_dependency) {
+	if !handler.HasDependency(second_dependency) {
 		t.Fatalf("Second dependency was removed! Map length %d, Heap length %d\n", len(handler.lookup_map), handler.min_heap.Len())
 	}
 
 }
 
 func Test_Lamport_Clock_Wraparound(t *testing.T) {
-	clock_high := Lamport_Clock{common.LAMPORT_CLOCK_WRAPAROUND_UPPER_EDGE + 1}
-	clock_low := Lamport_Clock{common.LAMPORT_CLOCK_WRAPAROUND_LOWER_EDGE - 1}
+	clock_high := LamportClock{common.LAMPORT_CLOCK_WRAPAROUND_UPPER_EDGE + 1}
+	clock_low := LamportClock{common.LAMPORT_CLOCK_WRAPAROUND_LOWER_EDGE - 1}
 
 	if !clock_high.Is_Less_Than(clock_low) {
 		t.Fatal("Wraparound clock is not returning true on wraparound!")
@@ -52,8 +52,8 @@ func Test_Lamport_Clock_Wraparound(t *testing.T) {
 }
 
 func Test_Dependency_Wraparound(t *testing.T) {
-	handler := New_Dependency_Handler()
-	clock := New_Lamport_Clock()
+	handler := NewDependencyHandler()
+	clock := NewLamportClock()
 
 	clock.time = common.LAMPORT_CLOCK_WRAPAROUND_UPPER_EDGE + 1
 
@@ -64,7 +64,7 @@ func Test_Dependency_Wraparound(t *testing.T) {
 
 		handler.Add_Dependency(dependency)
 
-		if !handler.Has_Dependency(dependency) {
+		if !handler.HasDependency(dependency) {
 			t.Fatal("Handler did not add dependency to list!\n")
 		}
 
@@ -77,15 +77,15 @@ func Test_Dependency_Wraparound(t *testing.T) {
 		dependency := Dependency{strconv.Itoa(clock.time), clock}
 
 		handler.Add_Dependency(dependency)
-		old_dependency := Dependency{strconv.Itoa(clock.time - 1), Lamport_Clock{clock.time - 1}}
+		old_dependency := Dependency{strconv.Itoa(clock.time - 1), LamportClock{clock.time - 1}}
 
-		if !handler.Has_Dependency(dependency) {
+		if !handler.HasDependency(dependency) {
 			t.Fatal("Handler did not add dependency to list!\n")
 		}
 
 		// Old dependency doesn't exist for i = 0.
-		if i != 0 && !handler.Has_Dependency(old_dependency) {
-			t.Fatalf("Handler did not keep the new dependency: %s!\n", old_dependency.To_String())
+		if i != 0 && !handler.HasDependency(old_dependency) {
+			t.Fatalf("Handler did not keep the new dependency: %s!\n", old_dependency.ToString())
 		}
 
 		clock.Event()
@@ -95,20 +95,20 @@ func Test_Dependency_Wraparound(t *testing.T) {
 func Test_P2P_Message_String(t *testing.T) {
 	sender_field := "SENDER"
 	type_field := MESSAGE
-	time_field := New_Lamport_Clock_From_String("6")
-	dependency_field := New_Dependency("OTHER", New_Lamport_Clock_From_String("3"))
+	time_field := NewLamportClockFromString("6")
+	dependency_field := NewDependency("OTHER", NewLamportClockFromString("3"))
 	body_field := "Hello from body!"
 
 	test_tcp_message :=
 		sender_field + common.P2P_FIELD_DELIMINATOR +
 			string(type_field) + common.P2P_FIELD_DELIMINATOR +
 			time_field.String() + common.P2P_FIELD_DELIMINATOR +
-			dependency_field.To_String() + common.P2P_FIELD_DELIMINATOR +
+			dependency_field.ToString() + common.P2P_FIELD_DELIMINATOR +
 			body_field
 
-	p2pMessage := P2P_Message_From_String(test_tcp_message)
+	p2pMessage := P2PMessageFromString(test_tcp_message)
 
-	t.Logf("P2P_message generated: %s\n", p2pMessage.To_String())
+	t.Logf("P2P_message generated: %s\n", p2pMessage.ToString())
 
 	if p2pMessage.Sender != sender_field {
 		t.Fatalf("Sender field mismatch!\n%s != %s\n", p2pMessage.Sender, sender_field)
@@ -122,15 +122,15 @@ func Test_P2P_Message_String(t *testing.T) {
 		t.Fatalf("Time field mismatch!\n%s != %s\n", p2pMessage.Time.String(), time_field.String())
 	}
 
-	if p2pMessage.dependency.To_String() != dependency_field.To_String() {
-		t.Fatalf("Dependency field mismatch!\n%s != %s\n", p2pMessage.dependency.To_String(), dependency_field.To_String())
+	if p2pMessage.dependency.ToString() != dependency_field.ToString() {
+		t.Fatalf("Dependency field mismatch!\n%s != %s\n", p2pMessage.dependency.ToString(), dependency_field.ToString())
 	}
 
 	if p2pMessage.Message != body_field {
 		t.Fatalf("Body field mismatch!\n%s != %s\n", p2pMessage.Message, body_field)
 	}
 
-	stringed_p2p_message := p2pMessage.To_String()
+	stringed_p2p_message := p2pMessage.ToString()
 
 	if stringed_p2p_message != test_tcp_message {
 		t.Fatalf("Stringed message:\n%s\n---\nDid not match origin string %s\n", stringed_p2p_message, test_tcp_message)
@@ -138,38 +138,38 @@ func Test_P2P_Message_String(t *testing.T) {
 }
 
 func Test_Message_Horizon(t *testing.T) {
-	resolver := New_Dependency_Resolver()
-	clock := New_Lamport_Clock()
+	resolver := NewDependencyResolver()
+	clock := NewLamportClock()
 
 	// 1 more than horizon
 	for i := 0; i < common.P2P_MSG_TIME_HORIZON+1; i++ {
 		clock.Event()
 
-		p2pMessage := New_P2P_Message("SENDER", MESSAGE, clock, "BODY")
-		resolver.Emplace_New_Message(p2pMessage)
+		p2pMessage := NewP2PMessage("SENDER", MESSAGE, clock, "BODY")
+		resolver.EmplaceNewMessage(p2pMessage)
 
-		dependency := New_Dependency("SENDER", clock)
+		dependency := NewDependency("SENDER", clock)
 
 		resolved_p2p_message, ok := resolver.Get_Message(dependency)
 
 		if !ok {
-			t.Fatalf("Failed to get an ok on sending %s:\n", p2pMessage.To_String())
+			t.Fatalf("Failed to get an ok on sending %s:\n", p2pMessage.ToString())
 		}
 
-		if p2pMessage.To_String() != resolved_p2p_message.To_String() {
+		if p2pMessage.ToString() != resolved_p2p_message.ToString() {
 			t.Fatalf("Returned string was ok, but not correct! %s != %s\n",
-				p2pMessage.To_String(), resolved_p2p_message.To_String())
+				p2pMessage.ToString(), resolved_p2p_message.ToString())
 		}
 	}
 
-	first_dependency := New_Dependency("SENDER", New_Lamport_Clock_From_String("1"))
-	second_dependency := New_Dependency("SENDER", New_Lamport_Clock_From_String("2"))
+	first_dependency := NewDependency("SENDER", NewLamportClockFromString("1"))
+	second_dependency := NewDependency("SENDER", NewLamportClockFromString("2"))
 
 	message, ok := resolver.Get_Message(first_dependency)
 
 	if ok {
 		t.Fatalf("Received a message that was supposed to be out of horizon!\n Resolver returned: %s\n",
-			message.To_String())
+			message.ToString())
 	}
 
 	message, ok = resolver.Get_Message(second_dependency)
@@ -178,10 +178,10 @@ func Test_Message_Horizon(t *testing.T) {
 		t.Fatal("Did not find the second message that was supposed to be in horizon!")
 	}
 
-	p2pMessage := New_P2P_Message("SENDER", MESSAGE, New_Lamport_Clock_From_String("2"), "BODY")
-	if message.To_String() != p2pMessage.To_String() {
+	p2pMessage := NewP2PMessage("SENDER", MESSAGE, NewLamportClockFromString("2"), "BODY")
+	if message.ToString() != p2pMessage.ToString() {
 		t.Fatalf("Returned second dependency was ok, but not correct! %s != %s\n",
-			message.To_String(), p2pMessage.To_String())
+			message.ToString(), p2pMessage.ToString())
 	}
 }
 
@@ -200,10 +200,10 @@ func Test_Network(t *testing.T) {
 	time.Sleep(time.Second)
 
 	select {
-	case received_message := <-network_2.Read_Channel:
-		if p2pMessage.To_String() != received_message.To_String() {
+	case received_message := <-network_2.ReadChannel:
+		if p2pMessage.ToString() != received_message.ToString() {
 			t.Fatalf("Error Peer2Peer! Message received did not match sent!\n%s != %s\n",
-				p2pMessage.To_String(), received_message.To_String())
+				p2pMessage.ToString(), received_message.ToString())
 		}
 	default:
 		t.Fatal("Error Peer2Peer! Message was never received!")
@@ -228,10 +228,10 @@ func Test_Dependency_Resend(t *testing.T) {
 	time.Sleep(time.Second)
 
 	select {
-	case received_message := <-network_2.Read_Channel:
-		if p2pMessage.To_String() != received_message.To_String() {
+	case received_message := <-network_2.ReadChannel:
+		if p2pMessage.ToString() != received_message.ToString() {
 			t.Fatalf("Error Peer2Peer! Message received did not match sent!\n%s != %s\n",
-				p2pMessage.To_String(), received_message.To_String())
+				p2pMessage.ToString(), received_message.ToString())
 		}
 
 		p2p_depended_message := network_2.CreateMessage("Hello 2!")
@@ -242,17 +242,17 @@ func Test_Dependency_Resend(t *testing.T) {
 		time.Sleep(time.Second)
 
 		select {
-		case received_message_network_3 := <-network_3.Read_Channel:
-			if p2pMessage.To_String() != received_message_network_3.To_String() {
+		case received_message_network_3 := <-network_3.ReadChannel:
+			if p2pMessage.ToString() != received_message_network_3.ToString() {
 				t.Fatalf("Error Peer2Peer! Depended message received did not match sent!\n%s != %s\n",
-					p2pMessage.To_String(), received_message.To_String())
+					p2pMessage.ToString(), received_message.ToString())
 			}
 
 			select {
-			case received_depended_message := <-network_3.Read_Channel:
-				if p2p_depended_message.To_String() != received_depended_message.To_String() {
+			case received_depended_message := <-network_3.ReadChannel:
+				if p2p_depended_message.ToString() != received_depended_message.ToString() {
 					t.Fatalf("Error Peer2Peer! Depended message received did not match sent!\n%s != %s\n",
-						p2pMessage.To_String(), received_message.To_String())
+						p2pMessage.ToString(), received_message.ToString())
 				}
 			default:
 				t.Fatal("Error Peer2Peer Network 3! Hello 2 Message was never received!")
@@ -283,15 +283,15 @@ func Test_Double_Send(t *testing.T) {
 	time.Sleep(time.Second)
 
 	select {
-	case received_message := <-network_2.Read_Channel:
-		if p2pMessage.To_String() != received_message.To_String() {
+	case received_message := <-network_2.ReadChannel:
+		if p2pMessage.ToString() != received_message.ToString() {
 			t.Fatalf("Error Peer2Peer! Message received did not match sent!\n%s != %s\n",
-				p2pMessage.To_String(), received_message.To_String())
+				p2pMessage.ToString(), received_message.ToString())
 		}
 
 		select {
-		case spurious_message := <-network_2.Read_Channel:
-			t.Fatalf("Error Peer2Peer, a message got sent twice! %s", spurious_message.To_String())
+		case spurious_message := <-network_2.ReadChannel:
+			t.Fatalf("Error Peer2Peer, a message got sent twice! %s", spurious_message.ToString())
 		default:
 		}
 	default:

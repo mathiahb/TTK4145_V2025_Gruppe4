@@ -8,10 +8,10 @@ import (
 
 type Dependency struct {
 	Dependency_Owner string
-	Dependency_Clock Lamport_Clock
+	Dependency_Clock LamportClock
 }
 
-func New_Dependency(owner string, clock Lamport_Clock) Dependency {
+func NewDependency(owner string, clock LamportClock) Dependency {
 	return Dependency{
 		Dependency_Owner: owner,
 		Dependency_Clock: clock,
@@ -20,7 +20,7 @@ func New_Dependency(owner string, clock Lamport_Clock) Dependency {
 
 // Format Dependency:
 // DEPENDENCYOWNER/LAMPORTCLOCK
-func (dependency Dependency) To_String() string {
+func (dependency Dependency) ToString() string {
 	return dependency.Dependency_Owner + common.P2P_DEP_DELIMINATOR + dependency.Dependency_Clock.String()
 }
 
@@ -33,7 +33,7 @@ func Dependency_From_String(str string) Dependency {
 	}
 
 	owner := fields[0]
-	time := New_Lamport_Clock_From_String(fields[1])
+	time := NewLamportClockFromString(fields[1])
 
 	return Dependency{
 		Dependency_Owner: owner,

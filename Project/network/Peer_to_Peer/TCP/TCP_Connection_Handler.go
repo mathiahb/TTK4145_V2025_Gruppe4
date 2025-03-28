@@ -33,7 +33,7 @@ func (TCP_Connection *TCP_Connection) read() {
 			if split_message == common.TCP_HEARTBEAT {
 				TCP_Connection.watchdog_timer.Reset(common.TCP_HEARTBEAT_TIME)
 			} else {
-				TCP_Connection.Read_Channel <- split_message
+				TCP_Connection.ReadChannel <- split_message
 			}
 		}
 	}
@@ -44,8 +44,8 @@ func (TCP_Connection *TCP_Connection) write(message string) {
 	deadline := time.Now().Add(common.TCP_READ_DEADLNE)
 	TCP_Connection.connection.SetWriteDeadline(deadline)
 
-	tcp_message := TCP_Connection.split_handler.Make_Null_Terminated_TCP_Message(message)
-	data := []byte(tcp_message)
+	tcpMessage := TCP_Connection.split_handler.Make_Null_Terminated_TCP_Message(message)
+	data := []byte(tcpMessage)
 
 	_, err := TCP_Connection.connection.Write(data)
 

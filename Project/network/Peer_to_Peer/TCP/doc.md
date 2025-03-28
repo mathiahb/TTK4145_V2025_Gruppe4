@@ -2,7 +2,7 @@ TCP
 ---
 
 The TCP module provides a TCP_Connection and a TCP_Connection_Manager struct
-The intended use case is to use TCP Connection Manager and not use TCP Connection because the manager creates connections using Open_Server() and Connect_Client(), though the option exists to directly connect a connection you have made yourself.
+The intended use case is to use TCP Connection Manager and not use TCP Connection because the manager creates connections using OpenServer() and ConnectClient(), though the option exists to directly connect a connection you have made yourself.
 
 Used by
 ---

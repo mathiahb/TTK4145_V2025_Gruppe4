@@ -6,18 +6,18 @@ import (
 	"strings"
 )
 
-type P2P_Message_Type string
+type P2PMessageType string
 
 const (
-	MESSAGE                    P2P_Message_Type = "MSGSND"
-	REQUEST_MISSING_DEPENDENCY P2P_Message_Type = "REQDEP"
+	MESSAGE                    P2PMessageType = "MSGSND"
+	REQUEST_MISSING_DEPENDENCY P2PMessageType = "REQDEP"
 )
 
 type P2PMessage struct {
 	Sender  string
-	Type    P2P_Message_Type
+	Type    P2PMessageType
 	Message string
-	Time    Lamport_Clock
+	Time    LamportClock
 
 	dependency Dependency
 }
@@ -28,7 +28,7 @@ type P2PMessage struct {
 // LAMPORT_CLOCK\r\n
 // DEPENDENCY\r\n
 // BODY/REQUEST\r\n
-func New_P2P_Message(Sender string, Type P2P_Message_Type, Time Lamport_Clock, Message string) P2PMessage {
+func NewP2PMessage(Sender string, Type P2PMessageType, Time LamportClock, Message string) P2PMessage {
 	return P2PMessage{
 		Sender:  Sender,
 		Type:    Type,
@@ -39,33 +39,33 @@ func New_P2P_Message(Sender string, Type P2P_Message_Type, Time Lamport_Clock, M
 	}
 }
 
-func (message *P2PMessage) DependOn(dependency_message P2PMessage) {
-	message.dependency = New_Dependency(dependency_message.Sender, dependency_message.Time)
+func (message *P2PMessage) DependOn(dependencyMessage P2PMessage) {
+	message.dependency = NewDependency(dependencyMessage.Sender, dependencyMessage.Time)
 }
 
-func (message P2PMessage) To_String() string {
+func (message P2PMessage) ToString() string {
 	var result string = ""
 
 	result = result + message.Sender
 	result = result + common.P2P_FIELD_DELIMINATOR + string(message.Type)
 	result = result + common.P2P_FIELD_DELIMINATOR + message.Time.String()
-	result = result + common.P2P_FIELD_DELIMINATOR + message.dependency.To_String()
+	result = result + common.P2P_FIELD_DELIMINATOR + message.dependency.ToString()
 	result = result + common.P2P_FIELD_DELIMINATOR + message.Message
 
 	return result
 }
 
-func P2P_Message_From_String(tcp_message string) P2PMessage {
-	fields := strings.Split(tcp_message, common.P2P_FIELD_DELIMINATOR)
+func P2PMessageFromString(tcpMessage string) P2PMessage {
+	fields := strings.Split(tcpMessage, common.P2P_FIELD_DELIMINATOR)
 
 	if len(fields) != 5 {
-		fmt.Printf("ERROR: P2PMessage badly formatted! Did you accidentally use \\r\\n in a file? %s\n", tcp_message)
+		fmt.Printf("ERROR: P2PMessage badly formatted! Did you accidentally use \\r\\n in a file? %s\n", tcpMessage)
 		return P2PMessage{}
 	}
 
 	sender := fields[0]
-	messageType := P2P_Message_Type(fields[1])
-	clock := New_Lamport_Clock_From_String(fields[2])
+	messageType := P2PMessageType(fields[1])
+	clock := NewLamportClockFromString(fields[2])
 	dependency := Dependency_From_String(fields[3])
 	body := fields[4]
 

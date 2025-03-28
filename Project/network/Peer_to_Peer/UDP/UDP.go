@@ -1,33 +1,34 @@
 package UDP
 
 import (
+	"elevator_project/common"
 	"fmt"
 	"net"
 	"time"
-	"elevator_project/common"
+
 	"golang.org/x/net/ipv4"
 )
 
 // Package UDP
 //-----------------------------------------------------------------
 //
-// Implements a struct UDP_Channel, connected to Multicast (239.255.255.255), made by New_UDP_Channel().
+// Implements a struct UDP_Channel, connected to Multicast (239.255.255.255), made by NewUDPChannel().
 //
 // WRITING:
 // By default on
 // Use Channel.Write_Channel <- message, to write onto the channel
 //
 // READING:
-// Use message <- Channel.Read_Channel, to read from the channel after Start_Reading() has been called
+// Use message <- Channel.ReadChannel, to read from the channel after Start_Reading() has been called
 //
-// Note: There may be messages read in Read_Channel after Stop_Reading has been called.
+// Note: There may be messages read in ReadChannel after Stop_Reading has been called.
 //
 // ----------------------------------------------------------------
 
 type UDP_Channel struct {
 	// Public
 	Write_Channel chan string
-	Read_Channel  chan string
+	ReadChannel   chan string
 
 	// Protected
 	quit_channel chan bool
@@ -43,7 +44,7 @@ func (channel UDP_Channel) Broadcast(message string) {
 
 // --------------------------------------------------------------------
 
-func Get_local_IP() net.IP {
+func GetLocalIP() net.IP {
 	connection, err := net.Dial("udp", "255.255.255.255:1")
 	if err != nil {
 		panic(err)
@@ -88,7 +89,7 @@ func (Channel UDP_Channel) udp_server(connection *ipv4.PacketConn) {
 
 			if err == nil {
 				message := string(data[0:bytes_received])
-				Channel.Read_Channel <- message
+				Channel.ReadChannel <- message
 			}
 		case <-Channel.quit_channel:
 			return
@@ -145,14 +146,14 @@ func (channel *UDP_Channel) create_UDP_server() error {
 	return nil
 }
 
-func New_UDP_Channel() UDP_Channel {
+func NewUDPChannel() UDP_Channel {
 	channel_write := make(chan string, 1024)
 	channel_read := make(chan string, 1024)
 	channel_quit := make(chan bool)
 
 	channel := UDP_Channel{
 		Write_Channel: channel_write,
-		Read_Channel:  channel_read,
+		ReadChannel:   channel_read,
 		quit_channel:  channel_quit,
 	}
 

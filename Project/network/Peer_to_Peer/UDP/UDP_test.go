@@ -7,8 +7,8 @@ import (
 
 func Test_Multicast_Multiple_Listeners(t *testing.T) {
 
-	channel1 := New_UDP_Channel()
-	channel2 := New_UDP_Channel()
+	channel1 := NewUDPChannel()
+	channel2 := NewUDPChannel()
 
 	defer channel1.Close()
 	defer channel2.Close()
@@ -22,7 +22,7 @@ func Test_Multicast_Multiple_Listeners(t *testing.T) {
 	time.Sleep(time.Millisecond)
 
 	select {
-	case message := <-channel2.Read_Channel:
+	case message := <-channel2.ReadChannel:
 		if message != send_message {
 			t.Errorf("Message 1 received did not match message sent!\n%s != %s\n", message, send_message)
 		}
@@ -35,7 +35,7 @@ func Test_Multicast_Multiple_Listeners(t *testing.T) {
 	time.Sleep(time.Millisecond)
 
 	select {
-	case message := <-channel1.Read_Channel:
+	case message := <-channel1.ReadChannel:
 		if message != send_message {
 			t.Errorf("Message 2 received did not match message sent!\n%s != %s\n", message, send_message)
 		}

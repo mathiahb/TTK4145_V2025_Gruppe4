@@ -273,9 +273,9 @@ func testDiscoveryDispatchRetry(Node1 *Node, Node2 *Node, t *testing.T) {
 	Node1.protocolDispatcher.DoSynchronization()
 	time.Sleep(time.Millisecond)
 
-	p2pMessage := <-Node2.p2p.Read_Channel
+	p2pMessage := <-Node2.p2p.ReadChannel
 	message := translateMessage(p2pMessage)
-	Node2.abort_Synchronization(message)
+	Node2.abortSynchronization(message)
 
 	go Node2.reader()
 

@@ -1,9 +1,9 @@
 package TCP
 
 import (
+	"elevator_project/common"
 	"fmt"
 	"sync"
-	"elevator_project/common"
 )
 
 // TCP Connection Manager
@@ -13,14 +13,14 @@ type TCP_Connection_Manager struct {
 	mu          sync.Mutex
 	Connections map[string]TCP_Connection // TCP Connection defined in TCP_internal.go
 
-	Global_Read_Channel chan string
+	GlobalReadChannel   chan string
 	stop_server_channel chan bool
 }
 
-func New_TCP_Connection_Manager() *TCP_Connection_Manager {
+func NewTCPConnectionManager() *TCP_Connection_Manager {
 	return &TCP_Connection_Manager{
 		Connections:         make(map[string]TCP_Connection),
-		Global_Read_Channel: make(chan string, common.TCP_BUFFER_SIZE),
+		GlobalReadChannel:   make(chan string, common.TCP_BUFFER_SIZE),
 		stop_server_channel: make(chan bool),
 	}
 }
@@ -51,14 +51,14 @@ func (manager *TCP_Connection_Manager) does_connection_exist_unsafe(connection_n
 	return ok
 }
 
-func (manager *TCP_Connection_Manager) Does_Connection_Exist(connection_name string) bool {
+func (manager *TCP_Connection_Manager) DoesConnectionExist(connection_name string) bool {
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
 
 	return manager.does_connection_exist_unsafe(connection_name)
 }
 
-func (manager *TCP_Connection_Manager) Close_All() {
+func (manager *TCP_Connection_Manager) CloseAll() {
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
 
@@ -69,7 +69,7 @@ func (manager *TCP_Connection_Manager) Close_All() {
 	}
 }
 
-func (manager *TCP_Connection_Manager) Open_Server() string {
+func (manager *TCP_Connection_Manager) OpenServer() string {
 	address_channel := make(chan string)
 
 	go manager.create_TCP_Server(address_channel)
@@ -77,7 +77,7 @@ func (manager *TCP_Connection_Manager) Open_Server() string {
 	return <-address_channel
 }
 
-func (manager *TCP_Connection_Manager) Connect_Client(address string) {
+func (manager *TCP_Connection_Manager) ConnectClient(address string) {
 	go manager.create_TCP_Client(address)
 }
 
@@ -96,7 +96,7 @@ func (manager *TCP_Connection_Manager) Send(message string, recipient string) {
 
 	if !manager.does_connection_exist_unsafe(recipient) {
 		fmt.Printf("Error, connection %s did not exist! Failed sending %s\n", recipient, message)
-		manager.Connect_Client(recipient)
+		manager.ConnectClient(recipient)
 		return
 	}
 

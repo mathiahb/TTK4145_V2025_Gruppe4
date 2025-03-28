@@ -15,7 +15,7 @@ type Dependency_Resolver struct {
 	Saved_Messages map[Dependency]P2PMessage
 }
 
-func New_Dependency_Resolver() *Dependency_Resolver {
+func NewDependencyResolver() *Dependency_Resolver {
 	return &Dependency_Resolver{
 		queue_list: make([]Dependency, common.P2P_MSG_TIME_HORIZON),
 		queue_head: 0,
@@ -28,7 +28,7 @@ func (controller *Dependency_Resolver) advance_head() {
 	controller.queue_head = (controller.queue_head + 1) % common.P2P_MSG_TIME_HORIZON
 }
 
-func (controller *Dependency_Resolver) Emplace_New_Message(message P2PMessage) {
+func (controller *Dependency_Resolver) EmplaceNewMessage(message P2PMessage) {
 	if message.Type != MESSAGE {
 		return
 	}
@@ -37,7 +37,7 @@ func (controller *Dependency_Resolver) Emplace_New_Message(message P2PMessage) {
 	defer controller.mu.Unlock()
 
 	controller.advance_head()
-	key := New_Dependency(message.Sender, message.Time)
+	key := NewDependency(message.Sender, message.Time)
 
 	delete(controller.Saved_Messages, controller.queue_list[controller.queue_head])
 
@@ -53,19 +53,19 @@ func (controller *Dependency_Resolver) Get_Message(dependency Dependency) (P2PMe
 	return message, ok
 }
 
-func (network *P2P_Network) handle_special_case(message P2PMessage) {
+func (network *P2P_Network) handleSpecialCase(message P2PMessage) {
 	switch message.Type {
 	case REQUEST_MISSING_DEPENDENCY:
 		requested_dependency := Dependency_From_String(message.Message)
-		response, ok := network.dependency_resolver.Get_Message(requested_dependency)
+		response, ok := network.dependencyResolver.Get_Message(requested_dependency)
 		if ok {
 			network.Send(response, message.Sender)
 		} else {
-			fmt.Printf("Error in special cases, a requested dependency was not found: %s", message.To_String())
+			fmt.Printf("Error in special cases, a requested dependency was not found: %s", message.ToString())
 		}
 		// Other special cases?
 	case MESSAGE:
-		fmt.Printf("Error in special cases, a message got handled as special case: %s", message.To_String())
+		fmt.Printf("Error in special cases, a message got handled as special case: %s", message.ToString())
 		return
 	}
 }

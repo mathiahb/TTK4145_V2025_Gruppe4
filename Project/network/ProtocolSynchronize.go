@@ -18,7 +18,7 @@ import (
 
 	Expected procedure
 	---
-	Coordinator: Synchronize dispatched -> go coordinate_Synchronization(success_channel)
+	Coordinator: Synchronize dispatched -> go coordinateSynchronization(success_channel)
 	Coordinator: Broadcast Synchronize Begin
 	Coordinator: Acquires it's own information via the synchronization channels.
 
@@ -50,11 +50,11 @@ func (node *Node) interpret_Synchronization_Responses(responses map[string]strin
 	return <-node.sharedStateCommunication.ToNetwork.Synchronization.RespondWithInterpretation
 }
 
-func (node *Node) send_Synchronization_Result(result string) {
+func (node *Node) sendSynchronizationResult(result string) {
 	node.sharedStateCommunication.FromNetwork.Synchronization.ResultFromSynchronization <- result
 }
 
-func (node *Node) coordinate_Synchronization() bool {
+func (node *Node) coordinateSynchronization() bool {
 	if !node.connectedToNetwork {
 		return true // We're not connected, no need to do anything.
 	}
@@ -74,7 +74,7 @@ func (node *Node) coordinate_Synchronization() bool {
 	defer node.deleteCommunicationChannel(begin_synchronization_message)
 
 	node.Broadcast(begin_synchronization_message)
-	node.send_Own_Information_For_Synchronization(begin_synchronization_message)
+	node.sendOwnInformationForSynchronization(begin_synchronization_message)
 
 	combined_information := make(map[string]string)
 	timeout := time.After(time.Second)
@@ -82,7 +82,7 @@ func (node *Node) coordinate_Synchronization() bool {
 		select {
 		case response := <-comm:
 			if !node.aliveNodesManager.IsNodeAlive(response.sender) {
-				node.abort_Synchronization(begin_synchronization_message)
+				node.abortSynchronization(begin_synchronization_message)
 
 				node.Connect()
 				return false
@@ -95,18 +95,18 @@ func (node *Node) coordinate_Synchronization() bool {
 					result := node.interpret_Synchronization_Responses(combined_information)
 
 					go node.broadcast_Synchronization_Result(begin_synchronization_message, result)
-					go node.send_Synchronization_Result(result)
+					go node.sendSynchronizationResult(result)
 
 					return true
 				}
 			}
 			if response.messageType == common.ABORT_SYNCHRONIZATION && response.id == begin_synchronization_message.id {
-				node.abort_Synchronization(begin_synchronization_message)
+				node.abortSynchronization(begin_synchronization_message)
 
 				return false
 			}
 		case <-timeout:
-			node.abort_Synchronization(begin_synchronization_message)
+			node.abortSynchronization(begin_synchronization_message)
 			node.protocolTimedOut()
 
 			return false
@@ -119,12 +119,12 @@ func (node *Node) broadcast_Synchronization_Result(begin_synchronization_message
 	node.BroadcastResponse(message, begin_synchronization_message)
 }
 
-func (node *Node) abort_Synchronization(begin_synchronization_message Message) {
+func (node *Node) abortSynchronization(begin_synchronization_message Message) {
 	message := node.createMessage(common.ABORT_SYNCHRONIZATION, begin_synchronization_message.id, "")
 	node.BroadcastResponse(message, begin_synchronization_message)
 }
 
-func (node *Node) send_Own_Information_For_Synchronization(synchronization_message Message) {
+func (node *Node) sendOwnInformationForSynchronization(synchronization_message Message) {
 	information := node.get_Synchronization_Information()
 
 	response := node.createMessage(common.SYNC_RESPONSE, synchronization_message.id, information)
@@ -138,7 +138,7 @@ func (node *Node) participateInSynchronization(begin_message Message) {
 
 	ok := node.muVotingResource.TryLock()
 	if !ok {
-		node.abort_Synchronization(begin_message)
+		node.abortSynchronization(begin_message)
 		return
 	}
 	defer node.muVotingResource.Unlock()
@@ -152,7 +152,7 @@ func (node *Node) participateInSynchronization(begin_message Message) {
 	comm := node.createCommunicationChannel(begin_message)
 	defer node.deleteCommunicationChannel(begin_message)
 
-	node.send_Own_Information_For_Synchronization(begin_message)
+	node.sendOwnInformationForSynchronization(begin_message)
 
 	timeout := time.After(time.Second)
 
@@ -160,7 +160,7 @@ func (node *Node) participateInSynchronization(begin_message Message) {
 		select {
 		case result := <-comm:
 			if result.messageType == common.SYNC_RESULT && result.id == begin_message.id {
-				node.send_Synchronization_Result(result.payload)
+				node.sendSynchronizationResult(result.payload)
 				return
 			}
 

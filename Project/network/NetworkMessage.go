@@ -40,7 +40,7 @@ func translateMessage(p2pMessage peerToPeer.P2PMessage) Message {
 
 	split := strings.SplitN(message, "=", 4) // Returns [garbage, txid + space + s, sender + space + r, payload]
 	if len(split) != 4 {
-		fmt.Printf("ERROR: Badly formatted message! %s\n", p2pMessage.To_String())
+		fmt.Printf("ERROR: Badly formatted message! %s\n", p2pMessage.ToString())
 		return result
 	}
 

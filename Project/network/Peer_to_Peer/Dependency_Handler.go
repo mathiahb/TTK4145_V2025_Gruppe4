@@ -32,7 +32,7 @@ type Dependency_Handler struct {
 	lookup_map map[Dependency]struct{}
 }
 
-func New_Dependency_Handler() Dependency_Handler {
+func NewDependencyHandler() Dependency_Handler {
 	min_heap := make(dependency_heap, 0)
 
 	heap.Init(&min_heap)
@@ -74,7 +74,7 @@ func (handler *Dependency_Handler) has_Dependency(dependency Dependency) bool {
 	return ok
 }
 
-func (handler *Dependency_Handler) Has_Dependency(dependency Dependency) bool {
+func (handler *Dependency_Handler) HasDependency(dependency Dependency) bool {
 	handler.mu.Lock()
 	defer handler.mu.Unlock()
 
@@ -82,7 +82,7 @@ func (handler *Dependency_Handler) Has_Dependency(dependency Dependency) bool {
 }
 
 // Performs the action of checking for dependency and adding it to the list
-func (handler *Dependency_Handler) Have_Seen_Dependency_Before(dependency Dependency) bool {
+func (handler *Dependency_Handler) HaveSeenDependencyBefore(dependency Dependency) bool {
 	handler.mu.Lock()
 	defer handler.mu.Unlock()
 

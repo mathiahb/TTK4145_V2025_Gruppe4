@@ -182,7 +182,7 @@ func (node *Node) reader() {
 			node.aliveNodesManager.SetAliveNodes(peerUpdate.Peers)
 			node.sharedStateCommunication.FromNetwork.Discovery.Updated_Alive_Nodes <- node.aliveNodesManager.GetAliveNodes()
 
-		case p2pMessage := <-node.p2p.Read_Channel:
+		case p2pMessage := <-node.p2p.ReadChannel:
 			message := translateMessage(p2pMessage)
 
 			fmt.Printf("[%s] Received message: %s, decoded to \"%s: %s %s\"\n",

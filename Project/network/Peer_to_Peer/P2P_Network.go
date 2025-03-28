@@ -14,46 +14,46 @@ import (
 // Does not handle elevator detection (not all peers must be elevators, some may be listeners!)
 
 type P2P_Network struct {
-	Read_Channel chan P2PMessage
+	ReadChannel chan P2PMessage
 
 	TCP *TCP.TCP_Connection_Manager
 	UDP UDP.UDP_Channel
 
 	closeChannel chan bool
 
-	tcp_server_address string
+	tcpServerAddress string
 
-	dependency_resolver *Dependency_Resolver
-	dependency_handler  Dependency_Handler
-	clock               Lamport_Clock
+	dependencyResolver *Dependency_Resolver
+	dependencyHandler  Dependency_Handler
+	clock              LamportClock
 }
 
 func NewP2PNetwork() *P2P_Network {
-	read_channel := make(chan P2PMessage, common.P2P_BUFFER_SIZE)
+	readChannel := make(chan P2PMessage, common.P2P_BUFFER_SIZE)
 
-	tcp_manager := TCP.New_TCP_Connection_Manager()
-	udp_channel := UDP.New_UDP_Channel()
+	tcpManager := TCP.NewTCPConnectionManager()
+	udpChannel := UDP.NewUDPChannel()
 
-	server_port := tcp_manager.Open_Server()
-	server_address := UDP.Get_local_IP().String() + server_port
-	fmt.Printf("Opened server at: %s\n", server_address)
+	serverPort := tcpManager.OpenServer()
+	serverAddress := UDP.GetLocalIP().String() + serverPort
+	fmt.Printf("Opened server at: %s\n", serverAddress)
 
 	network := P2P_Network{
-		Read_Channel: read_channel,
+		ReadChannel: readChannel,
 
-		TCP: tcp_manager,
-		UDP: udp_channel,
+		TCP: tcpManager,
+		UDP: udpChannel,
 
 		closeChannel: make(chan bool),
 
-		tcp_server_address: server_address,
+		tcpServerAddress: serverAddress,
 
-		dependency_resolver: New_Dependency_Resolver(),
-		dependency_handler:  New_Dependency_Handler(),
-		clock:               New_Lamport_Clock(),
+		dependencyResolver: NewDependencyResolver(),
+		dependencyHandler:  NewDependencyHandler(),
+		clock:              NewLamportClock(),
 	}
 
-	go network.peer_detection()
+	go network.peerDetection()
 	go network.reader()
 
 	time.Sleep(common.P2P_TIME_UNTIL_EXPECTED_ALL_CONNECTED)
@@ -63,38 +63,38 @@ func NewP2PNetwork() *P2P_Network {
 
 func (network *P2P_Network) Close() {
 	close(network.closeChannel)
-	network.TCP.Close_All()
+	network.TCP.CloseAll()
 	network.UDP.Close()
 }
 
 func (network *P2P_Network) Broadcast(message P2PMessage) {
-	network.dependency_resolver.Emplace_New_Message(message)
-	network.TCP.Broadcast(message.To_String())
+	network.dependencyResolver.EmplaceNewMessage(message)
+	network.TCP.Broadcast(message.ToString())
 }
 
 func (network *P2P_Network) Send(message P2PMessage, recipient string) {
-	network.TCP.Send(message.To_String(), recipient)
+	network.TCP.Send(message.ToString(), recipient)
 }
 
 func (network *P2P_Network) CreateMessage(message string) P2PMessage {
 	return network.createMessage(message, MESSAGE)
 }
 
-func (network *P2P_Network) request_Dependency(dependency Dependency) {
-	message := network.createMessage(dependency.To_String(), REQUEST_MISSING_DEPENDENCY)
+func (network *P2P_Network) requestDependency(dependency Dependency) {
+	message := network.createMessage(dependency.ToString(), REQUEST_MISSING_DEPENDENCY)
 	network.Send(message, dependency.Dependency_Owner)
 }
 
-func (network *P2P_Network) createMessage(message string, messageType P2P_Message_Type) P2PMessage {
+func (network *P2P_Network) createMessage(message string, messageType P2PMessageType) P2PMessage {
 	network.clock.Event()
 
-	return New_P2P_Message(network.tcp_server_address, messageType, network.clock, message)
+	return NewP2PMessage(network.tcpServerAddress, messageType, network.clock, message)
 }
 func (network *P2P_Network) reader() {
 	for {
 		select {
-		case tcp_message := <-network.TCP.Global_Read_Channel:
-			p2pMessage := P2P_Message_From_String(tcp_message)
+		case tcpMessage := <-network.TCP.GlobalReadChannel:
+			p2pMessage := P2PMessageFromString(tcpMessage)
 
 			network.clock.Update(p2pMessage.Time)
 			go network.publisher(p2pMessage)
@@ -109,9 +109,9 @@ func (network *P2P_Network) reader() {
 }
 
 func (network *P2P_Network) publisher(message P2PMessage) {
-	new_dependency := New_Dependency(message.Sender, message.Time)
+	new_dependency := NewDependency(message.Sender, message.Time)
 
-	if network.dependency_handler.Have_Seen_Dependency_Before(new_dependency) {
+	if network.dependencyHandler.HaveSeenDependencyBefore(new_dependency) {
 		return
 	}
 
@@ -127,25 +127,25 @@ func (network *P2P_Network) publisher(message P2PMessage) {
 		default:
 		}
 
-		if network.dependency_handler.Has_Dependency(message.dependency) {
+		if network.dependencyHandler.HasDependency(message.dependency) {
 			if message.Type == MESSAGE {
-				network.Read_Channel <- message
+				network.ReadChannel <- message
 			} else {
-				network.handle_special_case(message)
+				network.handleSpecialCase(message)
 			}
 
 			return
 		}
 
 		// Request the missing dependency.
-		network.request_Dependency(message.dependency)
+		network.requestDependency(message.dependency)
 
 		// Wait until more data is processed
 		time.Sleep(20 * time.Millisecond)
 	}
 }
 
-func (network *P2P_Network) peer_detection() {
+func (network *P2P_Network) peerDetection() {
 	renew_presence_ticker := time.NewTicker(common.UDP_WAIT_BEFORE_TRANSMITTING_AGAIN)
 
 	for {
@@ -154,16 +154,16 @@ func (network *P2P_Network) peer_detection() {
 			return // P2P Connection closed
 
 		case <-renew_presence_ticker.C:
-			network.announce_presence()
+			network.announcePresence()
 
-		case address := <-network.UDP.Read_Channel:
-			if !network.TCP.Does_Connection_Exist(address) {
-				network.TCP.Connect_Client(address)
+		case address := <-network.UDP.ReadChannel:
+			if !network.TCP.DoesConnectionExist(address) {
+				network.TCP.ConnectClient(address)
 			}
 		}
 	}
 }
 
-func (network *P2P_Network) announce_presence() {
-	network.UDP.Broadcast(network.tcp_server_address)
+func (network *P2P_Network) announcePresence() {
+	network.UDP.Broadcast(network.tcpServerAddress)
 }

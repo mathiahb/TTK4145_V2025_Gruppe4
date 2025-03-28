@@ -27,7 +27,7 @@ func (dispatcher ProtocolDispatcher) DoCommand(command string) {
 	dispatcher.commandQueue <- command
 }
 
-func (dispatcher ProtocolDispatcher) Flush_Synchronization_Channel() {
+func (dispatcher ProtocolDispatcher) FlushSynchronizationChannel() {
 	for {
 		select {
 		case <-dispatcher.shouldDoSynchronization:
@@ -38,11 +38,11 @@ func (dispatcher ProtocolDispatcher) Flush_Synchronization_Channel() {
 }
 
 // Waits a random amount of time between no waiting and a millisecond. This is to manage multi-master conflict.
-func Random_Wait() {
+func RandomWait() {
 	time.Sleep(time.Duration(rand.Intn(int(100 * time.Millisecond))))
 }
 
-func Wait_After_Protocol() {
+func WaitAfterProtocol() {
 	time.Sleep(100 * time.Millisecond)
 }
 
@@ -57,12 +57,12 @@ func (node *Node) dispatcher() {
 		// First check if we should do Discovery -> Synchronize
 		select {
 		case <-node.protocolDispatcher.shouldDoSynchronization:
-			node.protocolDispatcher.Flush_Synchronization_Channel()
-			success := node.coordinate_Synchronization()
+			node.protocolDispatcher.FlushSynchronizationChannel()
+			success := node.coordinateSynchronization()
 
 			if !success {
 				go node.protocolDispatcher.DoSynchronization()
-				Random_Wait()
+				RandomWait()
 			}
 			continue
 		default:
@@ -75,7 +75,7 @@ func (node *Node) dispatcher() {
 
 			if !success {
 				go func() { node.protocolDispatcher.repeatCommand <- command }()
-				Random_Wait()
+				RandomWait()
 			}
 			continue
 		default:
@@ -84,12 +84,12 @@ func (node *Node) dispatcher() {
 		// Then wait for new commands/discovery
 		select {
 		case <-node.protocolDispatcher.shouldDoSynchronization:
-			node.protocolDispatcher.Flush_Synchronization_Channel()
-			success := node.coordinate_Synchronization()
+			node.protocolDispatcher.FlushSynchronizationChannel()
+			success := node.coordinateSynchronization()
 
 			if !success {
 				go node.protocolDispatcher.DoSynchronization()
-				Random_Wait()
+				RandomWait()
 			}
 
 		case command := <-node.protocolDispatcher.repeatCommand:
@@ -97,7 +97,7 @@ func (node *Node) dispatcher() {
 
 			if !success {
 				go func() { node.protocolDispatcher.repeatCommand <- command }()
-				Random_Wait()
+				RandomWait()
 			}
 
 		case command := <-node.protocolDispatcher.commandQueue:
@@ -105,9 +105,9 @@ func (node *Node) dispatcher() {
 
 			if !success {
 				go func() { node.protocolDispatcher.repeatCommand <- command }()
-				Random_Wait()
+				RandomWait()
 			}
 		}
-		Wait_After_Protocol()
+		WaitAfterProtocol()
 	}
 }
