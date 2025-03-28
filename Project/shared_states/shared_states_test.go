@@ -48,32 +48,32 @@ type fakeElevator struct {
 	toSharedState   FromElevator
 	fromSharedState ToElevator
 
-	get_information chan bool
-	close_channel   chan bool
+	getInformation chan bool
+	closeChannel   chan bool
 
-	information_local_hr  chan common.HallRequestType
-	information_global_hr chan common.HallRequestType
-	information_global_cr chan []bool
+	informationLocalHr  chan common.HallRequestType
+	informationGlobalHr chan common.HallRequestType
+	informationGlobalCr chan []bool
 }
 
 // run handles the fake elevator's state updates and communication with shared states.
 func (elevator fakeElevator) run() {
-	global_cr := make([]bool, 4)
-	local_hr := make(common.HallRequestType, 4)
-	global_hr := make(common.HallRequestType, 4)
+	globalCr := make([]bool, 4)
+	localHr := make(common.HallRequestType, 4)
+	globalHr := make(common.HallRequestType, 4)
 
 	for {
 		select {
-		case <-elevator.close_channel:
+		case <-elevator.closeChannel:
 			return
-		case <-elevator.get_information:
-			elevator.information_local_hr <- local_hr
-			elevator.information_global_hr <- global_hr
-			elevator.information_global_cr <- global_cr
+		case <-elevator.getInformation:
+			elevator.informationLocalHr <- localHr
+			elevator.informationGlobalHr <- globalHr
+			elevator.informationGlobalCr <- globalCr
 
-		case global_cr = <-elevator.fromSharedState.ApprovedCabRequests:
-		case local_hr = <-elevator.fromSharedState.ApprovedHRA:
-		case global_hr = <-elevator.fromSharedState.UpdateHallRequestLights:
+		case globalCr = <-elevator.fromSharedState.ApprovedCabRequests:
+		case localHr = <-elevator.fromSharedState.ApprovedHRA:
+		case globalHr = <-elevator.fromSharedState.UpdateHallRequestLights:
 		}
 	}
 }
@@ -115,11 +115,11 @@ func TestSharedStateUpdate(t *testing.T) {
 		fromSharedState: toElevator,
 		toSharedState:   fromElevator,
 
-		get_information:       make(chan bool),
-		close_channel:         make(chan bool),
-		information_local_hr:  make(chan common.HallRequestType, 1),
-		information_global_hr: make(chan common.HallRequestType, 1),
-		information_global_cr: make(chan []bool, 1),
+		getInformation:       make(chan bool),
+		closeChannel:         make(chan bool),
+		informationLocalHr:  make(chan common.HallRequestType, 1),
+		informationGlobalHr: make(chan common.HallRequestType, 1),
+		informationGlobalCr: make(chan []bool, 1),
 	}
 
 	// Open node
@@ -129,7 +129,7 @@ func TestSharedStateUpdate(t *testing.T) {
 
 	go SharedStatesRoutine(make(chan common.Elevator), toElevator, fromElevator, toNetwork, fromNetwork)
 	go fakeElevator.run()
-	defer close(fakeElevator.close_channel)
+	defer close(fakeElevator.closeChannel)
 
 	elevator := common.Elevator{
 		Behaviour:   common.EB_Idle,
@@ -156,7 +156,7 @@ func TestSharedStateUpdate(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 150)
 
-	fakeElevator.get_information <- true
+	fakeElevator.getInformation <- true
 
 	expectedhrresult := common.HallRequestType{{true, false}, {true, false}, {false, false}, {false, false}}
 	expectedcrresult := make([]bool, 4)
@@ -164,13 +164,13 @@ func TestSharedStateUpdate(t *testing.T) {
 	expectedhrresultAsString := fmt.Sprintf("%+v", expectedhrresult)
 	expectedcrresultAsString := fmt.Sprintf("%+v", expectedcrresult)
 
-	localhr := <-fakeElevator.information_local_hr
+	localhr := <-fakeElevator.informationLocalHr
 	localhrAsString := fmt.Sprintf("%+v", localhr)
 
-	globalhr := <-fakeElevator.information_global_hr
+	globalhr := <-fakeElevator.informationGlobalHr
 	globalhrAsString := fmt.Sprintf("%+v", globalhr)
 
-	globalcr := <-fakeElevator.information_global_cr
+	globalcr := <-fakeElevator.informationGlobalCr
 	globalcrAsString := fmt.Sprintf("%+v", globalcr)
 
 	if expectedhrresultAsString != localhrAsString {

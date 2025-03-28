@@ -12,13 +12,13 @@ import (
 func resolveDifferences(
 	state1 common.HRAType, 
 	state2 common.HRAType, 
-	owner_of_state2 string,
+	ownerOfState2 string,
 ) common.HRAType {
-	elevatorState, ok := state2.States[owner_of_state2]
+	elevatorState, ok := state2.States[ownerOfState2]
 
 	// State2 is authorative over it's own state
 	if ok {
-		state1.States[owner_of_state2] = elevatorState
+		state1.States[ownerOfState2] = elevatorState
 	}
 
 	// Add any states missing in state1 from state2
@@ -58,11 +58,11 @@ func ResolveSharedStateConflicts(states map[string]string) string {
 	}
 
 	for name, state := range states {
-		new_state := common.HRAType{}
-		err := json.Unmarshal([]byte(state), &new_state)
+		newState := common.HRAType{}
+		err := json.Unmarshal([]byte(state), &newState)
 
 		if err == nil {
-			result = resolveDifferences(result, new_state, name)
+			result = resolveDifferences(result, newState, name)
 		}
 	}
 

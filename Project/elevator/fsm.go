@@ -200,7 +200,7 @@ func FSMButtonPress(
 
 // FSMOnFloorArrival is called upon when the elevator arrives a new floor.
 // It resets the isStuckTimer. If the elevator has "stuck" behaviour when the elevator arrives a new floor,
-// we can change it to moving as this is aclear sign of an active elevator.
+// we can change it to moving as this is a clear sign of an active elevator.
 // The functions also checks if the elevator should stop. If the elevator stops, it opens the door and updates shared states.
 func FSMOnFloorArrival(
 	newFloor int,
