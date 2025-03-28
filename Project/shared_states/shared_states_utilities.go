@@ -120,7 +120,6 @@ func getHallRequestAssignments(HRAInputVariable common.HRAType) map[string][][2]
 	return output
 }
 
-// ===================== TRANSLATION TO/FROM NETWORK ===================== //
 
 // The network operates with JSON strings, while shared states and the elevator operates with distinct types. 
 // Therefore it necessary to translate to the network. The function turns any variable into JSON.
@@ -136,7 +135,7 @@ func translateToNetwork(variable any) string {
 	return string(translatedVariable)
 }
 
-// translateFromNetwork deserializes a JSON string into a specified type,
+// TranslateFromNetwork deserializes a JSON string into a specified type,
 // converting it back to its original structure.
 func translateFromNetwork[T any](variable string) T {
 	var translatedVariable T
