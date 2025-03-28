@@ -170,11 +170,8 @@ func (node *Node) reader() {
 				}
 			}
 
-			node.txEnable <- node.connectedToNetwork
-
 			if !node.connectedToNetwork {
-				// We're not connected to network, tell other modules we exist, but no one else
-				peerUpdate.Peers = append(peerUpdate.Peers, node.name)
+				peerUpdate.Peers = []string{node.name}
 			} else {
 				node.protocolDispatcher.DoSynchronization()
 			}
