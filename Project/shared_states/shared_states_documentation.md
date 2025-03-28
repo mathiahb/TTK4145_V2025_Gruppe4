@@ -11,8 +11,10 @@ Shared state is also used when the network is syncronizing, as it hold all infor
 
 
 
+Conflict Resolver
+----
 
-
-
-
-
+The conflict resolver takes in a map of node names to their shared states. It will then generate a single shared state that will become the shared state used by all nodes on the network.
+The main purpose of this function is to solve conflicts between the shared states. The following procedure is used:
+States - The owner of the state has priority, if none have been supplied by the owner the first entry is picked. (This ensures that the state will stay updated whenever a node is connected, and also keeps it around should the node crash.)
+Hall Requests - Assuming the worst possible case, we assume that if any node says a hall request exists, it exists. (The no dropping orders after turning on the light.)

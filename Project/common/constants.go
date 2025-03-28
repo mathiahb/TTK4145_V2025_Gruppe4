@@ -86,8 +86,6 @@ const SYNC_REQUEST string = "SYNC"  // SYNChronize
 const SYNC_RESPONSE string = "SRSP" // Synchronize ReSPonse
 const SYNC_RESULT string = "SRST"   // Synchronize ReSulT
 
-const NETWORK_FIELD_DELIMITER = "\\\n"
-
 // Constants for UDP connection
 const UDP_PORT int = 10005
 const PEERS_PORT int = 10006
