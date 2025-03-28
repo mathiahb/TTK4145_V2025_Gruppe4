@@ -7,17 +7,17 @@ import (
 )
 
 // Example from Golang container documentation for IntHeap
-type dependency_heap []Dependency
+type dependencyHeap []Dependency
 
-func (h dependency_heap) Len() int               { return len(h) }
-func (h dependency_heap) Less(i int, j int) bool { return h[i].Is_Less_Than(h[j]) }
-func (h dependency_heap) Swap(i int, j int)      { h[i], h[j] = h[j], h[i] }
+func (h dependencyHeap) Len() int               { return len(h) }
+func (h dependencyHeap) Less(i int, j int) bool { return h[i].IsLessThan(h[j]) }
+func (h dependencyHeap) Swap(i int, j int)      { h[i], h[j] = h[j], h[i] }
 
-func (h *dependency_heap) Push(dependency any) {
+func (h *dependencyHeap) Push(dependency any) {
 	*h = append(*h, dependency.(Dependency))
 }
 
-func (h *dependency_heap) Pop() any {
+func (h *dependencyHeap) Pop() any {
 	old := *h
 	n := len(old)
 	x := old[n-1]
@@ -25,71 +25,71 @@ func (h *dependency_heap) Pop() any {
 	return x
 }
 
-type Dependency_Handler struct {
+type DependencyHandler struct {
 	mu sync.Mutex
 
-	min_heap   *dependency_heap
-	lookup_map map[Dependency]struct{}
+	minHeap   *dependencyHeap
+	lookupMap map[Dependency]struct{}
 }
 
-func NewDependencyHandler() Dependency_Handler {
-	min_heap := make(dependency_heap, 0)
+func NewDependencyHandler() DependencyHandler {
+	minHeap := make(dependencyHeap, 0)
 
-	heap.Init(&min_heap)
+	heap.Init(&minHeap)
 
-	return Dependency_Handler{
-		min_heap:   &min_heap,
-		lookup_map: make(map[Dependency]struct{}),
+	return DependencyHandler{
+		minHeap:   &minHeap,
+		lookupMap: make(map[Dependency]struct{}),
 	}
 }
 
-func (handler *Dependency_Handler) add_Dependency(dependency Dependency) {
-	if dependency.Dependency_Owner == "" {
+func (handler *DependencyHandler) addDependency(dependency Dependency) {
+	if dependency.DependencyOwner == "" {
 		// No dependency.
 		return
 	}
 
-	if handler.min_heap.Len() == common.P2P_DEP_TIME_HORIZON {
-		old_dependency := heap.Pop(handler.min_heap).(Dependency)
-		delete(handler.lookup_map, old_dependency)
+	if handler.minHeap.Len() == common.P2P_DEP_TIME_HORIZON {
+		oldDependency := heap.Pop(handler.minHeap).(Dependency)
+		delete(handler.lookupMap, oldDependency)
 	}
 
-	heap.Push(handler.min_heap, dependency)
-	handler.lookup_map[dependency] = struct{}{} // Creates an instance of an empty struct.
+	heap.Push(handler.minHeap, dependency)
+	handler.lookupMap[dependency] = struct{}{} // Creates an instance of an empty struct.
 }
 
-func (handler *Dependency_Handler) Add_Dependency(dependency Dependency) {
+func (handler *DependencyHandler) AddDependency(dependency Dependency) {
 	handler.mu.Lock()
 	defer handler.mu.Unlock()
 
-	handler.add_Dependency(dependency)
+	handler.addDependency(dependency)
 }
 
-func (handler *Dependency_Handler) has_Dependency(dependency Dependency) bool {
-	if dependency.Dependency_Owner == "" {
+func (handler *DependencyHandler) hasDependency(dependency Dependency) bool {
+	if dependency.DependencyOwner == "" {
 		return true
 	}
 
-	_, ok := handler.lookup_map[dependency]
+	_, ok := handler.lookupMap[dependency]
 	return ok
 }
 
-func (handler *Dependency_Handler) HasDependency(dependency Dependency) bool {
+func (handler *DependencyHandler) HasDependency(dependency Dependency) bool {
 	handler.mu.Lock()
 	defer handler.mu.Unlock()
 
-	return handler.has_Dependency(dependency)
+	return handler.hasDependency(dependency)
 }
 
 // Performs the action of checking for dependency and adding it to the list
-func (handler *Dependency_Handler) HaveSeenDependencyBefore(dependency Dependency) bool {
+func (handler *DependencyHandler) HaveSeenDependencyBefore(dependency Dependency) bool {
 	handler.mu.Lock()
 	defer handler.mu.Unlock()
 
-	result := handler.has_Dependency(dependency)
+	result := handler.hasDependency(dependency)
 
 	if !result {
-		handler.add_Dependency(dependency)
+		handler.addDependency(dependency)
 	}
 
 	return result

@@ -7,24 +7,24 @@ import (
 )
 
 type Dependency struct {
-	Dependency_Owner string
-	Dependency_Clock LamportClock
+	DependencyOwner string
+	DependencyClock LamportClock
 }
 
 func NewDependency(owner string, clock LamportClock) Dependency {
 	return Dependency{
-		Dependency_Owner: owner,
-		Dependency_Clock: clock,
+		DependencyOwner: owner,
+		DependencyClock: clock,
 	}
 }
 
 // Format Dependency:
 // DEPENDENCYOWNER/LAMPORTCLOCK
 func (dependency Dependency) ToString() string {
-	return dependency.Dependency_Owner + common.P2P_DEP_DELIMINATOR + dependency.Dependency_Clock.String()
+	return dependency.DependencyOwner + common.P2P_DEP_DELIMINATOR + dependency.DependencyClock.String()
 }
 
-func Dependency_From_String(str string) Dependency {
+func DependencyFromString(str string) Dependency {
 	fields := strings.Split(str, common.P2P_DEP_DELIMINATOR)
 
 	if len(fields) != 2 {
@@ -36,11 +36,11 @@ func Dependency_From_String(str string) Dependency {
 	time := NewLamportClockFromString(fields[1])
 
 	return Dependency{
-		Dependency_Owner: owner,
-		Dependency_Clock: time,
+		DependencyOwner: owner,
+		DependencyClock: time,
 	}
 }
 
-func (lesser Dependency) Is_Less_Than(greater Dependency) bool {
-	return lesser.Dependency_Clock.Is_Less_Than(greater.Dependency_Clock)
+func (lesser Dependency) IsLessThan(greater Dependency) bool {
+	return lesser.DependencyClock.IsLessThan(greater.DependencyClock)
 }

@@ -33,55 +33,55 @@ import (
 // --------------------------------------------------------------------
 // Connection
 
-type TCP_Connection struct {
+type TCPConnection struct {
 	// Public
-	Write_Channel chan string
-	ReadChannel   chan string
+	WriteChannel chan string
+	ReadChannel  chan string
 
 	// Protected
-	closeChannel    chan bool
-	connection_name string
-	connection      net.Conn
+	closeChannel   chan bool
+	connectionName string
+	connection     net.Conn
 
-	split_handler TCP_Split_Handler
+	splitHandler TCPSplitHandler
 
-	failed_writes    int
-	watchdog_timer   *time.Timer
-	heartbeat_ticker *time.Ticker
+	failedWrites    int
+	watchdogTimer   *time.Timer
+	heartbeatTicker *time.Ticker
 }
 
 // Creates a new TCP conneciton bound to a shared read channel.
-func New_TCP_Connection(name string, readChannel chan string, connection net.Conn) TCP_Connection {
-	write_channel := make(chan string, common.TCP_BUFFER_SIZE)
+func NewTCPConnection(name string, readChannel chan string, connection net.Conn) TCPConnection {
+	writeChannel := make(chan string, common.TCP_BUFFER_SIZE)
 	closeChannel := make(chan bool)
 
-	return TCP_Connection{
-		Write_Channel: write_channel,
-		ReadChannel:   readChannel,
-		closeChannel:  closeChannel,
+	return TCPConnection{
+		WriteChannel: writeChannel,
+		ReadChannel:  readChannel,
+		closeChannel: closeChannel,
 
-		connection_name: name,
-		connection:      connection,
+		connectionName: name,
+		connection:     connection,
 
-		split_handler: New_TCP_Split_Handler(), // New connection, no split read message yet.
+		splitHandler: NewTCPSplitHandler(), // New connection, no split read message yet.
 
-		failed_writes:    0,
-		watchdog_timer:   time.NewTimer(common.TCP_HEARTBEAT_TIME),
-		heartbeat_ticker: time.NewTicker(common.TCP_RESEND_HEARTBEAT),
+		failedWrites:    0,
+		watchdogTimer:   time.NewTimer(common.TCP_HEARTBEAT_TIME),
+		heartbeatTicker: time.NewTicker(common.TCP_RESEND_HEARTBEAT),
 	}
 }
 
-func (connection TCP_Connection) Close() {
+func (connection TCPConnection) Close() {
 	select {
 	case <-connection.closeChannel:
 		// Connection was already closed!
-		fmt.Printf("Error: Attempted to close closed channel %s!\n", connection.connection_name)
+		fmt.Printf("Error: Attempted to close closed channel %s!\n", connection.connectionName)
 		return
 	default:
 		close(connection.closeChannel)
 	}
 }
 
-func (connection TCP_Connection) Get_Name() string {
-	return connection.connection_name
+func (connection TCPConnection) Get_Name() string {
+	return connection.connectionName
 }

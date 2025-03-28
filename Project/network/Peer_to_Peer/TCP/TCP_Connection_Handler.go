@@ -11,53 +11,53 @@ import (
 
 // Reads a TCP message from the TCP Connection and puts all detected messages in the TCP message onto the Read Channel.
 // Handles splitting messages using the TCP Split Handler.
-func (TCP_Connection *TCP_Connection) read() {
+func (TCPConnection *TCPConnection) read() {
 	deadline := time.Now().Add(common.TCP_READ_DEADLNE)
-	TCP_Connection.connection.SetReadDeadline(deadline)
+	TCPConnection.connection.SetReadDeadline(deadline)
 
 	data := make([]byte, 4096)
 
-	bytes_received, err := TCP_Connection.connection.Read(data)
+	bytesReceived, err := TCPConnection.connection.Read(data)
 
 	if err == io.EOF {
 		// Connection terminated from the other side. Disconnect.
-		TCP_Connection.Close()
+		TCPConnection.Close()
 	}
 
 	if err == nil {
-		message := string(data[0:bytes_received])
+		message := string(data[0:bytesReceived])
 
-		split_messages := TCP_Connection.split_handler.Split_Null_Terminated_Tcp_Message(message)
+		splitMessages := TCPConnection.splitHandler.SplitNullTerminatedTCPMessage(message)
 
-		for _, split_message := range split_messages {
-			if split_message == common.TCP_HEARTBEAT {
-				TCP_Connection.watchdog_timer.Reset(common.TCP_HEARTBEAT_TIME)
+		for _, splitMessage := range splitMessages {
+			if splitMessage == common.TCP_HEARTBEAT {
+				TCPConnection.watchdogTimer.Reset(common.TCP_HEARTBEAT_TIME)
 			} else {
-				TCP_Connection.ReadChannel <- split_message
+				TCPConnection.ReadChannel <- splitMessage
 			}
 		}
 	}
 }
 
 // Writes a string onto the TCP Connection, function handles necessary
-func (TCP_Connection *TCP_Connection) write(message string) {
+func (TCPConnection *TCPConnection) write(message string) {
 	deadline := time.Now().Add(common.TCP_READ_DEADLNE)
-	TCP_Connection.connection.SetWriteDeadline(deadline)
+	TCPConnection.connection.SetWriteDeadline(deadline)
 
-	tcpMessage := TCP_Connection.split_handler.Make_Null_Terminated_TCP_Message(message)
-	data := []byte(tcpMessage)
+	tcp_message := TCPConnection.splitHandler.MakeNullTerminatedTCPMessage(message)
+	data := []byte(tcp_message)
 
-	_, err := TCP_Connection.connection.Write(data)
+	_, err := TCPConnection.connection.Write(data)
 
 	if err != nil {
 		fmt.Println("Write didn't succeed, error: ", err)
-		TCP_Connection.failed_writes++
+		TCPConnection.failedWrites++
 	} else {
-		TCP_Connection.failed_writes = 0
+		TCPConnection.failedWrites = 0
 	}
 
-	if TCP_Connection.failed_writes >= common.TCP_MAX_FAIL_WRITES {
-		TCP_Connection.Close()
+	if TCPConnection.failedWrites >= common.TCP_MAX_FAIL_WRITES {
+		TCPConnection.Close()
 	}
 }
 
@@ -65,24 +65,24 @@ func (TCP_Connection *TCP_Connection) write(message string) {
 // And reads any data from the connection onto the Read Channel.
 //
 // Will self-remove from the connection manager should close be called.
-func (connection *TCP_Connection) handle_TCP_Connection(connection_manager *TCP_Connection_Manager) {
+func (connection *TCPConnection) handleTCPConnection(connectionManager *TCPConnectionManager) {
 	defer connection.connection.Close()
-	defer connection_manager.Remove_Connection(*connection)
+	defer connectionManager.RemoveConnection(*connection)
 
-	when_to_read_ticker := time.NewTicker(common.TCP_WAIT_BEFORE_READING_AGAIN)
+	whenToReadTicker := time.NewTicker(common.TCP_WAIT_BEFORE_READING_AGAIN)
 
 	for {
 		select {
-		case <-when_to_read_ticker.C:
+		case <-whenToReadTicker.C:
 			connection.read()
 
-		case message := <-connection.Write_Channel:
+		case message := <-connection.WriteChannel:
 			connection.write(message)
 
-		case <-connection.heartbeat_ticker.C:
+		case <-connection.heartbeatTicker.C:
 			connection.write(common.TCP_HEARTBEAT)
 
-		case <-connection.watchdog_timer.C:
+		case <-connection.watchdogTimer.C:
 			return // No heartbeats heard within watchdog time, disconnect...
 
 		case <-connection.closeChannel:

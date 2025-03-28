@@ -8,31 +8,31 @@ import (
 	"time"
 )
 
-func (connection_manager *TCP_Connection_Manager) setup_TCP_Connection(connection net.Conn) {
+func (connectionManager *TCPConnectionManager) setupTCPConnection(connection net.Conn) {
 	// Add the incoming connection to the connection manager
-	connection_name := connection.RemoteAddr().String()
-	if connection_manager.DoesConnectionExist(connection_name) {
+	connectionName := connection.RemoteAddr().String()
+	if connectionManager.DoesConnectionExist(connectionName) {
 		return // We are already connected...
 	}
 
-	connection_object := New_TCP_Connection(connection_name, connection_manager.GlobalReadChannel, connection)
-	connection_manager.Add_Connection(connection_object)
+	connectionObject := NewTCPConnection(connectionName, connectionManager.GlobalReadChannel, connection)
+	connectionManager.AddConnection(connectionObject)
 
 	// We don't want to delay, send everything asap.
 	tcp_conn := connection.(*net.TCPConn)
 	tcp_conn.SetNoDelay(true)
 
 	// Hand over the accepted connection to a TCP Connection Handler.
-	go connection_object.handle_TCP_Connection(connection_manager)
+	go connectionObject.handleTCPConnection(connectionManager)
 }
 
-func (connection_manager *TCP_Connection_Manager) tcp_listener(listener *net.Listener) {
+func (connectionManager *TCPConnectionManager) tcpListener(listener *net.Listener) {
 	// Accept all incoming connections
 	for {
 		connection, err := (*listener).Accept()
 		if err != nil {
 			select {
-			case <-connection_manager.stop_server_channel:
+			case <-connectionManager.stopServerChannel:
 				return
 			default:
 				fmt.Println("Error in accepting connection: ", err)
@@ -40,11 +40,11 @@ func (connection_manager *TCP_Connection_Manager) tcp_listener(listener *net.Lis
 			}
 		}
 
-		connection_manager.setup_TCP_Connection(connection)
+		connectionManager.setupTCPConnection(connection)
 	}
 }
 
-func (connection_manager *TCP_Connection_Manager) create_TCP_Server(addr_channel chan string) {
+func (connectionManager *TCPConnectionManager) createTCPServer(addrChannel chan string) {
 	// Create a listener
 	port := common.TCP_PORT + common.NameExtension
 	listener, err := net.Listen("tcp", ":"+strconv.Itoa(port))
@@ -54,15 +54,15 @@ func (connection_manager *TCP_Connection_Manager) create_TCP_Server(addr_channel
 	defer listener.Close()
 
 	// Address from a listener is on the form [::]:xxxxx
-	const port_offset = 4
-	addr_channel <- listener.Addr().String()[port_offset:]
+	const portOffset = 4
+	addrChannel <- listener.Addr().String()[portOffset:]
 
-	go connection_manager.tcp_listener(&listener)
+	go connectionManager.tcpListener(&listener)
 
-	<-connection_manager.stop_server_channel
+	<-connectionManager.stopServerChannel
 }
 
-func (connection_manager *TCP_Connection_Manager) create_TCP_Client(address string) {
+func (connectionManager *TCPConnectionManager) createTCPClient(address string) {
 	timeout := time.Second
 
 	for {
@@ -77,7 +77,7 @@ func (connection_manager *TCP_Connection_Manager) create_TCP_Client(address stri
 			return
 		}
 
-		connection_manager.setup_TCP_Connection(connection)
+		connectionManager.setupTCPConnection(connection)
 		return
 	}
 }

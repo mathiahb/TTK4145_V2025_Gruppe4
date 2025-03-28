@@ -9,96 +9,96 @@ import (
 // TCP Connection Manager
 // Implements creating TCP servers and clients and storing them onto a connection.
 // Automatic disconnection is handled by TCP Handler
-type TCP_Connection_Manager struct {
+type TCPConnectionManager struct {
 	mu          sync.Mutex
-	Connections map[string]TCP_Connection // TCP Connection defined in TCP_internal.go
+	Connections map[string]TCPConnection // TCP Connection defined in TCP_internal.go
 
-	GlobalReadChannel   chan string
-	stop_server_channel chan bool
+	GlobalReadChannel chan string
+	stopServerChannel chan bool
 }
 
-func NewTCPConnectionManager() *TCP_Connection_Manager {
-	return &TCP_Connection_Manager{
-		Connections:         make(map[string]TCP_Connection),
-		GlobalReadChannel:   make(chan string, common.TCP_BUFFER_SIZE),
-		stop_server_channel: make(chan bool),
+func NewTCPConnectionManager() *TCPConnectionManager {
+	return &TCPConnectionManager{
+		Connections:       make(map[string]TCPConnection),
+		GlobalReadChannel: make(chan string, common.TCP_BUFFER_SIZE),
+		stopServerChannel: make(chan bool),
 	}
 }
 
-func (manager *TCP_Connection_Manager) Add_Connection(connection TCP_Connection) {
+func (manager *TCPConnectionManager) AddConnection(connection TCPConnection) {
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
 
-	if manager.does_connection_exist_unsafe(connection.connection_name) {
+	if manager.doesConnectionExistUnsafe(connection.connectionName) {
 		connection.Close()
 		return
 	}
 
-	manager.Connections[connection.connection_name] = connection
-	fmt.Printf("Connection %s added!\n", connection.connection_name)
+	manager.Connections[connection.connectionName] = connection
+	fmt.Printf("Connection %s added!\n", connection.connectionName)
 }
 
-func (manager *TCP_Connection_Manager) Remove_Connection(connection TCP_Connection) {
+func (manager *TCPConnectionManager) RemoveConnection(connection TCPConnection) {
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
 
-	delete(manager.Connections, connection.connection_name)
-	fmt.Printf("Connection %s removed!\n", connection.connection_name)
+	delete(manager.Connections, connection.connectionName)
+	fmt.Printf("Connection %s removed!\n", connection.connectionName)
 }
 
-func (manager *TCP_Connection_Manager) does_connection_exist_unsafe(connection_name string) bool {
-	_, ok := manager.Connections[connection_name]
+func (manager *TCPConnectionManager) doesConnectionExistUnsafe(connectionName string) bool {
+	_, ok := manager.Connections[connectionName]
 	return ok
 }
 
-func (manager *TCP_Connection_Manager) DoesConnectionExist(connection_name string) bool {
+func (manager *TCPConnectionManager) DoesConnectionExist(connectionName string) bool {
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
 
-	return manager.does_connection_exist_unsafe(connection_name)
+	return manager.doesConnectionExistUnsafe(connectionName)
 }
 
-func (manager *TCP_Connection_Manager) CloseAll() {
+func (manager *TCPConnectionManager) CloseAll() {
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
 
-	close(manager.stop_server_channel)
+	close(manager.stopServerChannel)
 
 	for _, connection := range manager.Connections {
 		connection.Close()
 	}
 }
 
-func (manager *TCP_Connection_Manager) OpenServer() string {
-	address_channel := make(chan string)
+func (manager *TCPConnectionManager) OpenServer() string {
+	addressChannel := make(chan string)
 
-	go manager.create_TCP_Server(address_channel)
+	go manager.createTCPServer(addressChannel)
 
-	return <-address_channel
+	return <-addressChannel
 }
 
-func (manager *TCP_Connection_Manager) ConnectClient(address string) {
-	go manager.create_TCP_Client(address)
+func (manager *TCPConnectionManager) ConnectClient(address string) {
+	go manager.createTCPClient(address)
 }
 
-func (manager *TCP_Connection_Manager) Broadcast(message string) {
+func (manager *TCPConnectionManager) Broadcast(message string) {
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
 
 	for _, connection := range manager.Connections {
-		connection.Write_Channel <- message
+		connection.WriteChannel <- message
 	}
 }
 
-func (manager *TCP_Connection_Manager) Send(message string, recipient string) {
+func (manager *TCPConnectionManager) Send(message string, recipient string) {
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
 
-	if !manager.does_connection_exist_unsafe(recipient) {
+	if !manager.doesConnectionExistUnsafe(recipient) {
 		fmt.Printf("Error, connection %s did not exist! Failed sending %s\n", recipient, message)
 		manager.ConnectClient(recipient)
 		return
 	}
 
-	manager.Connections[recipient].Write_Channel <- message
+	manager.Connections[recipient].WriteChannel <- message
 }
