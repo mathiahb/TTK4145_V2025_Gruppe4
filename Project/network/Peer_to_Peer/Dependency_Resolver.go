@@ -6,29 +6,29 @@ import (
 	"sync"
 )
 
-type Dependency_Resolver struct {
+type DependencyResolver struct {
 	mu sync.Mutex
 
-	queue_list []Dependency
-	queue_head int
+	queueList []Dependency
+	queueHead int
 
-	Saved_Messages map[Dependency]P2PMessage
+	SavedMessages map[Dependency]P2PMessage
 }
 
-func NewDependencyResolver() *Dependency_Resolver {
-	return &Dependency_Resolver{
-		queue_list: make([]Dependency, common.P2P_MSG_TIME_HORIZON),
-		queue_head: 0,
+func NewDependencyResolver() *DependencyResolver {
+	return &DependencyResolver{
+		queueList: make([]Dependency, common.P2P_MSG_TIME_HORIZON),
+		queueHead: 0,
 
-		Saved_Messages: make(map[Dependency]P2PMessage, common.P2P_MSG_TIME_HORIZON),
+		SavedMessages: make(map[Dependency]P2PMessage, common.P2P_MSG_TIME_HORIZON),
 	}
 }
 
-func (controller *Dependency_Resolver) advance_head() {
-	controller.queue_head = (controller.queue_head + 1) % common.P2P_MSG_TIME_HORIZON
+func (controller *DependencyResolver) advanceHead() {
+	controller.queueHead = (controller.queueHead + 1) % common.P2P_MSG_TIME_HORIZON
 }
 
-func (controller *Dependency_Resolver) EmplaceNewMessage(message P2PMessage) {
+func (controller *DependencyResolver) EmplaceNewMessage(message P2PMessage) {
 	if message.Type != MESSAGE {
 		return
 	}
@@ -36,28 +36,28 @@ func (controller *Dependency_Resolver) EmplaceNewMessage(message P2PMessage) {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
 
-	controller.advance_head()
+	controller.advanceHead()
 	key := NewDependency(message.Sender, message.Time)
 
-	delete(controller.Saved_Messages, controller.queue_list[controller.queue_head])
+	delete(controller.SavedMessages, controller.queueList[controller.queueHead])
 
-	controller.queue_list[controller.queue_head] = key
-	controller.Saved_Messages[key] = message
+	controller.queueList[controller.queueHead] = key
+	controller.SavedMessages[key] = message
 }
 
-func (controller *Dependency_Resolver) Get_Message(dependency Dependency) (P2PMessage, bool) {
+func (controller *DependencyResolver) GetMessage(dependency Dependency) (P2PMessage, bool) {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
 
-	message, ok := controller.Saved_Messages[dependency]
+	message, ok := controller.SavedMessages[dependency]
 	return message, ok
 }
 
 func (network *P2P_Network) handleSpecialCase(message P2PMessage) {
 	switch message.Type {
 	case REQUEST_MISSING_DEPENDENCY:
-		requested_dependency := Dependency_From_String(message.Message)
-		response, ok := network.dependencyResolver.Get_Message(requested_dependency)
+		requestedDependency := DependencyFromString(message.Message)
+		response, ok := network.dependencyResolver.GetMessage(requestedDependency)
 		if ok {
 			network.Send(response, message.Sender)
 		} else {

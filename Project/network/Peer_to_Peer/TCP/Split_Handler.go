@@ -6,33 +6,33 @@ import (
 )
 
 // Struct that handles the fact that TCP messages can be cut short in a read statement.
-type TCP_Split_Handler struct {
-	split_message_to_be_handled string
+type TCPSplitHandler struct {
+	splitMessageToBeHandled string
 }
 
-func (handler *TCP_Split_Handler) Split_Null_Terminated_Tcp_Message(tcpMessage string) []string {
-	split_messages := strings.Split(tcpMessage, common.NULL)
+func (handler *TCPSplitHandler) SplitNullTerminatedTCPMessage(tcpMessage string) []string {
+	splitMessages := strings.Split(tcpMessage, common.NULL)
 
 	// Handle message that has been split due to buffer size or partial TCP transmission.
 	//---
 	// Add previous split message to the first message:
-	split_messages[0] = handler.split_message_to_be_handled + split_messages[0]
+	splitMessages[0] = handler.splitMessageToBeHandled + splitMessages[0]
 
 	// Store next split message to be handled on next read:
-	last_split_id := len(split_messages) - 1
-	handler.split_message_to_be_handled = split_messages[last_split_id]
+	lastSplitID := len(splitMessages) - 1
+	handler.splitMessageToBeHandled = splitMessages[lastSplitID]
 
 	//---
 	// Return all except the incomplete split.
-	return split_messages[0:last_split_id]
+	return splitMessages[0:lastSplitID]
 }
 
-func (handler *TCP_Split_Handler) Make_Null_Terminated_TCP_Message(message string) string {
+func (handler *TCPSplitHandler) MakeNullTerminatedTCPMessage(message string) string {
 	return message + common.NULL
 }
 
-func New_TCP_Split_Handler() TCP_Split_Handler {
-	return TCP_Split_Handler{
-		split_message_to_be_handled: "",
+func NewTCPSplitHandler() TCPSplitHandler {
+	return TCPSplitHandler{
+		splitMessageToBeHandled: "",
 	}
 }

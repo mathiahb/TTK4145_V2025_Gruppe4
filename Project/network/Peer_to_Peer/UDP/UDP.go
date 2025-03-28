@@ -25,21 +25,21 @@ import (
 //
 // ----------------------------------------------------------------
 
-type UDP_Channel struct {
+type UDPChannel struct {
 	// Public
-	Write_Channel chan string
-	ReadChannel   chan string
+	WriteChannel chan string
+	ReadChannel  chan string
 
 	// Protected
-	quit_channel chan bool
+	quitChannel chan bool
 }
 
-func (channel UDP_Channel) Close() {
-	close(channel.quit_channel)
+func (channel UDPChannel) Close() {
+	close(channel.quitChannel)
 }
 
-func (channel UDP_Channel) Broadcast(message string) {
-	channel.Write_Channel <- message
+func (channel UDPChannel) Broadcast(message string) {
+	channel.WriteChannel <- message
 }
 
 // --------------------------------------------------------------------
@@ -56,16 +56,16 @@ func GetLocalIP() net.IP {
 	return localaddr.IP
 }
 
-func (Channel UDP_Channel) udp_client(connection *net.UDPConn) {
+func (Channel UDPChannel) udpClient(connection *net.UDPConn) {
 	defer connection.Close()
 
 	// Handle incoming write requests
 	for {
 		select {
-		case message := <-Channel.Write_Channel:
+		case message := <-Channel.WriteChannel:
 			data := []byte(message)
 			connection.Write(data)
-		case <-Channel.quit_channel:
+		case <-Channel.quitChannel:
 			return
 		}
 
@@ -73,25 +73,25 @@ func (Channel UDP_Channel) udp_client(connection *net.UDPConn) {
 	}
 }
 
-func (Channel UDP_Channel) udp_server(connection *ipv4.PacketConn) {
+func (Channel UDPChannel) udpServer(connection *ipv4.PacketConn) {
 	defer connection.Close()
 
-	ticker_read_UDP := time.NewTicker(common.UDP_WAIT_BEFORE_READING_AGAIN)
+	tickerReadUDP := time.NewTicker(common.UDP_WAIT_BEFORE_READING_AGAIN)
 
 	for {
 		select {
-		case <-ticker_read_UDP.C:
+		case <-tickerReadUDP.C:
 			deadline := time.Now().Add(common.UDP_READ_DEADLINE)
 			connection.SetReadDeadline(deadline)
 
 			data := make([]byte, 1024)
-			bytes_received, _, _, err := connection.ReadFrom(data)
+			bytesReceived, _, _, err := connection.ReadFrom(data)
 
 			if err == nil {
-				message := string(data[0:bytes_received])
+				message := string(data[0:bytesReceived])
 				Channel.ReadChannel <- message
 			}
-		case <-Channel.quit_channel:
+		case <-Channel.quitChannel:
 			return
 		}
 
@@ -99,7 +99,7 @@ func (Channel UDP_Channel) udp_server(connection *ipv4.PacketConn) {
 	}
 }
 
-func (channel *UDP_Channel) create_UDP_client() {
+func (channel *UDPChannel) createUDPClient() {
 	addr, err := net.ResolveUDPAddr("udp", common.UDP_BROADCAST_IP_PORT)
 	if err != nil {
 		panic(err)
@@ -110,11 +110,11 @@ func (channel *UDP_Channel) create_UDP_client() {
 		panic(err)
 	}
 
-	go channel.udp_client(connection)
+	go channel.udpClient(connection)
 }
 
-// func create_UDP_server, to be called by a function that creates an UDP_Channel
-func (channel *UDP_Channel) create_UDP_server() error {
+// func createUDPServer, to be called by a function that creates an UDP_Channel
+func (channel *UDPChannel) createUDPServer() error {
 	addr, err := net.ResolveUDPAddr("udp", common.UDP_BROADCAST_IP_PORT)
 	if err != nil {
 		panic(err)
@@ -125,40 +125,40 @@ func (channel *UDP_Channel) create_UDP_server() error {
 		return err
 	}
 
-	packet_conn := ipv4.NewPacketConn(connection)
+	packetConn := ipv4.NewPacketConn(connection)
 
 	nifi, err := net.Interfaces()
 	if err != nil {
 		return err
 	}
 
-	err = packet_conn.SetMulticastLoopback(true)
+	err = packetConn.SetMulticastLoopback(true)
 	if err != nil {
 		return err
 	}
 
 	for _, ifi := range nifi {
-		packet_conn.JoinGroup(&ifi, addr)
+		packetConn.JoinGroup(&ifi, addr)
 	}
 
-	go channel.udp_server(packet_conn)
+	go channel.udpServer(packetConn)
 
 	return nil
 }
 
-func NewUDPChannel() UDP_Channel {
-	channel_write := make(chan string, 1024)
-	channel_read := make(chan string, 1024)
-	channel_quit := make(chan bool)
+func NewUDPChannel() UDPChannel {
+	channelWrite := make(chan string, 1024)
+	channelRead := make(chan string, 1024)
+	channelQuit := make(chan bool)
 
-	channel := UDP_Channel{
-		Write_Channel: channel_write,
-		ReadChannel:   channel_read,
-		quit_channel:  channel_quit,
+	channel := UDPChannel{
+		WriteChannel: channelWrite,
+		ReadChannel:  channelRead,
+		quitChannel:  channelQuit,
 	}
 
-	channel.create_UDP_client()
-	err := channel.create_UDP_server()
+	channel.createUDPClient()
+	err := channel.createUDPServer()
 	if err != nil {
 		fmt.Printf("Error when starting UDP server: %s\n", err.Error())
 	}

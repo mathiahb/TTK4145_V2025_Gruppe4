@@ -66,7 +66,7 @@ func P2PMessageFromString(tcpMessage string) P2PMessage {
 	sender := fields[0]
 	messageType := P2PMessageType(fields[1])
 	clock := NewLamportClockFromString(fields[2])
-	dependency := Dependency_From_String(fields[3])
+	dependency := DependencyFromString(fields[3])
 	body := fields[4]
 
 	return P2PMessage{

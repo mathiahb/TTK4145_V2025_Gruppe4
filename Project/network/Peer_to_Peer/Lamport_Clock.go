@@ -43,24 +43,24 @@ func (clock *LamportClock) Event() {
 	clock.time = clock.time + 1
 }
 
-func (receiver_clock *LamportClock) Update(sender_clock LamportClock) {
-	if receiver_clock.Is_Less_Than(sender_clock) {
-		receiver_clock.time = sender_clock.time
+func (receiverClock *LamportClock) Update(senderClock LamportClock) {
+	if receiverClock.IsLessThan(senderClock) {
+		receiverClock.time = senderClock.time
 	}
 
-	receiver_clock.Event()
+	receiverClock.Event()
 }
 
 // If a -> b, then b.time < a.time
-func (lesser LamportClock) Is_Less_Than(greater LamportClock) bool {
+func (lesser LamportClock) IsLessThan(greater LamportClock) bool {
 	// Check if the clocks have wrapped around
-	const lower_edge int = common.LAMPORT_CLOCK_WRAPAROUND_LOWER_EDGE
-	const upper_edge int = common.LAMPORT_CLOCK_WRAPAROUND_UPPER_EDGE
+	const lowerEdge int = common.LAMPORT_CLOCK_WRAPAROUND_LOWER_EDGE
+	const upperEdge int = common.LAMPORT_CLOCK_WRAPAROUND_UPPER_EDGE
 
-	if greater.time < lower_edge && lesser.time > upper_edge {
+	if greater.time < lowerEdge && lesser.time > upperEdge {
 		return true
 	}
-	if lesser.time < lower_edge && greater.time > upper_edge {
+	if lesser.time < lowerEdge && greater.time > upperEdge {
 		return false
 	}
 

@@ -16,15 +16,15 @@ import (
 type P2P_Network struct {
 	ReadChannel chan P2PMessage
 
-	TCP *TCP.TCP_Connection_Manager
-	UDP UDP.UDP_Channel
+	TCP *TCP.TCPConnectionManager
+	UDP UDP.UDPChannel
 
 	closeChannel chan bool
 
 	tcpServerAddress string
 
-	dependencyResolver *Dependency_Resolver
-	dependencyHandler  Dependency_Handler
+	dependencyResolver *DependencyResolver
+	dependencyHandler  DependencyHandler
 	clock              LamportClock
 }
 
@@ -82,7 +82,7 @@ func (network *P2P_Network) CreateMessage(message string) P2PMessage {
 
 func (network *P2P_Network) requestDependency(dependency Dependency) {
 	message := network.createMessage(dependency.ToString(), REQUEST_MISSING_DEPENDENCY)
-	network.Send(message, dependency.Dependency_Owner)
+	network.Send(message, dependency.DependencyOwner)
 }
 
 func (network *P2P_Network) createMessage(message string, messageType P2PMessageType) P2PMessage {
@@ -146,14 +146,14 @@ func (network *P2P_Network) publisher(message P2PMessage) {
 }
 
 func (network *P2P_Network) peerDetection() {
-	renew_presence_ticker := time.NewTicker(common.UDP_WAIT_BEFORE_TRANSMITTING_AGAIN)
+	renewPresenceTicker := time.NewTicker(common.UDP_WAIT_BEFORE_TRANSMITTING_AGAIN)
 
 	for {
 		select {
 		case <-network.closeChannel:
 			return // P2P Connection closed
 
-		case <-renew_presence_ticker.C:
+		case <-renewPresenceTicker.C:
 			network.announcePresence()
 
 		case address := <-network.UDP.ReadChannel:
